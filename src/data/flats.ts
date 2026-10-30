@@ -241,29 +241,45 @@ function topView(key: FlatViewKey, o: TopOpts): FlatView {
     const mirror = (d: string) => d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => `${f(-Number(x))} ${y}`);
     zones.push(zone('delantero-b', 'Delantero izquierdo', 'delantero', mirror(zones[0].d)));
   } else zones.push(zone(back ? 'espalda' : 'delantero', back ? 'Espalda' : 'Delantero', back ? 'espalda' : 'delantero', bodyD));
-  // Mangas
+  // Mangas: la sisa va del hombro (S) a la axila (U). En manga corta el bajo es
+  // perpendicular a la manga; en larga la manga cuelga sobre el costado.
   if (o.sleeve !== 'sin' && o.type !== 'chaleco') {
-    const len = { corta: 210, 'tres-cuartos': 470, larga: 620, sin: 0 }[o.sleeve];
-    const angle = o.sleeve === 'corta' ? 0.62 : 0.22;
-    const dir: P = [-Math.sin(angle), Math.cos(angle)];
-    const outerEnd: P = [-shoulderX + dir[0] * len, shoulderY + dir[1] * len];
-    const cuffW = o.sleeve === 'corta' ? 150 : o.sleeve === 'tres-cuartos' ? 125 : 105;
-    const perp: P = [dir[1], -dir[0]];
-    const innerEnd: P = [outerEnd[0] + perp[0] * -cuffW * -1, outerEnd[1] + perp[1] * -cuffW * -1];
-    const sleeveL = `${M([-shoulderX, shoulderY])} ${Lp(outerEnd)} ${Lp(innerEnd)} ${Lp([-chestHalf + 2, armY])} ${Q([-chestHalf + 12, (shoulderY + armY) / 2 + 20], [-shoulderX, shoulderY])} Z`;
+    const S: P = [-shoulderX, shoulderY];
+    const U: P = [-chestHalf, armY];
+    const short = o.sleeve === 'corta';
+    const len = { corta: 230, 'tres-cuartos': 470, larga: 620, sin: 0 }[o.sleeve];
+    const theta = short ? 0.95 : o.sleeve === 'tres-cuartos' ? 0.3 : 0.24;
+    const dir: P = [-Math.sin(theta), Math.cos(theta)];
+    const inward: P = [Math.cos(theta), Math.sin(theta)];
+    const outerEnd: P = [S[0] + dir[0] * len, S[1] + dir[1] * len];
+    let innerEnd: P;
+    if (short) {
+      const proj = (U[0] - S[0]) * dir[0] + (U[1] - S[1]) * dir[1];
+      const lenIn = Math.max(25, len - proj);
+      innerEnd = [U[0] + dir[0] * lenIn, U[1] + dir[1] * lenIn];
+    } else {
+      const hemW = o.sleeve === 'tres-cuartos' ? 125 : 110;
+      innerEnd = [outerEnd[0] + inward[0] * hemW, outerEnd[1] + inward[1] * hemW];
+    }
     const mirror = (d: string) => d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => `${f(-Number(x))} ${y}`);
+    const sleeveL = `${M(S)} ${Lp(outerEnd)} ${Lp(innerEnd)} ${Lp(U)} ${Q([-chestHalf + 12, (shoulderY + armY) / 2 + 20], S)} Z`;
     zones.push(zone('manga-a', back ? 'Manga izquierda' : 'Manga derecha', 'manga', sleeveL));
     zones.push(zone('manga-b', back ? 'Manga derecha' : 'Manga izquierda', 'manga', mirror(sleeveL)));
+    const hemDir: P = [innerEnd[0] - outerEnd[0], innerEnd[1] - outerEnd[1]];
+    const hl = Math.hypot(hemDir[0], hemDir[1]) || 1;
+    // Dirección a lo largo de la manga, hacia el hombro, para el puño o el dobladillo.
+    const up: P = [-dir[0], -dir[1]];
     if (o.cuffs || o.type === 'sudadera' || o.type === 'hoodie' || (o.type === 'camisa' && o.sleeve === 'larga')) {
       const cuffH = o.type === 'camisa' ? 60 : 65;
-      const a1: P = [outerEnd[0] - dir[0] * cuffH, outerEnd[1] - dir[1] * cuffH];
-      const a2: P = [innerEnd[0] - dir[0] * cuffH, innerEnd[1] - dir[1] * cuffH];
+      const a1: P = [outerEnd[0] + up[0] * cuffH, outerEnd[1] + up[1] * cuffH];
+      const a2: P = [innerEnd[0] + up[0] * cuffH, innerEnd[1] + up[1] * cuffH];
       const cuffL = poly([a1, outerEnd, innerEnd, a2]);
       zones.push(zone('puno-a', back ? 'Puño izquierdo' : 'Puño derecho', 'puno', cuffL));
       zones.push(zone('puno-b', back ? 'Puño derecho' : 'Puño izquierdo', 'puno', mirror(cuffL)));
     } else {
-      const h1: P = [outerEnd[0] - dir[0] * 22, outerEnd[1] - dir[1] * 22];
-      const h2: P = [innerEnd[0] - dir[0] * 22, innerEnd[1] - dir[1] * 22];
+      const h1: P = [outerEnd[0] + up[0] * 22, outerEnd[1] + up[1] * 22];
+      const h2: P = [innerEnd[0] + up[0] * 22, innerEnd[1] + up[1] * 22];
+      void hl;
       details.push({ d: line(h1, h2), style: 'pespunte' }, { d: line(mx(h1), mx(h2)), style: 'pespunte' });
     }
   }
@@ -273,9 +289,16 @@ function topView(key: FlatViewKey, o: TopOpts): FlatView {
   } else if (o.neck === 'camisa' && back) {
     zones.push(zone('cuello', 'Cuello', 'cuello', poly([[-neckHalf - 6, -14], [neckHalf + 6, -14], [neckHalf + 12, 40], [-neckHalf - 12, 40]])));
   } else if (o.neck === 'capucha') {
-    const hood = back ? `${M([-neckHalf - 20, 30])} ${C([-150, -180], [150, -180], [neckHalf + 20, 30])} Z` : `${M([-neckHalf - 30, 50])} ${C([-170, -170], [170, -170], [neckHalf + 30, 50])} ${Lp([20, neckDrop])} ${C([90, -60], [-90, -60], [-20, neckDrop])} Z`;
-    zones.push(zone('capucha', 'Capucha', 'capucha', hood));
-    if (back) details.push({ d: `${M([0, -136])} ${Lp([0, 28])}`, style: 'costura' });
+    if (back) {
+      zones.push(zone('capucha', 'Capucha', 'capucha', `${M([-neckHalf - 40, 40])} ${C([-175, -110], [-120, -230], [0, -232])} ${C([120, -230], [175, -110], [neckHalf + 40, 40])} ${Q([0, 70], [-neckHalf - 40, 40])} Z`));
+      details.push({ d: `${M([0, -230])} ${Lp([0, 52])}`, style: 'costura' });
+    } else {
+      zones.push(zone('capucha', 'Capucha', 'capucha', `${M([-neckHalf - 45, 45])} ${C([-180, -100], [-125, -225], [0, -228])} ${C([125, -225], [180, -100], [neckHalf + 45, 45])} ${Lp([0, neckDrop])} Z`));
+      // Abertura de la cara y cordón.
+      details.push({ d: `${M([0, neckDrop])} ${C([-70, 40], [-115, -60], [-78, -150])} ${C([-50, -200], [50, -200], [78, -150])} ${C([115, -60], [70, 40], [0, neckDrop])}`, style: 'costura' });
+      details.push({ d: `${M([-14, neckDrop - 10])} ${Lp([-22, neckDrop + 70])} M14 ${f(neckDrop - 10)} ${Lp([22, neckDrop + 70])}`, style: 'costura' });
+      dots.push({ x: -16, y: neckDrop - 6, r: 4 }, { x: 16, y: neckDrop - 6, r: 4 });
+    }
   } else if (o.neck === 'solapa' && !back) {
     zones.push(zone('solapa-a', 'Solapa derecha', 'cuello', poly([[-neckHalf, 0], [-neckHalf - 30, -10], [-150, 160], [-60, 230], [0, neckDrop]])));
     zones.push(zone('solapa-b', 'Solapa izquierda', 'cuello', poly([[neckHalf, 0], [neckHalf + 30, -10], [150, 160], [60, 230], [0, neckDrop]])));
@@ -410,8 +433,9 @@ function bagView(key: FlatViewKey, kind: 'tote' | 'neceser' | 'bandolera'): Flat
   const details: FlatView['details'] = [];
   if (kind === 'tote') {
     zones.push(zone(back ? 'espalda' : 'delantero', back ? 'Cara trasera' : 'Cara delantera', back ? 'espalda' : 'delantero', rect(-190, 0, 380, 400)));
-    zones.push(zone('asa-a', 'Asa', 'otra', `${M([-120, 0])} ${C([-120, -260], [-50, -260], [-50, 0])} L-80 0 ${C([-80, -215], [-90, -215], [-90, 0])} Z`));
-    zones.push(zone('asa-b', 'Asa', 'otra', `${M([120, 0])} ${C([120, -260], [50, -260], [50, 0])} L80 0 ${C([80, -215], [90, -215], [90, 0])} Z`));
+    zones.push(zone('asa', 'Asa', 'otra', `${M([-120, 0])} ${C([-120, -250], [120, -250], [120, 0])} ${Lp([88, 0])} ${C([88, -205], [-88, -205], [-88, 0])} Z`));
+    zones.push(zone('asa-costado-a', 'Unión del asa', 'otra', rect(-122, 0, 34, 70)));
+    zones.push(zone('asa-costado-b', 'Unión del asa', 'otra', rect(88, 0, 34, 70)));
     details.push({ d: line([-190, 30], [190, 30]), style: 'pespunte' });
     if (!back) zones.push(zone('bolsillo', 'Bolsillo exterior', 'bolsillo', rect(-110, 170, 220, 170)));
   } else if (kind === 'neceser') {
