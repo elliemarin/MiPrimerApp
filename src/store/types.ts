@@ -237,6 +237,21 @@ export interface Project {
   notes: ProgressNote[];
   exports: ExportRecord[];
   changeLog: { at: ISO; text: string }[];
+  /** Análisis de una prenda a partir de fotos: lo visto, lo medido y lo pendiente. */
+  analysis?: GarmentAnalysis;
+}
+
+export type GarmentKind = 'pantalon' | 'falda' | 'bolsa' | 'otra';
+export type DetailState = 'visto' | 'no' | 'confirmar';
+
+export interface GarmentAnalysis {
+  kind: GarmentKind;
+  details: Record<string, DetailState>;
+  /** Medidas de la prenda terminada (mm) tomadas sobre la prenda real. */
+  measures: Record<string, number>;
+  /** Medidas de la persona que no se pueden obtener de la prenda. */
+  person: Record<string, number>;
+  notes?: string;
 }
 
 export interface Settings {

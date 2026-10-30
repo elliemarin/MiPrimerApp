@@ -75,3 +75,24 @@ describe('PDF', () => {
     if (OUT) writeFileSync(`${OUT}/aplicaciones.pdf`, res.bytes);
   });
 });
+
+import { planStitches, writeDst, readDst } from '../src/lib/dst';
+
+describe('DST experimental', () => {
+  it('codifica y decodifica puntadas sin perder posición', () => {
+    const runs = [
+      { color: '#000', pts: [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 30 }] },
+      { color: '#c00', pts: [{ x: 60, y: 10 }, { x: 80, y: 40 }] }
+    ];
+    const plan = planStitches(runs, 2.5);
+    const bytes = writeDst('prueba', plan);
+    expect(bytes.length).toBeGreaterThan(512);
+    const back = readDst(bytes);
+    const stitches = plan.stitches.filter((s) => s.kind === 'puntada' || s.kind === 'salto');
+    const last = stitches[stitches.length - 1];
+    const lastBack = back.pts[back.pts.length - 1];
+    expect(lastBack.x).toBe(last.x);
+    expect(lastBack.y).toBe(last.y);
+    expect(back.colors).toBe(2);
+  });
+});

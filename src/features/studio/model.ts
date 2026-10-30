@@ -75,6 +75,10 @@ export interface DesignView {
   refLabel: string;
   /** Posiciones x de los costados en esta vista, para continuidad. */
   seams?: { left?: number; right?: number; center?: number };
+  /** Relleno por zona para probar telas sobre la prenda. */
+  zoneFills?: Record<string, Fill>;
+  /** Tamaño de la base de un parche (mm). */
+  patchShape?: 'circulo' | 'rectangulo' | 'escudo' | 'ovalo';
 }
 
 export type ElementKind = 'forma' | 'organica' | 'trazo' | 'texto' | 'imagen' | 'grupo' | 'parche';

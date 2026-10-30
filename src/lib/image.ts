@@ -204,3 +204,67 @@ export function snapToEdge(img: ImageData, p: Pt, radius: number): Pt {
   }
   return bestG > 40 ? best : p;
 }
+
+/**
+ * Corrige la perspectiva de toda la imagen: el cuadrilátero `quad` (px) pasa a
+ * ser un rectángulo de wMm × hMm. Devuelve la imagen corregida y su escala.
+ */
+export function rectifyWhole(src: ImageData, quad: Pt[], wMm: number, hMm: number, maxSide = 2400): { img: ImageData; mmPerPx: number } {
+  const side = (a: Pt, b: Pt) => Math.hypot(a.x - b.x, a.y - b.y);
+  const pxQuad = (side(quad[0], quad[1]) + side(quad[3], quad[2])) / 2;
+  let pxPerMm = pxQuad / wMm;
+  const dstRect: Pt[] = [
+    { x: 0, y: 0 },
+    { x: wMm, y: 0 },
+    { x: wMm, y: hMm },
+    { x: 0, y: hMm }
+  ];
+  const Hmm = homography(quad, dstRect);
+  const corners = [
+    { x: 0, y: 0 },
+    { x: src.width, y: 0 },
+    { x: src.width, y: src.height },
+    { x: 0, y: src.height }
+  ].map((p) => applyH(Hmm, p));
+  // Limitar el área para evitar horizontes infinitos en perspectivas extremas.
+  const clampX = (v: number) => Math.max(-wMm * 3, Math.min(wMm * 4, v));
+  const clampY = (v: number) => Math.max(-hMm * 3, Math.min(hMm * 4, v));
+  const minX = Math.min(...corners.map((c) => clampX(c.x)));
+  const maxX = Math.max(...corners.map((c) => clampX(c.x)));
+  const minY = Math.min(...corners.map((c) => clampY(c.y)));
+  const maxY = Math.max(...corners.map((c) => clampY(c.y)));
+  const wOut = maxX - minX;
+  const hOut = maxY - minY;
+  pxPerMm = Math.min(pxPerMm, maxSide / Math.max(wOut, hOut));
+  const outW = Math.max(1, Math.round(wOut * pxPerMm));
+  const outH = Math.max(1, Math.round(hOut * pxPerMm));
+  // Mapa inverso: píxel de salida → mm → píxel de origen.
+  const inv = homography(dstRect, quad);
+  const out = new ImageData(outW, outH);
+  const s = src.data;
+  const o = out.data;
+  const sw = src.width;
+  const sh = src.height;
+  for (let y = 0; y < outH; y++) {
+    for (let x = 0; x < outW; x++) {
+      const p = applyH(inv, { x: minX + (x + 0.5) / pxPerMm, y: minY + (y + 0.5) / pxPerMm });
+      const fx = p.x - 0.5;
+      const fy = p.y - 0.5;
+      const x0 = Math.floor(fx);
+      const y0 = Math.floor(fy);
+      const idx = (y * outW + x) * 4;
+      if (x0 < 0 || y0 < 0 || x0 >= sw - 1 || y0 >= sh - 1) {
+        o[idx] = o[idx + 1] = o[idx + 2] = 255;
+        o[idx + 3] = 255;
+        continue;
+      }
+      const ax = fx - x0;
+      const ay = fy - y0;
+      for (let c = 0; c < 4; c++) {
+        const i00 = (y0 * sw + x0) * 4 + c;
+        o[idx + c] = (s[i00] * (1 - ax) + s[i00 + 4] * ax) * (1 - ay) + (s[i00 + sw * 4] * (1 - ax) + s[i00 + sw * 4 + 4] * ax) * ay;
+      }
+    }
+  }
+  return { img: out, mmPerPx: 1 / pxPerMm };
+}

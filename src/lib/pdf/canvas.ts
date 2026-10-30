@@ -22,7 +22,9 @@ import {
   stroke,
   LineCapStyle,
   LineJoinStyle,
-  degrees
+  degrees,
+  grayscale,
+  setFillingRgbColor
 } from 'pdf-lib';
 import { PT_PER_MM } from '../units';
 import type { PathCmd } from '../draw/paths';
@@ -118,6 +120,10 @@ export class PdfCanvas {
   fillPath(cmds: PathCmd[], gray: number, tx: (p: Pt) => Pt = (p) => p) {
     this.page.pushOperators(pushGraphicsState(), setFillingGrayscaleColor(gray), ...this.pathOps(cmds, tx), fill(), popGraphicsState());
   }
+  fillPathRgb(cmds: PathCmd[], c: [number, number, number], tx: (p: Pt) => Pt = (p) => p) {
+    if (!cmds.length) return;
+    this.page.pushOperators(pushGraphicsState(), setFillingRgbColor(c[0], c[1], c[2]), ...this.pathOps(cmds, tx), fill(), popGraphicsState());
+  }
   /** Rectángulo exacto relleno (sin trazo): sus bordes miden exactamente w × h. */
   fillRect(x: number, y: number, w: number, h: number, gray: number) {
     this.page.pushOperators(pushGraphicsState(), setFillingGrayscaleColor(gray), rectangle(this.X(x), this.Y(y + h), w * PT_PER_MM, h * PT_PER_MM), fill(), popGraphicsState());
@@ -158,7 +164,7 @@ export class PdfCanvas {
     const base = size * 0.34;
     const px = this.X(x) - dir.x * shift - up.x * base;
     const py = this.Y(y) - dir.y * shift - up.y * base;
-    this.page.drawText(t, { x: px, y: py, size, font, rotate: degrees(ang), opacity: 1, color: undefined });
+    this.page.drawText(t, { x: px, y: py, size, font, rotate: degrees(ang), opacity: 1, color: opts.gray !== undefined ? grayscale(opts.gray) : undefined });
   }
   textWidthMm(str: string, sizeMm: number, bold = false) {
     const font = bold ? this.bold : this.font;
