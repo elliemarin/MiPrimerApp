@@ -24,7 +24,7 @@ export const PieceSvg = memo(function PieceSvg({ piece, cut, style }: { piece: P
   const mid = { x: (gA.x + gB.x) / 2, y: (gA.y + gB.y) / 2 };
   const side = { x: -gd.y, y: gd.x };
   const textAngle = gAngle > 90 || gAngle < -90 ? gAngle + 180 : gAngle;
-  const label = add(mid, mul(side, 14));
+  const label = add(mid, mul(side, 18));
   const ink = style.selected ? 'var(--mat)' : 'var(--ink)';
   const arrow = (tip: { x: number; y: number }, d: { x: number; y: number }) => {
     const b = sub(tip, mul(d, 7));
@@ -82,10 +82,10 @@ export const PieceSvg = memo(function PieceSvg({ piece, cut, style }: { piece: P
       <line x1={gA.x} y1={gA.y} x2={gB.x} y2={gB.y} stroke={ink} strokeWidth={1.1} vectorEffect="non-scaling-stroke" />
       <path d={arrow(gB, gd)} fill={ink} />
       <path d={arrow(gA, mul(gd, -1))} fill={ink} />
-      <text x={label.x} y={label.y} fontSize={Math.max(8, Math.min(16, Math.abs(gB.y - gA.y) / 30))} fontWeight={600} textAnchor="middle" fill={ink} transform={`rotate(${textAngle} ${label.x} ${label.y})`} style={{ fontFamily: 'var(--sans)' }}>
+      <text x={label.x} y={label.y} fontSize={Math.max(10, Math.min(30, Math.hypot(gB.x - gA.x, gB.y - gA.y) / 22))} fontWeight={600} textAnchor="middle" fill={ink} transform={`rotate(${textAngle} ${label.x} ${label.y})`} style={{ fontFamily: 'var(--sans)' }}>
         {piece.name}
       </text>
-      <text x={label.x + side.x * 9} y={label.y + side.y * 9} fontSize={5.5} textAnchor="middle" fill="var(--ink-2)" transform={`rotate(${textAngle} ${label.x + side.x * 9} ${label.y + side.y * 9})`} style={{ fontFamily: 'var(--sans)' }}>
+      <text x={label.x + side.x * 14} y={label.y + side.y * 14} fontSize={8} textAnchor="middle" fill="var(--ink-2)" transform={`rotate(${textAngle} ${label.x + side.x * 14} ${label.y + side.y * 14})`} style={{ fontFamily: 'var(--sans)' }}>
         {piece.cut.onFold ? `Cortar ${piece.cut.qty} al doblez` : `Cortar ${piece.cut.qty}${piece.cut.mirrorPairs ? ' en par' : ''}`}
       </text>
     </g>

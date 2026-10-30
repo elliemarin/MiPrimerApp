@@ -48,8 +48,12 @@ export function PageHead({ title, sub, back, actions }: { title: string; sub?: R
 }
 
 export function Sheet({ title, onClose, children, wide, footer }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean; footer?: ReactNode }) {
+  // Se registra una sola vez: si se re-registrara en cada render, un cambio de
+  // estado durante el mismo evento podría quitar el oyente antes de llamarlo.
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
-    const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const k = (e: KeyboardEvent) => e.key === 'Escape' && closeRef.current();
     window.addEventListener('keydown', k);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -57,7 +61,7 @@ export function Sheet({ title, onClose, children, wide, footer }: { title: strin
       window.removeEventListener('keydown', k);
       document.body.style.overflow = prev;
     };
-  }, [onClose]);
+  }, []);
   return (
     <>
       <div className="scrim" onClick={onClose} />

@@ -124,22 +124,31 @@ export function PatternEditor({ projectId }: { projectId: string }) {
     }
   }, [built, vp, worldBBox, state?.refLayers?.length]);
 
-  // Atajos de teclado.
+  // Atajos de teclado (oyente único con referencia al historial actual).
+  const histRef = useRef(hist);
+  histRef.current = hist;
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).closest('input,textarea,select')) return;
+      if ((e.target as HTMLElement).closest?.('input,textarea,select')) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault();
-        if (e.shiftKey) hist.redo();
-        else hist.undo();
+        if (e.shiftKey) histRef.current.redo();
+        else histRef.current.undo();
       } else if (e.key === 'Escape') {
-        setTrace([]);
-        setReadout(null);
+        setTrace((t) => (t.length ? [] : t));
+        setReadout((r) => (r ? null : r));
       }
     };
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
-  }, [hist]);
+  }, []);
+  // La pista de la herramienta se muestra unos segundos al cambiarla.
+  const [hintVisible, setHintVisible] = useState(true);
+  useEffect(() => {
+    setHintVisible(true);
+    const t = setTimeout(() => setHintVisible(false), 4500);
+    return () => clearTimeout(t);
+  }, [tool]);
 
   const layers = state?.refLayers ?? [];
   const topLayer = layers.filter((l) => l.visible).slice(-1)[0];
@@ -463,7 +472,7 @@ export function PatternEditor({ projectId }: { projectId: string }) {
             <Button size="sm" variant="primary" onClick={finishTrace} disabled={trace.length < 3}>Cerrar pieza</Button>
           </div>
         )}
-        <div className="status-pill">{tool === 'calibrar' && calib?.a ? 'Ahora toca el segundo punto.' : toolInfo.hint}</div>
+        {(hintVisible || (tool === 'calibrar' && calib?.a)) && <div className="status-pill">{tool === 'calibrar' && calib?.a ? 'Ahora toca el segundo punto.' : toolInfo.hint}</div>}
         <div className="float-bar zoom-pill">
           <IconButton icon="zoomout" label="Alejar" onClick={() => vp.zoomAt(1 / 1.3, { x: vp.size.current.w / 2, y: vp.size.current.h / 2 })} />
           <button className="icon-btn" style={{ width: 'auto', padding: '0 8px', fontSize: 12.5, fontWeight: 700 }} title="Ver a escala real en pantalla (calibra en Ajustes)" onClick={() => vp.setView((v) => { const c = { x: vp.size.current.w / 2, y: vp.size.current.h / 2 }; const k = realScale / v.scale; return { scale: realScale, tx: c.x - (c.x - v.tx) * k, ty: c.y - (c.y - v.ty) * k }; })}>

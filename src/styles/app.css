@@ -99,6 +99,8 @@ body {
   overscroll-behavior-y: none;
 }
 button, input, select, textarea { font: inherit; color: inherit; }
+input[type=checkbox], input[type=radio], input[type=range] { accent-color: var(--mat); }
+input[type=checkbox] { width: 20px; height: 20px; }
 button { cursor: pointer; }
 a { color: var(--mat); }
 img { max-width: 100%; display: block; }

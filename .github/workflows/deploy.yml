@@ -28,6 +28,8 @@ jobs:
         env:
           # La ruta base sigue el nombre del repositorio aunque se renombre.
           BASE_PATH: /${{ github.event.repository.name }}/
+      - name: Página 404 que carga la app
+        run: cp dist/index.html dist/404.html
       - name: Publicar en la rama gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
