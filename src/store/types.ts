@@ -222,6 +222,8 @@ export interface Project {
   updatedAt: ISO;
   origin: ProjectOrigin;
   modelId?: string;
+  /** Preferences for a local editorial reference pack; never pattern geometry. */
+  editorial?: { styleId?: 'HILVANA_EDITORIAL_V1'; title: string; mood: string; lookNumber: number; projectIds: string[] };
   references: Reference[];
   profileRef?: { profileId: string; versionId: string };
   /** Tejido y ajuste deseados para el patrón. */

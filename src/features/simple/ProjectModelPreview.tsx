@@ -8,7 +8,7 @@ import { getFlat } from '../../ui/FlatArt';
 import { ModelIllustration } from '../library/ModelIllustration';
 import { modelMaterials } from './modelMaterials';
 
-export function ProjectModelPreview({ project, onClose }: { project: Project; onClose: () => void }) {
+export function ProjectModelPreview({ project, onClose, onPrepareEditorial }: { project: Project; onClose: () => void; onPrepareEditorial?: () => void }) {
   const model = findModel(project.modelId ?? '');
   const fabrics = useApp(state=>state.fabrics);
   const update = useApp(state=>state.updateProject);
@@ -20,7 +20,7 @@ export function ProjectModelPreview({ project, onClose }: { project: Project; on
   const current = flat.views.find(view=>view.key===side) ?? flat.views[0];
   const materials = modelMaterials(project,current);
   const change = (values: Partial<typeof options>) => update(project.id,value=>value.design?{...value,design:{...value.design,figurine:{...options,...values}}}:value);
-  return <Sheet title={object?'Vista del accesorio':'Tu diseño en un figurín'} onClose={onClose} wide footer={<Button block variant="primary" onClick={onClose}>Volver a las piezas</Button>}>
+  return <Sheet title={object?'Vista del accesorio':'Tu diseño en un figurín'} onClose={onClose} wide footer={<div className="row-wrap">{onPrepareEditorial&&<Button onClick={onPrepareEditorial}>Preparar lámina</Button>}<Button className="grow" variant="primary" onClick={onClose}>Volver a las piezas</Button></div>}>
     <div className="model-preview-layout">
       <div className="model-preview-art"><ModelIllustration model={model} view={side} body={options.body} skin={options.skin} hair={options.hair} hairColor={options.hairColor} materials={materials.fills} fabrics={fabrics}/></div>
       <div className="stack-lg">

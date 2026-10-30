@@ -12,16 +12,49 @@ Actualízalo al terminar cada tarea.
 
 ```bash
 npm install
-npm test            # 2272 pruebas: patrones, extras, materiales, figurines, letras y PDF
+npm test            # 2294 pruebas: patrones, materiales, figurines, PDF y láminas
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Láminas editoriales para el ChatGPT personal (2026-10-30)
+
+**Este es el relevo más reciente.** Se añade **Preparar lámina** al terminar en
+Acabados, al ver el modelo y desde el PDF de confección.
+
+- Una prenda/accesorio o hasta seis proyectos por look, con nombre, número y
+  ambiente opcional. Estilo fijo `HILVANA_EDITORIAL_V1`: papel marfil, figura
+  principal y espalda, prendas separadas, paleta y detalles como la referencia.
+- Prepara localmente PNG con vistas reales, fotos de telas, colores, extras,
+  bordados y miniaturas del despiece validado. Conserva todas las referencias
+  mediante paginación y los contornos de patrones se presentan «sin escala».
+- Compartir nativo cuando el dispositivo admite los archivos. Alternativa:
+  descargar PNG, copiar prompt y abrir ChatGPT para adjuntar/pegar/enviar. ZIP
+  con texto, imágenes e inventario SHA-256. No se usa una API ni se envía nada
+  automáticamente; el navegador no garantiza abrir ChatGPT con fotos pegadas.
+- Si cambia el diseño, talla, materiales o selección, exige actualizar las
+  referencias. Los datos privados del perfil/notas no se añaden al paquete.
+  Los patrones de confección y sus medidas permanecen intactos.
+
+**Verificado:** 2,294 pruebas en 45 archivos, TypeScript y build para Pages.
+Recorrido editorial en Chromium 320/390/1440 px, fotos y colores de los PNG,
+ZIP/hashes, estilo constante, copia manual, compartir/cancelar simulados,
+persistencia y tres puntos de entrada. Regresión del recorrido completo y PDF
+de 69 páginas/doce plantillas con controles de 50/100 mm.
+
+**Pendiente:** hoja real de compartir en iPhone/Safari y Android con ChatGPT
+instalado; revisar una generación enviada por el usuario. El prompt conserva
+el estilo, pero la imagen generada puede variar. Se mantienen las verificaciones
+físicas de patronaje pendientes de las entregas anteriores.
+
+Relevo: [docs/LAMINAS_EDITORIALES.md](docs/LAMINAS_EDITORIALES.md) y
+[docs/CHATGPT_PERSONAL_COMPARTIR.md](docs/CHATGPT_PERSONAL_COMPARTIR.md).
+
 ## Ilustraciones profesionales, figurines y telas recientes (2026-10-30)
 
-**Este es el relevo más reciente.** Se conserva la identidad y el recorrido de
+Se conserva la identidad y el recorrido de
 Hilvana; esta entrega mejora los dibujos y reduce las herramientas visibles.
 
 - Catálogo con acabado vectorial compartido: paletas por familia, volumen

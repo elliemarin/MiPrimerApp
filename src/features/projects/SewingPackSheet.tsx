@@ -10,7 +10,7 @@ import { exportRecord, freezeDeps } from '../../store/exports';
 import { saveBlob } from '../../lib/download';
 
 /** One explicit final step: review everything the physical project will need. */
-export function SewingPackSheet({ projectId, onClose }: { projectId: string; onClose: () => void }) {
+export function SewingPackSheet({ projectId, onClose, onPrepareEditorial }: { projectId: string; onClose: () => void; onPrepareEditorial?: () => void }) {
   const project = useApp(state=>state.projects[projectId]);
   const profiles = useApp(state=>state.profiles);
   const fabrics = useApp(state=>state.fabrics);
@@ -59,6 +59,7 @@ export function SewingPackSheet({ projectId, onClose }: { projectId: string; onC
   return <Sheet title={hasBase?'Todo listo para coser':'PDF de la intervención'} wide onClose={onClose} footer={<div className="stack" style={{gap:8}}>
     <Button variant="primary" icon="pdf" block disabled={busy||preview.blockers.length>0} onClick={()=>void download()}>{busy?'Preparando tu PDF…':hasBase?'Descargar PDF completo':'Descargar PDF de intervención'}</Button>
     <p className="tiny muted" style={{margin:0}}>Un archivo PDF en hojas carta. Imprime las plantillas al 100 %, sin ajustar a la página.</p>
+    {onPrepareEditorial&&<Button variant="ghost" disabled={busy} onClick={onPrepareEditorial}>Preparar lámina</Button>}
   </div>}>
     <div className="stack-lg">
       <div className="stack" style={{gap:6}}>

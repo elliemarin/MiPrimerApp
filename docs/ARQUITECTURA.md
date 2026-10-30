@@ -286,3 +286,19 @@ experimentales hasta imprimir y coser muestras.
   y contexto para no compartir referencias con el perfil.
 
 Relevo, pruebas, licencias y límites en `docs/INTERFAZ_SIMPLE_Y_BIBLIOTECA.md`.
+
+## 15. Referencias editoriales para ChatGPT
+
+`features/editorial` prepara un paquete local desde una selección de proyectos.
+`prompt.ts` conserva una dirección de arte versionada y construye el inventario
+real; `resolveEditorialPattern` resuelve cortes pendientes sin mutar el proyecto.
+`evidence.tsx` rasteriza vistas del estudio, figurines, muestras y miniaturas
+validadas con fotos incrustadas y paginación. Las texturas se identifican por
+vista y prefijo de parche, nunca por una búsqueda ambigua de zona en todo el doc.
+
+`package.ts` reúne PNG/texto/manifiesto SHA-256 y detecta referencias obsoletas.
+`EditorialSheet` se carga bajo demanda desde Acabados/modelo/confección y conserva
+preferencias opcionales en `Project.editorial`. `handoff.ts` limita las acciones
+a compartir explícitamente, copiar y abrir ChatGPT; la generación y envío final
+pertenecen a la cuenta del usuario. No modifica geometría, PDF ni exportaciones
+de costura. Contratos, pruebas y límites en `docs/LAMINAS_EDITORIALES.md`.

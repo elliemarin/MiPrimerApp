@@ -1,0 +1,26 @@
+.editorial-sheet { min-width: 0; }
+.editorial-style { display: flex; align-items: center; gap: 22px; padding: 18px; background: #f4eddf; border-radius: var(--r-md); color: #312e26; }
+.editorial-style-look { font-family: var(--display); font-size: clamp(25px,4vw,40px); line-height: 1; white-space: nowrap; }
+.editorial-style strong { font-size: 14px; font-weight: 600; }
+.editorial-style p { font-size: 13px; line-height: 1.45; margin-top: 5px; }
+.editorial-sheet summary { cursor: pointer; min-height: 36px; font-weight: 500; }
+.editorial-name-fields { display: grid; grid-template-columns: minmax(0,1fr) 84px; gap: 12px; }
+.editorial-current { display: grid; gap: 5px; font-size: 14px; }
+.editorial-current strong { font-size: 12px; color: var(--ink-2); }
+.editorial-projects { display: grid; max-height: 250px; overflow: auto; border-block: 1px solid var(--line); margin-top: 8px; }
+.editorial-projects label { display: flex; align-items: center; gap: 12px; min-height: 50px; padding: 8px 4px; cursor: pointer; font-size: 14px; }
+.editorial-projects input { width: 22px; height: 22px; accent-color: var(--mat); flex: none; }
+.editorial-preview-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 16px; }
+.editorial-assets { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; }
+.editorial-assets figure { min-width: 0; margin: 0; }
+.editorial-assets img { width: 100%; display: block; border: 1px solid var(--line); border-radius: 8px; }
+.editorial-assets figcaption { display: grid; gap: 8px; padding-top: 8px; font-size: 13px; }
+.editorial-assets.is-stale img { opacity: .55; }
+.editorial-send { border-top: 1px solid var(--line); padding-top: 20px; }
+.editorial-prompt { width: 100%; height: 250px; resize: vertical; font-size: 12px; line-height: 1.5; margin-top: 10px; }
+.editorial-disabled { opacity: .45; pointer-events: none; }
+.editorial-footer { display: flex; flex-wrap: wrap; gap: 8px; }
+.editorial-footer > .btn { flex: 1; }
+.editorial-warnings { margin-top: 8px; padding-left: 22px; color: var(--ink-2); font-size: 13px; }
+.editorial-warnings li { margin-bottom: 6px; }
+@media(max-width:600px) { .editorial-style { gap: 14px; padding: 14px; } .editorial-style-look { font-size: 26px; } .editorial-assets { grid-template-columns: minmax(0,1fr); } .editorial-footer > .btn { flex-basis: 100%; } }

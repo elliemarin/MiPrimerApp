@@ -14,6 +14,8 @@
 .finish-colors { display: flex; flex-wrap: wrap; gap: 12px; }
 .finish-colors button { width: 44px; height: 44px; border: 1px solid var(--line-strong); border-radius: 50%; }
 .finish-footer { position: fixed; z-index: 9; inset: auto 0 0 236px; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 24px; border-top: 1px solid var(--line); background: var(--surface); }
+.finish-final-actions { justify-content: flex-end; }
+@media(max-width:600px) { .finish-footer { flex-wrap: wrap; gap: 7px; } .finish-final-actions { width: 100%; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 8px; } .finish-final-actions .btn { padding-inline: 8px; font-size: 12px; } }
 .finish-preview-heading { display: flex; align-items: start; gap: 10px; }
 .finish-preview-heading .scroll-x { flex: 1; min-width: 0; }
 .finish-preview-heading>.btn { flex: none; }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useApp } from '../../store/app';
 import { designHash } from '../../store/projects';
 import { Button, Empty, Field, IconButton, LengthInput, PageHead, Sheet } from '../../ui/components';
@@ -25,6 +25,7 @@ import { supportsModelIllustration } from '../../lib/draw/garmentComposition';
 import './finishes.css';
 
 const COLORS=['#F3E9D2','#18211D','#FFFFFF','#24584A','#B4273A','#DFAE29','#3366AA','#8A5D91','#C97B55','#849B79','#F6CADA','#757975'];
+const EditorialSheet = lazy(() => import('../editorial/EditorialSheet').then(module => ({ default: module.EditorialSheet })));
 function rootOf(doc:DesignDoc,element:DesignElement):DesignElement { const parent=element.parentId?doc.elements.find(candidate=>candidate.id===element.parentId):undefined;return parent?rootOf(doc,parent):element; }
 
 export function FinishesPage({projectId}:{projectId:string}) {
@@ -38,6 +39,7 @@ export function FinishesPage({projectId}:{projectId:string}) {
   const [fabricTray,setFabricTray]=useState(false);
   const [picker,setPicker]=useState(false);
   const [modelPreview,setModelPreview]=useState(false);
+  const [editorial,setEditorial]=useState(false);
   const [selected,setSelected]=useState<string>();
   const [live,setLive]=useState<DesignDoc>();
   const [past,setPast]=useState<DesignDoc[]>([]),[future,setFuture]=useState<DesignDoc[]>([]);
@@ -126,10 +128,11 @@ export function FinishesPage({projectId}:{projectId:string}) {
         </>}
       </div>
     </div>
-    <div className="finish-footer"><span className="tiny muted">{missing.length?`${missing.length} partes por elegir`:'Materiales completos'}</span><Button variant="primary" icon="pdf" disabled={!!missing.length} onClick={()=>navigate(`/confeccion/${projectId}`)}>Generar patrones</Button></div>
+    <div className="finish-footer"><span className="tiny muted">{missing.length?`${missing.length} partes por elegir`:'Materiales completos'}</span><div className="row-wrap finish-final-actions"><Button disabled={!!missing.length} onClick={()=>setEditorial(true)}>Preparar lámina</Button><Button variant="primary" icon="pdf" disabled={!!missing.length} onClick={()=>navigate(`/confeccion/${projectId}`)}>Generar patrones</Button></div></div>
     {palette&&target&&<Sheet title={target.label} onClose={()=>setPalette(false)}><div className="stack-lg"><p className="small muted">Elige el color o la tela para esta parte.</p><div className="finish-colors">{COLORS.map(color=><button key={color} aria-label={`Color ${color}`} style={{background:color}} onClick={()=>material({type:'color',color})}/>)}</div><Field label="Otro color"><input type="color" aria-label="Otro color" value={target.fill?.type==='color'?target.fill.color:'#24584A'} onChange={event=>material({type:'color',color:event.target.value})}/></Field><Button icon="telas" onClick={()=>{setPalette(false);setFabricTray(true);}}>Elegir una tela o subir foto</Button><details><summary>Usar el mismo material en todo</summary><div className="stack" style={{marginTop:12}}><p className="small muted">Elige un color para todas las partes o aplica la tela/color actual.</p><div className="finish-colors">{COLORS.slice(0,6).map(color=><button key={color} aria-label={`Todas las partes ${color}`} style={{background:color}} onClick={()=>material({type:'color',color},true)}/>)}</div>{target.fill&&target.fill.type!=='ninguno'&&<Button onClick={()=>material(target.fill!,true)}>Usar en todas las partes</Button>}</div></details></div></Sheet>}
     {fabricTray&&<FabricTray immediate modelId={project.modelId} activeId={target?.fill?.type==='tela'?target.fill.fabricId:null} onChoose={id=>material({type:'tela',fabricId:id,rotation:0,offsetX:0,offsetY:0,scale:1})} onDrop={()=>{}} onClose={()=>setFabricTray(false)}/>}
     {picker&&<EmbroideryPicker onClose={()=>setPicker(false)} onPick={insert}/>}
-    {modelPreview&&<ProjectModelPreview project={project} onClose={()=>setModelPreview(false)}/>}
+    {modelPreview&&<ProjectModelPreview project={project} onClose={()=>setModelPreview(false)} onPrepareEditorial={()=>{setModelPreview(false);setEditorial(true);}}/>}
+    {editorial&&<Suspense fallback={<Sheet title="Lámina con ChatGPT" onClose={()=>setEditorial(false)}><p role="status">Abriendo las referencias…</p></Sheet>}><EditorialSheet projectId={projectId} onClose={()=>setEditorial(false)}/></Suspense>}
   </div>;
 }
