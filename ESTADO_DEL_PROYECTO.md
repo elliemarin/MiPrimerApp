@@ -19,9 +19,22 @@ npm run build
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Basurita en la selección del estudio (2026-10-30)
+
+- Al insertar o elegir una figura aparece una basurita junto a su selección,
+  también en móvil, sin abrir Propiedades. El control se mantiene dentro del
+  lienzo al mover, girar, ampliar o desplazar la figura.
+- Área táctil de 44×44 px y nombre accesible «Eliminar figura seleccionada».
+  No inicia gestos del lienzo. Eliminar se registra en el historial: Deshacer
+  recupera la figura y Rehacer vuelve a quitarla; el guardado persiste el cambio.
+- La selección múltiple conserva su acción de eliminar. El botón respeta el
+  bloqueo de los elementos seleccionados y de los hijos de un grupo.
+- Verificación:372 pruebas y build; prueba móvil de insertar, borrar, deshacer,
+  rehacer y recargar en `tests/browser/delete_selection_smoke.py`.
+
 ## Paneles de collage y patrones desde el estudio (2026-10-30)
 
-**Entrega más reciente.** El catálogo suma **160 modelos**, **82 con patrón**
+**Entrega de paneles.** El catálogo suma **160 modelos**, **82 con patrón**
 y 21 motores base. Las secciones siguientes conservan las entregas anteriores.
 
 ### Qué cambió

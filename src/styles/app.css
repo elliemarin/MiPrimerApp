@@ -386,3 +386,7 @@ button.list-row:hover, a.list-row:hover { background: var(--surface-2); }
 @media(max-width: 600px) { .fabric-tray .row { gap: 4px !important; } .fabric-tray .btn { padding-left: 8px; padding-right: 8px; } .fabric-tray .tiny { font-size: 10px; } }
 /* Las lecturas informativas nunca interceptan gestos de edición. */
 .status-pill, .readout { pointer-events: none; }
+
+/* Acción directa de selección: cerca de la figura y siempre dentro del lienzo. */
+.selection-delete { z-index: 7; }
+.selection-delete .icon-btn { width: 44px; height: 44px; color: var(--thread); }

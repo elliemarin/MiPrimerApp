@@ -176,6 +176,17 @@ export function StudioEditor({ projectId }: { projectId: string }) {
   const single = selected.length === 1 ? selected[0] : undefined;
   const hs = 9 / vp.view.scale;
   const prefix = 's-';
+  const selectionLocked = expandSelection(doc,sel).some(id=>doc.elements.find(e=>e.id===id)?.locked);
+  const selectionBox = single ? bboxOf(elementCorners(single)) : undefined;
+  const deletePosition = selectionBox ? {
+    left: Math.max(26,Math.min(vp.size.current.w-58,selectionBox.maxX*vp.view.scale+vp.view.tx+8)),
+    top: Math.max(24,Math.min(vp.size.current.h-62,selectionBox.minY*vp.view.scale+vp.view.ty-52))
+  } : undefined;
+  const deleteSelection = () => {
+    if(selectionLocked)return;
+    commit(removeElements(doc,sel));setSel([]);
+  };
+
 
   const hitElement = (w: Pt): DesignElement | undefined => {
     for (let i = els.length - 1; i >= 0; i--) {
@@ -735,11 +746,16 @@ export function StudioEditor({ projectId }: { projectId: string }) {
                 <Button size="sm" onClick={() => setShowShapes(true)}>Cambiar figura</Button>
               </div>
             )}
+            {single && tool==='seleccionar' && deletePosition && (
+              <div className="float-bar selection-delete" style={deletePosition} onPointerDown={e=>e.stopPropagation()} onDoubleClick={e=>e.stopPropagation()}>
+                <IconButton icon="trash" label="Eliminar figura seleccionada" title={selectionLocked?'Desbloquea la figura para eliminarla':'Eliminar figura seleccionada'} disabled={selectionLocked} onClick={deleteSelection} />
+              </div>
+            )}
             {sel.length > 1 && tool === 'seleccionar' && (
               <div className="float-bar" style={{ left: '50%', transform: 'translateX(-50%)', top: 10 }}>
                 <IconButton icon="group" label="Agrupar" onClick={() => { const r = groupElements(doc, sel, view.id); commit(r.doc); setSel([r.id]); }} />
                 <IconButton icon="copy" label="Duplicar" onClick={() => { const r = duplicateElements(doc, sel); commit(r.doc); setSel(r.ids); }} />
-                <IconButton icon="trash" label="Eliminar" onClick={() => { commit(removeElements(doc, sel)); setSel([]); }} />
+                <IconButton icon="trash" label="Eliminar selección" disabled={selectionLocked} onClick={deleteSelection} />
               </div>
             )}
             {hintVisible && <div className="status-pill">{toolInfo.hint}</div>}

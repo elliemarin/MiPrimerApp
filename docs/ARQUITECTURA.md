@@ -212,3 +212,12 @@ foto en `tests/browser`. Límites y fuentes en la bitácora y
 
 Pruebas:372 casos y `tests/browser/panels_smoke.py` más regresiones anteriores.
 Relevo/limitaciones físicas detallados en `ESTADO_DEL_PROYECTO.md`.
+
+
+## 12. Eliminar directamente desde la selección
+
+StudioEditor coloca una acción HTML flotante cerca de la caja transformada de
+la figura elegida y limita su posición a las dimensiones del lienzo. Usa
+`removeElements` y el historial existentes; el botón no propaga PointerDown al
+lienzo, tiene área44×44px y se desactiva con selección bloqueada. CSS específico
+`.selection-delete`. Smoke móvil en `tests/browser/delete_selection_smoke.py`.
