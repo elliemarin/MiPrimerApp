@@ -3,6 +3,8 @@ import { CutOutline } from '../pattern/offset';
 import { edgeCmds, PathCmd, polylineCmds, transformCmds, cmdsBBox } from './paths';
 import { orientation, outwardNormal, pointOnEdge } from '../pattern/outline';
 import type { Piece } from '../pattern/types';
+import { Font, Encodings } from '@pdf-lib/standard-fonts';
+import { pdfSafe } from '../pdf/canvas';
 
 /** Estilos de línea distinguibles en blanco y negro. */
 export type LineStyle = 'corte' | 'costura' | 'doblez' | 'final' | 'pespunte' | 'referencia' | 'colocacion' | 'hilo' | 'piquete' | 'bordado';
@@ -43,6 +45,47 @@ export const STYLE_LABEL: Record<LineStyle, string> = {
   bordado: 'Dibujo de bordado'
 };
 
+const labelFonts={regular:Font.load('Helvetica'),bold:Font.load('Helvetica-Bold')};
+
+/** Same Helvetica metrics, kerning and 1.38 size factor as PdfCanvas.text. */
+export function labelTextWidth(text:string,size:number,bold=false):number {
+  const font=bold?labelFonts.bold:labelFonts.regular;
+  const glyphs=Array.from(pdfSafe(text),char=>Encodings.WinAnsi.encodeUnicodeCodePoint(char.codePointAt(0)!).name);
+  let width=0;
+  for(let index=0;index<glyphs.length;index++) width+=(font.getWidthOfGlyph(glyphs[index])??0)+(index+1<glyphs.length?font.getXAxisKerningForPair(glyphs[index],glyphs[index+1])??0:0);
+  return width*size*1.38/1000;
+}
+
+/** Bounds of the actual rotated text box, including font bearing/ascender room. */
+export function labelBounds(label:DrawLabel):BBox {
+  const font=label.bold?labelFonts.bold:labelFonts.regular;
+  const width=labelTextWidth(label.text,label.size,!!label.bold);
+  const em=label.size*1.38;
+  const pad=em*.2;
+  const top=em*(.34-font.FontBBox[3]/1000);
+  const bottom=em*(.34-font.FontBBox[1]/1000);
+  const angle=(label.angle??0)*Math.PI/180, c=Math.cos(angle),s=Math.sin(angle);
+  return bboxOf([[-width/2-pad,top],[width/2+pad,top],[width/2+pad,bottom],[-width/2-pad,bottom]].map(([x,y])=>({x:label.at.x+c*x-s*y,y:label.at.y+s*x+c*y})));
+}
+
+/** Wrap at words and split a single overlong token without losing characters. */
+export function wrapLabelText(text:string,size:number,width:number,bold=false):string[] {
+  const lines:string[]=[];
+  let current='';
+  for(const word of text.trim().split(/\s+/)) {
+    if(!word) continue;
+    const candidate=current?`${current} ${word}`:word;
+    if(labelTextWidth(candidate,size,bold)<=width) {current=candidate;continue;}
+    if(current) {lines.push(current);current='';}
+    for(const char of word) {
+      if(current && labelTextWidth(current+char,size,bold)>width) {lines.push(current);current='';}
+      current+=char;
+    }
+  }
+  if(current) lines.push(current);
+  return lines;
+}
+
 export function drawableBBox(paths: DrawPath[], labels: DrawLabel[]): BBox {
   const pts: Pt[] = [];
   for (const p of paths) {
@@ -50,9 +93,8 @@ export function drawableBBox(paths: DrawPath[], labels: DrawLabel[]): BBox {
     if (Number.isFinite(b.minX)) pts.push({ x: b.minX, y: b.minY }, { x: b.maxX, y: b.maxY });
   }
   for (const l of labels) {
-    // Ancho aproximado del texto (Helvetica ≈ 0.55 × alto por carácter) para no encimar etiquetas.
-    const half = l.angle && Math.abs(l.angle) > 1 ? 0 : (l.text.length * l.size * 1.38 * 0.52) / 2;
-    pts.push({ x: l.at.x - half, y: l.at.y - l.size }, { x: l.at.x + half, y: l.at.y + l.size * 0.4 });
+    const box=labelBounds(l);
+    pts.push({x:box.minX,y:box.minY},{x:box.maxX,y:box.maxY});
   }
   return bboxOf(pts);
 }
@@ -132,13 +174,22 @@ export function pieceDrawable(piece: Piece, cut: CutOutline, m: Mat = IDENTITY, 
   const gAngle = (Math.atan2(gdir.y, gdir.x) * 180) / Math.PI;
   const mid = matApply(m, { x: (piece.grain.a.x + piece.grain.b.x) / 2, y: (piece.grain.a.y + piece.grain.b.y) / 2 });
   const side = { x: -gdir.y, y: gdir.x };
-  const labels: DrawLabel[] = [
-    { text: piece.name, at: add(mid, mul(side, 10)), size: 7, angle: gAngle, bold: true },
-    { text: CUT_LABEL(piece), at: add(mid, mul(side, 18)), size: 4, angle: gAngle },
-    { text: 'HILO', at: add(mid, mul(side, -3)), size: 3.2, angle: gAngle }
-  ];
-  if (meta.subtitle) labels.push({ text: meta.subtitle, at: add(mid, mul(side, 24)), size: 3.2, angle: gAngle });
-  if (meta.version) labels.push({ text: meta.version, at: add(mid, mul(side, 29)), size: 3, angle: gAngle });
+  const labels: DrawLabel[] = [{ text: 'HILO', at: add(mid, mul(side, -3)), size: 3.2, angle: gAngle }];
+  const available=Math.max(18,Math.hypot(gb.x-ga.x,gb.y-ga.y)-6);
+  let offset=8;
+  const block=(text:string,size:number,bold=false)=>{
+    const fitted=Math.max(2.4,Math.min(size,available/24));
+    const lines=wrapLabelText(text,fitted,available,bold);
+    for(const line of lines) {
+      labels.push({text:line,at:add(mid,mul(side,offset)),size:fitted,angle:gAngle,bold});
+      offset+=fitted*1.75;
+    }
+    offset+=2;
+  };
+  block(piece.name,7,true);
+  block(CUT_LABEL(piece),4);
+  if(meta.subtitle) block(meta.subtitle,3.2);
+  if(meta.version) block(meta.version,3);
   for (const e of piece.edges) {
     if (e.finish !== 'doblez') continue;
     const L = pointOnEdge(piece, e, 0);
@@ -147,13 +198,17 @@ export function pieceDrawable(piece: Piece, cut: CutOutline, m: Mat = IDENTITY, 
     const d = norm(sub(b, a));
     const inward = outwardNormal(d, orientationAfter(m, orient));
     const midE = add(mul(add(a, b), 0.5), mul(inward, -6));
-    labels.push({ text: 'COLOCAR AL DOBLEZ DE LA TELA', at: midE, size: 3.2, angle: normalizeAngle((Math.atan2(d.y, d.x) * 180) / Math.PI) });
+    const lines=wrapLabelText('COLOCAR AL DOBLEZ DE LA TELA',3.2,Math.max(18,Math.hypot(b.x-a.x,b.y-a.y)-8));
+    lines.forEach((text,index)=>labels.push({text,at:add(midE,mul(inward,-index*5.6)),size:3.2,angle:normalizeAngle((Math.atan2(d.y,d.x)*180)/Math.PI)}));
   }
   for (const l of piece.lines) if (l.label) {
     const d = norm(sub(l.b, l.a));
     const ang = (Math.atan2(d.y, d.x) * 180) / Math.PI;
-    const a = matApply(m, add(l.a, mul(d, 6)));
-    labels.push({ text: l.label, at: add(a, { x: 0, y: -1.5 }), size: 2.8, angle: normalizeAngle(ang + angleOf(m)) });
+    const at = matApply(m, mul(add(l.a,l.b),.5));
+    const labelAngle=normalizeAngle(ang+angleOf(m));
+    const normal={x:-Math.sin(labelAngle*Math.PI/180),y:Math.cos(labelAngle*Math.PI/180)};
+    const lines=wrapLabelText(l.label,2.8,Math.max(18,Math.hypot(l.b.x-l.a.x,l.b.y-l.a.y)-8));
+    lines.forEach((text,index)=>labels.push({text,at:add(at,mul(normal,-1.5-index*4.9)),size:2.8,angle:labelAngle}));
   }
   return { id: piece.id, name: piece.name, paths, labels, grains: [{ a: ga, b: gb }], bbox: drawableBBox(paths, labels) };
 }

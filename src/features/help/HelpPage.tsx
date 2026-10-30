@@ -21,12 +21,12 @@ export function HelpPage({ topic }: { topic?: string }) {
       <div className="stack" style={{ maxWidth: 780 }}>
         <Topic id="inicio" title="Primeros pasos" open={!topic || topic === 'inicio'}>
           <ol style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6 }}>
-            <li><strong>Guarda unas medidas</strong> en Medidas. Puedes partir de una talla de referencia y ajustarla con la cinta.</li>
-            <li><strong>Elige un modelo</strong> en Biblioteca. Los que dicen «Patrón disponible» generan el patrón a medida; los de «Solo inspiración» sirven como plantilla de diseño.</li>
-            <li><strong>Revisa el patrón</strong>: el editor comprueba costuras, márgenes y medidas. El aviso «Verificado» indica que la geometría es coherente.</li>
-            <li><strong>Diseña</strong> en el estudio: telas, collage, aplicaciones y bordado por zonas.</li>
-            <li><strong>Exporta</strong> el patrón en hojas carta a escala real, las plantillas de aplicaciones y la ficha del proyecto.</li>
+            <li><strong>Elige la base</strong> en Biblioteca y confirma su talla o tus medidas. «Patrón disponible» genera piezas de confección; «Solo inspiración» sirve como referencia de diseño.</li>
+            <li><strong>Personaliza</strong>: añade bolsillos, solapas, cierres o soportes para herramientas. Ajusta ancho, alto y cantidad. La colocación sobre la ilustración es orientativa: pruébala e hilvana sobre la prenda real.</li>
+            <li><strong>Termina en el estudio</strong>: coloca telas y colores en cada parte, elige figuras de bordado o dibuja. Asigna Aplicación a los recortes y Bordado a las guías que quieras imprimir. Los bocetos sin técnica quedan como referencias.</li>
+            <li><strong>Genera el PDF</strong> desde el paso PDF o el botón junto a Deshacer. Revisa la lista de piezas y descarga un archivo con medidas, materiales, instrucciones y plantillas 1:1. Si intervienes una prenda existente, el PDF incluye los complementos y no su patrón base.</li>
           </ol>
+          <p>La barra Base → Personalizar → Estudio → PDF permite regresar a cualquier paso del mismo proyecto. En Patronaje puedes revisar o ajustar sus piezas. Los complementos siguen siendo experimentales hasta imprimir y coser una muestra.</p>
         </Topic>
         <Topic id="medir" title="Cómo tomar medidas" open={topic === 'medir'}>
           <p>Usa una cinta flexible, sin apretar, sobre ropa ligera. En bebés y toddlers mide sobre el pañal; la edad solo sirve de referencia.</p>

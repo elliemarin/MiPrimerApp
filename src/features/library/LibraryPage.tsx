@@ -40,7 +40,7 @@ export function LibraryPage() {
 
   return (
     <div className="page page-wide">
-      <PageHead title="Biblioteca" sub={`${CATALOG.length} modelos: ${patterns} con patrón de costura y ${designs} para diseñar en el estudio. Explora prendas, accesorios y nuevas ideas.`} />
+      <PageHead title="Biblioteca" sub={`Elige tu base, añade complementos, dale color en el estudio y prepara tu PDF. ${CATALOG.length} modelos: ${patterns} con patrón de costura y ${designs} para diseñar en el estudio.`} />
       <div className="stack">
         <div className="row">
           <div className="grow" style={{ position: 'relative' }}>

@@ -9,14 +9,16 @@ export function ExportsTab({ project }: { project: Project }) {
   const updateProject = useApp((s) => s.updateProject);
   const toast = useApp((s) => s.toast);
   const list = [...project.exports].reverse();
-  if (!list.length) return <Empty icon="download" title="Sin exportaciones" body="Los PDF de patrón, plantillas, fichas y ZIP que generes quedan aquí con las versiones que los produjeron." />;
   const open = async (fileId: string, name: string, share: boolean) => {
     const f = await getFile(fileId);
     if (!f) return toast('El archivo ya no está en este dispositivo.', 'error');
     await saveBlob(f.blob, name, share);
   };
   return (
-    <div className="group" style={{ maxWidth: 900 }}>
+    <div className="stack-lg" style={{ maxWidth: 900 }}>
+      <div><a className="btn btn-primary" href={`#/confeccion/${project.id}`}>Generar PDF de confección</a></div>
+      {!list.length && <Empty icon="download" title="Sin exportaciones" body="Tus PDF y respaldos quedan aquí con las versiones que los produjeron." />}
+      <div className="group">
       {list.map((e) => {
         const out = exportOutdated(e, project);
         return (
@@ -39,6 +41,7 @@ export function ExportsTab({ project }: { project: Project }) {
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

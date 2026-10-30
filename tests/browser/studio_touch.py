@@ -12,6 +12,9 @@ with sync_playwright() as p:
  page.wait_for_timeout(300)
  page.get_by_role('button',name='Telas',exact=True).last.click()
  page.wait_for_timeout(300)
+ # La bandeja cambia el alto útil: ajusta al área visible antes de calcular el destino.
+ page.get_by_role('button',name='Ajustar a la vista',exact=True).click()
+ page.wait_for_timeout(100)
  point=page.evaluate('''()=>{const paths=[...document.querySelectorAll('.ed-canvas .board > g path')];const path=paths.find(p=>p.getAttribute('fill')==='#ffffff');const b=path.getBoundingClientRect();return {x:b.x+b.width*.5,y:b.y+b.height*.6};}''')
  sample=page.locator('.fabric-swatch').first.bounding_box();start={'x':sample['x']+sample['width']/2,'y':sample['y']+25}
  cdp=context.new_cdp_session(page)
@@ -20,7 +23,8 @@ with sync_playwright() as p:
  for i in range(1,7):touch('touchMove',[(start['x']+(point['x']-start['x'])*i/6,start['y']+(point['y']-start['y'])*i/6)])
  touch('touchEnd',[]);page.wait_for_timeout(500)
  page.screenshot(path='/tmp/hilvana-touch-drop.png'); fills=page.evaluate('''async()=>{const {useApp}=await import('/src/store/app.ts');return Object.values(useApp.getState().projects)[0].design.views[0].zoneFills;}''');print('touch dropped',fills);assert fills
- point['y']=500
+ # Evita el botón contextual de ajuste de tela que ocupa la parte superior del lienzo.
+ canvas=page.locator('.ed-canvas').bounding_box();point['y']=canvas['y']+canvas['height']*.6
  # Insert via touch, then choose element and spread two fingers inside its bounds.
  page.get_by_role('button',name='Figuras',exact=True).last.click()
  page.get_by_role('textbox',name='Buscar figuras').fill('estrella')

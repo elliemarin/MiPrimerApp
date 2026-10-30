@@ -9,6 +9,8 @@ import { FabricType, Fit, GeneratorResult, Params, PatternGenerator, missingMeas
 import type { Issue, NodeOverride, Piece, PieceLayout, PieceOverrides } from './types';
 import { formatLength } from '../units';
 import { panelizePattern, type PanelCut } from './panels';
+import { componentMeasureChecks, generateComponents, type PatternComponent } from './components';
+import { seamPolygon } from './outline';
 
 export interface PatternContextState {
   kind: PersonKind;
@@ -18,6 +20,8 @@ export interface PatternContextState {
 }
 
 export interface PatternState {
+  /** Independent sewable pockets and accessories, in finished millimetres. */
+  components?: PatternComponent[];
   /** Cuts from the studio in the original piece coordinate system (mm). */
   panelCuts?: PanelCut[];
   panelMaterials?: Record<string, { fabricId?: string; name: string; color?: string }>;
@@ -149,6 +153,36 @@ export function buildPattern(state: PatternState): BuiltPattern {
       empty.pieces = [...pieces, ...custom];
     }
   }
+  let componentIssues: Issue[] = [];
+  let componentSources: Piece[] = [];
+  if (state.components?.length) {
+    if (empty.missing.length) componentIssues.push({ level: 'error', code: 'component-base-missing', message: 'Completa las medidas de la base antes de generar sus complementos.' });
+    else {
+      const added = generateComponents(state.components, empty.pieces);
+      const componentPieces = added.pieces.map(piece => {
+        const applied = applyOverrides(piece, state.overrides[piece.id], state.allowances[piece.id]);
+        empty.review.push(...applied.review);
+        return applied.piece;
+      });
+      const componentChecks = componentMeasureChecks(state.components,componentPieces);
+      componentSources = componentPieces;
+      for (const check of componentChecks) if (!Number.isFinite(check.measured) || Math.abs(check.measured-check.target)>check.tolerance) {
+        componentIssues.push({level:'error',code:'component-dimensions',message:`${check.label}: el patrón mide ${formatLength(check.measured,'cm')} y debería medir ${formatLength(check.target,'cm')}.`});
+      }
+      empty.generated = [...empty.generated, ...added.pieces];
+      empty.pieces = [...added.basePieces, ...componentPieces];
+      const base = empty.result;
+      empty.result = {
+        pieces: empty.pieces,
+        seams: [...(base?.seams ?? []), ...added.seams],
+        checks: [...(base?.checks ?? []), ...componentChecks],
+        materials: [...(base?.materials ?? []), ...added.materials.filter(material => !base?.materials.some(existing => existing.id === material.id))],
+        assumptions: [...(base?.assumptions ?? ['Se generan solamente los complementos seleccionados y las piezas manuales existentes. La base de la prenda no está incluida: comprueba su talla y su montaje por separado.']), ...added.assumptions],
+        steps: base?.steps.length ? [base.steps[0], ...added.steps, ...base.steps.slice(1)] : added.steps,
+        notices: [...(base?.notices ?? []), ...added.notices]
+      };
+    }
+  }
   let panelIssues: Issue[] = [];
   let panelSeams: import('./types').SeamRelation[] = [];
   if (state.panelCuts?.length && !empty.missing.length) {
@@ -178,6 +212,17 @@ export function buildPattern(state: PatternState): BuiltPattern {
       return piece.panelSource && material?.name ? { ...piece, name: `${piece.name} · ${material.name.slice(0,50)}` } : piece;
     });
   }
+  // Panel coordinates retain the source frame. A free exterior-node edit can
+  // alter assembled dimensions without changing the join lengths, so inspect
+  // the union's bounds before accepting the original component instructions.
+  for (const source of componentSources) {
+    const children = empty.pieces.filter(piece=>piece.panelSource?.pieceId===source.id);
+    if(!children.some(piece=>Object.keys(state.overrides[piece.id]??{}).length))continue;
+    const before=bboxOf(seamPolygon(source,.01)), after=bboxOf(children.flatMap(piece=>seamPolygon(piece,.01)));
+    if(Math.abs(bboxW(after)-bboxW(before))>.1||Math.abs(bboxH(after)-bboxH(before))>.1) {
+      componentIssues.push({level:'error',code:'component-panel-dimensions',message:`Los ajustes de paneles de «${source.name}» cambian su tamaño terminado. Actualiza las medidas en Personalizar y revisa los cortes, o restablece esos ajustes antes de generar el PDF.`,pieceId:source.id});
+    }
+  }
   const visible = empty.pieces.filter((p) => !state.hidden.includes(p.id) && !state.hidden.includes(p.panelSource?.pieceId ?? p.id));
   for (const p of empty.pieces) {
     try {
@@ -188,10 +233,10 @@ export function buildPattern(state: PatternState): BuiltPattern {
   }
   if (empty.result) {
     const issues = validatePattern({ ...empty.result, pieces: visible }, empty.cuts);
-    empty.issues = [...empty.result.notices, ...panelIssues, ...issues];
+    empty.issues = [...empty.result.notices, ...componentIssues, ...panelIssues, ...issues.filter(issue=>!componentIssues.some(component=>component.message===issue.message))];
     empty.seamResults = evaluateSeams(empty.pieces, empty.result.seams);
   } else {
-    empty.issues.push(...panelIssues);
+    empty.issues.push(...componentIssues, ...panelIssues);
     for (const p of empty.pieces) empty.issues.push(...validatePiece(p, empty.cuts.get(p.id)));
     if (state.panelCuts?.length) empty.seamResults = evaluateSeams(empty.pieces, panelSeams);
   }

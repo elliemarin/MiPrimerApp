@@ -10,7 +10,7 @@ with sync_playwright() as p:
  page.goto(base+'/#/biblioteca/haori-corto');page.wait_for_load_state('networkidle')
  page.get_by_role('button',name='Crear proyecto con este modelo',exact=True).click()
  page.get_by_label('Talla',exact=True).select_option('M92')
- page.get_by_role('button',name='Crear proyecto',exact=True).click();page.wait_for_url('**/#/patronaje/**')
+ page.get_by_role('button',name='Crear proyecto',exact=True).click();page.wait_for_url('**/#/personalizar/**')
  pid=page.url.rsplit('/',1)[-1]
  page.goto(base+'/#/estudio/'+pid);page.wait_for_load_state('networkidle')
  page.get_by_role('button',name='Generar patrones del diseño',exact=True).click()
@@ -49,10 +49,11 @@ with sync_playwright() as p:
  page.reload();page.wait_for_load_state('networkidle')
  assert not errors,errors
  print('Studio realcut→2paintablepanels→4garmenttemplates, seams/materials/history/persistence, PDF calibration PASS',result)
- # A built-in collage variant opens Studio with its true segmented pieces already prepared.
+ # The guided step leads to Studio with genuine segmented pieces already prepared.
  page.goto(base+'/#/biblioteca/chaqueta-patchwork-cuadros');page.wait_for_load_state('networkidle')
  page.get_by_role('button',name='Crear proyecto con este modelo',exact=True).click()
- page.get_by_role('button',name='Crear proyecto',exact=True).click();page.wait_for_url('**/#/estudio/**')
+ page.get_by_role('button',name='Crear proyecto',exact=True).click();page.wait_for_url('**/#/personalizar/**')
+ page.get_by_role('button',name='Continuar al estudio',exact=True).click();page.wait_for_url('**/#/estudio/**')
  variant=page.evaluate('''async()=>{const {useApp}=await import('/src/store/app.ts');const {buildPattern}=await import('/src/lib/pattern/engine.ts');const p=Object.values(useApp.getState().projects).find(p=>p.modelId==='chaqueta-patchwork-cuadros'),built=buildPattern(p.pattern);return {cuts:p.design.panelCuts.length,pieces:built.pieces.length,zones:p.design.views.filter(v=>v.source.type==='pieza').map(v=>v.zones.length),errors:built.issues.filter(i=>i.level==='error')};}''')
  assert variant['pieces']==22 and not variant['errors'] and max(variant['zones'])==9,variant
  page.wait_for_timeout(180)

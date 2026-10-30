@@ -157,9 +157,10 @@ export interface VersionRecord<T> {
   data: T;
 }
 
-export type ExportKind = 'pdf-patron' | 'pdf-plantillas' | 'svg-bordado' | 'dst-bordado' | 'zip' | 'pdf-resumen' | 'svg-diseno';
+export type ExportKind = 'pdf-confeccion' | 'pdf-patron' | 'pdf-plantillas' | 'svg-bordado' | 'dst-bordado' | 'zip' | 'pdf-resumen' | 'svg-diseno';
 
 export const EXPORT_KIND_LABEL: Record<ExportKind, string> = {
+  'pdf-confeccion': 'PDF de confección e intervención',
   'pdf-patron': 'Patrón PDF carta',
   'pdf-plantillas': 'Plantillas de aplicaciones',
   'svg-bordado': 'Dibujo de bordado (SVG)',

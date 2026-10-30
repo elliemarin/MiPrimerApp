@@ -19,6 +19,7 @@ import { exportProjectZip } from '../../lib/zip';
 import { saveBlob } from '../../lib/download';
 import { slugify } from '../../lib/ids';
 import { exportRecord, freezeDeps } from '../../store/exports';
+import { ProjectJourney } from '../../ui/ProjectJourney';
 
 const TABS = [
   ['resumen', 'Resumen'],
@@ -95,6 +96,8 @@ export function ProjectDetail({ id, tab }: { id: string; tab?: string }) {
           {project.archived && ' · Archivado'}
         </p>
       </header>
+
+      <ProjectJourney projectId={id} step="base" />
 
       <div className="scroll-x" role="group" aria-label="Estado del proyecto" style={{ marginBottom: 14 }}>
         {(Object.keys(STATUS_LABEL) as ProjectStatus[]).map((s, i) => (

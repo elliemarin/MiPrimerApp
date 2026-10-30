@@ -13,6 +13,8 @@ import { PatternHub } from './features/pattern/PatternHub';
 const PatternEditor = lazy(() => import('./features/pattern/PatternEditor').then((m) => ({ default: m.PatternEditor })));
 import { StudioHub } from './features/studio/StudioHub';
 const StudioEditor = lazy(() => import('./features/studio/StudioEditor').then((m) => ({ default: m.StudioEditor })));
+const CustomizePage = lazy(() => import('./features/customize/CustomizePage').then((m) => ({ default: m.CustomizePage })));
+const SewingPackPage = lazy(() => import('./features/projects/SewingPackPage').then((m) => ({ default: m.SewingPackPage })));
 import { FabricsPage } from './features/fabrics/FabricsPage';
 const FabricDetail = lazy(() => import('./features/fabrics/FabricDetail').then((m) => ({ default: m.FabricDetail })));
 const HelpPage = lazy(() => import('./features/help/HelpPage').then((m) => ({ default: m.HelpPage })));
@@ -71,7 +73,7 @@ export function App() {
   if (!ready) return <div className="page" aria-busy="true" />;
 
   const [section = 'proyectos', a, b] = route;
-  const active = ['ajustes', 'mas'].includes(section) ? 'mas' : section;
+  const active = ['ajustes', 'mas'].includes(section) ? 'mas' : ['personalizar', 'confeccion'].includes(section) ? 'proyectos' : section;
   let content: JSX.Element;
   switch (section) {
     case 'biblioteca':
@@ -82,6 +84,12 @@ export function App() {
       break;
     case 'estudio':
       content = a ? <StudioEditor projectId={a} /> : <StudioHub />;
+      break;
+    case 'personalizar':
+      content = a ? <CustomizePage projectId={a} /> : <LibraryPage />;
+      break;
+    case 'confeccion':
+      content = a ? <SewingPackPage projectId={a} /> : <ProjectsPage />;
       break;
     case 'telas':
       content = a ? <FabricDetail id={a} /> : <FabricsPage />;

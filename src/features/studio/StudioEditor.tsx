@@ -4,7 +4,9 @@ import { Board, BoardPointer, BoardPinch, useViewport } from '../../ui/Board';
 import { useHistory } from '../../ui/useHistory';
 import { Icon } from '../../ui/Icon';
 import { Button, Empty, FilePick, IconButton, SaveIndicator, Segmented, Sheet, Field, LengthInput, TextInput, Select } from '../../ui/components';
-import { goBack, navigate } from '../../ui/router';
+import { goBack, navigate, queryParam } from '../../ui/router';
+import { ProjectJourney } from '../../ui/ProjectJourney';
+import { componentGroupId, componentIdForElement, normalizeComponentDesign, reconcileComponentDesign } from '../customize/componentDesign';
 import { Pt, bboxOf, dist } from '../../lib/geom/vec';
 import { formatLength } from '../../lib/units';
 import { uid } from '../../lib/ids';
@@ -65,12 +67,12 @@ export function StudioEditor({ projectId }: { projectId: string }) {
   const updateProject = useApp((s) => s.updateProject);
   const addFile = useApp((s) => s.addFile);
   const unit = useApp((s) => s.settings.unit);
-  const onCommit = useCallback((d: DesignDoc | undefined) => d && updateProject(projectId, (p) => ({ ...p, design: d })), [projectId, updateProject]);
+  const onCommit = useCallback((d: DesignDoc | undefined) => d && updateProject(projectId, (p) => reconcileComponentDesign({ ...p, design: d }, useApp.getState().fabrics)), [projectId, updateProject]);
   const hist = useHistory<DesignDoc | undefined>(project?.design, onCommit);
   const doc = hist.state;
   const vp = useViewport();
   const [viewId, setViewId] = useState<string | undefined>(doc?.views[0]?.id);
-  const [tool, setTool] = useState<Tool>('seleccionar');
+  const [tool, setTool] = useState<Tool>(() => queryParam('herramienta') === 'lapiz' ? 'lapiz' : 'seleccionar');
   const [sel, setSel] = useState<string[]>([]);
   const [multi, setMulti] = useState(false);
   const [mode, setMode] = useState<RenderMode>('apariencia');
@@ -128,7 +130,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
     }
   }, [view, fitView]);
 
-  const commit = useCallback((d: DesignDoc, prev?: DesignDoc) => hist.commit(refreshGroups(touch(d)), prev), [hist]);
+  const commit = useCallback((d: DesignDoc, prev?: DesignDoc) => hist.commit(refreshGroups(touch(normalizeComponentDesign(d))), prev), [hist]);
   const histRef = useRef(hist);
   histRef.current = hist;
   const selRef = useRef(sel);
@@ -158,7 +160,8 @@ export function StudioEditor({ projectId }: { projectId: string }) {
         const step = e.shiftKey ? 10 : 1;
         const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
         const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
-        h.commit(refreshGroups(updateElements(d, expandSelection(d, ids), (el) => ({ ...el, x: el.x + dx, y: el.y + dy }))));
+        const whole = ids.map(id => { const component = componentIdForElement(id); return component ? componentGroupId(component) : id; });
+        h.commit(refreshGroups(updateElements(d, expandSelection(d, whole), (el) => ({ ...el, x: el.x + dx, y: el.y + dy }))));
       } else if (e.key === 'Escape') {
         setPen((p) => (p.length ? [] : p));
         setSel((s) => (s.length ? [] : s));
@@ -174,6 +177,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
   const els = viewElements(doc, view.id);
   const selected = doc.elements.filter((e) => sel.includes(e.id));
   const single = selected.length === 1 ? selected[0] : undefined;
+  const componentPart = !!single && single.kind !== 'grupo' && !!componentIdForElement(single.id);
   const hs = 9 / vp.view.scale;
   const prefix = 's-';
   const selectionLocked = expandSelection(doc,sel).some(id=>doc.elements.find(e=>e.id===id)?.locked);
@@ -265,7 +269,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
   }
   const handlers = {
     onPinchStart: (p: BoardPinch): boolean => {
-      if (tool !== 'seleccionar' || !single || single.locked || !p.points.some(point => {
+      if (tool !== 'seleccionar' || !single || single.locked || componentPart || !p.points.some(point => {
         const l=toLocal(single,point); return Math.abs(l.x)<=single.w/2+hs*2 && Math.abs(l.y)<=single.h/2+hs*2;
       })) return false;
       pinchEdit.current={doc, ids:expandSelection(doc,[single.id]), midpoint:p.midpoint};
@@ -284,7 +288,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
     },
     onPinchEnd: () => {
       const start=pinchEdit.current; pinchEdit.current=null;
-      if (start?.latest) histRef.current.commit(touch(start.latest),start.doc);
+      if (start?.latest) histRef.current.commit(refreshGroups(touch(normalizeComponentDesign(start.latest))),start.doc);
     },
     onDown: (bp: BoardPointer): boolean => {
       const w = bp.world;
@@ -300,7 +304,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
         return true;
       }
       if (tool === 'seleccionar') {
-        if (single && !single.locked) {
+        if (single && !single.locked && !componentPart) {
           const h = handlesFor(single);
           const near = (p: Pt) => dist(p, w) < hs * 1.6;
           if (near(h.rot)) {
@@ -490,7 +494,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
       setLive(null);
       if (!d) return;
       if(d.kind==='panel-cut'){addPanelCut([d.start,d.cur]);return;}
-      if ((d.kind === 'move' || d.kind === 'scale' || d.kind === 'rotate') && hist.state && hist.state !== d.d0) hist.commit(hist.state, d.d0);
+      if ((d.kind === 'move' || d.kind === 'scale' || d.kind === 'rotate') && hist.state && hist.state !== d.d0) commit(hist.state, d.d0);
       if (d.kind === 'draw') {
         if (d.pts.length < 2) return;
         const b = bboxOf(d.pts);
@@ -609,7 +613,9 @@ export function StudioEditor({ projectId }: { projectId: string }) {
         <IconButton icon="patronaje" label="Generar patrones del diseño" onClick={()=>setPanelSheet(true)} />
         <IconButton icon="undo" label="Deshacer" onClick={hist.undo} disabled={!hist.canUndo} />
         <IconButton icon="redo" label="Rehacer" onClick={hist.redo} disabled={!hist.canRedo} />
+        <IconButton icon="pdf" label="Terminar y generar PDF de confección" onClick={() => navigate(`/confeccion/${projectId}`)} />
       </div>
+      <ProjectJourney projectId={projectId} step="estudio" />
       <div className="ed-body">
         <div className="ed-rail" role="toolbar" aria-label="Herramientas">
           <button className="tool" aria-pressed={showFabrics} onClick={()=>{setShowFabrics(!showFabrics);setTool('tela');}}><Icon name="telas" />Telas</button>
@@ -677,7 +683,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
               {selected.map((e) => (
                 <polygon key={e.id} points={elementCorners(e).map((p) => `${p.x},${p.y}`).join(' ')} fill="none" stroke="var(--mat)" strokeWidth={1.4} strokeDasharray={e.kind === 'grupo' ? '5 3' : undefined} vectorEffect="non-scaling-stroke" />
               ))}
-              {single && !single.locked && tool === 'seleccionar' && (
+              {single && !single.locked && !componentPart && tool === 'seleccionar' && (
                 <g>
                   {(() => {
                     const h = handlesFor(single);

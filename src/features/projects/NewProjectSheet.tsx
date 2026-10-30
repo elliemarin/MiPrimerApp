@@ -93,7 +93,7 @@ function FromModel({ model, onClose, initialRecipient, initialBabySize }: { mode
     p=prepareModelPanels(p,model);
     put('project', p);
     onClose();
-    navigate(p.pattern && !model.panelPreset ? `/patronaje/${p.id}` : `/estudio/${p.id}`);
+    navigate(`/personalizar/${p.id}`);
   };
   return (
     <div className="stack">
@@ -138,7 +138,7 @@ function FromBase({ onClose }: { onClose: () => void }) {
     p.status = 'patronaje';
     put('project', p);
     onClose();
-    navigate(`/patronaje/${p.id}`);
+    navigate(`/personalizar/${p.id}`);
   };
   return (
     <div className="stack">
@@ -157,7 +157,7 @@ function FromBase({ onClose }: { onClose: () => void }) {
       </Field>
       {gen.requiredMeasures.length > 0 && <ProfilePicker value={choice} onChange={setChoice} />}
       {gen.requiredMeasures.length > 0 && <FabricFit {...{ fabric, setFabric, stretch, setStretch, fit, setFit }} />}
-      <Button variant="primary" block onClick={create}>Crear y abrir el patrón</Button>
+      <Button variant="primary" block onClick={create}>Crear y personalizar</Button>
     </div>
   );
 }
@@ -244,7 +244,7 @@ function FromIntervention({ onClose }: { onClose: () => void }) {
     p.status = 'diseno';
     put('project', p);
     onClose();
-    navigate(`/estudio/${p.id}`);
+    navigate(`/personalizar/${p.id}`);
   };
   return (
     <div className="stack">

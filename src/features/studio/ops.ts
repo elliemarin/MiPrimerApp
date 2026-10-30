@@ -1,6 +1,7 @@
 import { uid, nowIso } from '../../lib/ids';
 import { bboxOf, Pt } from '../../lib/geom/vec';
 import { CUT_TECHNIQUES, DesignDoc, DesignElement, DesignView, EDGE_ALLOWANCE, EdgeFinish, Technique, elementCorners } from './model';
+import { componentElementId, componentGroupId, componentIdForElement, normalizeComponentDesign } from '../customize/componentDesign';
 
 export const touch = (d: DesignDoc): DesignDoc => ({ ...d, updatedAt: nowIso() });
 
@@ -18,16 +19,81 @@ export function updateElements(doc: DesignDoc, ids: string[], fn: (e: DesignElem
 }
 
 export function removeElements(doc: DesignDoc, ids: string[]): DesignDoc {
-  const set = new Set(ids);
-  // Al borrar un grupo se borran sus hijos.
-  for (const e of doc.elements) if (e.parentId && set.has(e.parentId)) set.add(e.id);
+  const set = new Set(expandSelection(doc, componentRoots(doc, ids)));
   return touch({ ...doc, elements: doc.elements.filter((e) => !set.has(e.id)).map((e) => (e.continuityId && !doc.elements.some((x) => x.id !== e.id && !set.has(x.id) && x.continuityId === e.continuityId) ? { ...e, continuityId: undefined } : e)) });
 }
 
 export function duplicateElements(doc: DesignDoc, ids: string[], offset = 10): { doc: DesignDoc; ids: string[] } {
-  const created: DesignElement[] = [];
-  for (const e of doc.elements) if (ids.includes(e.id)) created.push({ ...JSON.parse(JSON.stringify(e)), id: uid('el'), name: `${e.name} (copia)`, x: e.x + offset, y: e.y + offset, continuityId: undefined });
-  return { doc: touch({ ...doc, elements: [...doc.elements, ...created] }), ids: created.map((c) => c.id) };
+  const roots = componentRoots(doc, ids);
+  const selected = new Set(expandSelection(doc, roots));
+  const copies = (doc.componentSelections ?? []).filter(c => selected.has(componentGroupId(c.id))).map(c => ({
+    originalId: c.id,
+    copy: { ...structuredClone(c), id: uid('comp'), placement: c.placement ? { ...c.placement, x: c.placement.x + offset, y: c.placement.y + offset } : undefined }
+  }));
+  const idMap = new Map<string, string>();
+  for (const e of doc.elements) if (selected.has(e.id)) {
+    const component = copies.find(c => componentIdForElement(e.id) === c.originalId);
+    idMap.set(e.id, component ? componentElementId(component.copy.id, e.id.slice(e.id.lastIndexOf('--') + 2)) : uid(e.kind === 'grupo' ? 'grp' : 'el'));
+  }
+  const created = doc.elements.filter(e => selected.has(e.id)).map(e => ({
+    ...structuredClone(e), id: idMap.get(e.id)!, name: `${e.name} (copia)`,
+    parentId: e.parentId ? idMap.get(e.parentId) : undefined,
+    x: e.x + offset, y: e.y + offset, continuityId: undefined
+  }));
+  return { doc: touch({ ...doc, elements: [...doc.elements, ...created],
+    ...(copies.length ? { componentSelections: [...(doc.componentSelections ?? []), ...copies.map(c => c.copy)] } : {})
+  }), ids: roots.filter(id => idMap.has(id)).map(id => idMap.get(id)!) };
+}
+
+/** Las partes de un complemento forman una sola receta de confección. */
+function componentRoots(doc: DesignDoc, ids: string[]): string[] {
+  const roots = [...new Set(ids.map(id => {
+    const component = doc.componentSelections?.find(c => componentIdForElement(id) === c.id);
+    const root = component ? componentGroupId(component.id) : undefined;
+    return root && doc.elements.some(e => e.id === root) ? root : id;
+  }))];
+  const selected = new Set(roots);
+  return roots.filter(id => {
+    const visited = new Set<string>([id]);
+    let parentId = doc.elements.find(e => e.id === id)?.parentId;
+    while (parentId && !visited.has(parentId)) {
+      if (selected.has(parentId)) return false;
+      visited.add(parentId);
+      parentId = doc.elements.find(e => e.id === parentId)?.parentId;
+    }
+    return true;
+  });
+}
+
+/** Cambia la caja de un grupo trasladando y transformando sus partes con él. */
+export function editElement(doc: DesignDoc, id: string, patch: Partial<DesignElement>): DesignDoc {
+  const element = doc.elements.find(e => e.id === id);
+  if (!element || element.kind !== 'grupo') return updateElements(doc, [id], e => ({ ...e, ...patch }));
+  const next = { ...element, ...patch };
+  const affected = expandSelection(doc, [id]);
+  const oldAngle = element.rotation * Math.PI / 180;
+  const newAngle = next.rotation * Math.PI / 180;
+  const sx = next.w / Math.max(0.001, element.w) * (next.flipX === element.flipX ? 1 : -1);
+  const sy = next.h / Math.max(0.001, element.h) * (next.flipY === element.flipY ? 1 : -1);
+  const transformVector = (x: number, y: number) => {
+    const localX = (x * Math.cos(oldAngle) + y * Math.sin(oldAngle)) * sx;
+    const localY = (-x * Math.sin(oldAngle) + y * Math.cos(oldAngle)) * sy;
+    return { x: localX * Math.cos(newAngle) - localY * Math.sin(newAngle), y: localX * Math.sin(newAngle) + localY * Math.cos(newAngle) };
+  };
+  return normalizeComponentDesign(refreshGroups(updateElements(doc, affected, e => {
+    if (e.id === id) return next;
+    const p = transformVector(e.x - element.x, e.y - element.y);
+    const angle = e.rotation * Math.PI / 180;
+    const xAxis = transformVector(Math.cos(angle) * (e.flipX ? -1 : 1), Math.sin(angle) * (e.flipX ? -1 : 1));
+    const yAxis = transformVector(-Math.sin(angle) * (e.flipY ? -1 : 1), Math.cos(angle) * (e.flipY ? -1 : 1));
+    return { ...e, x: next.x + p.x, y: next.y + p.y,
+      w: e.w * Math.hypot(xAxis.x, xAxis.y), h: e.h * Math.hypot(yAxis.x, yAxis.y),
+      rotation: (Math.atan2(xAxis.y, xAxis.x) * 180 / Math.PI + 360) % 360,
+      flipX: false, flipY: xAxis.x * yAxis.y - xAxis.y * yAxis.x < 0,
+      ...(patch.locked !== undefined ? { locked: patch.locked } : {}),
+      ...(patch.hidden !== undefined ? { hidden: patch.hidden } : {})
+    };
+  })));
 }
 
 /** Reordena dentro de la vista: el orden del arreglo es el orden de superposición. */
@@ -58,38 +124,40 @@ export function selectionBBox(els: DesignElement[]) {
 }
 
 export function alignElements(doc: DesignDoc, ids: string[], how: 'izq' | 'centro-h' | 'der' | 'arriba' | 'centro-v' | 'abajo'): DesignDoc {
-  const els = doc.elements.filter((e) => ids.includes(e.id));
+  const roots = componentRoots(doc, ids);
+  const els = doc.elements.filter((e) => roots.includes(e.id));
   if (els.length < 2) return doc;
   const bb = selectionBBox(els);
-  return updateElements(doc, ids, (e) => {
+  return els.reduce((next, e) => {
     const b = bboxOf(elementCorners(e));
     const hw = (b.maxX - b.minX) / 2;
     const hh = (b.maxY - b.minY) / 2;
     switch (how) {
       case 'izq':
-        return { ...e, x: bb.minX + hw + (e.x - (b.minX + hw)) };
+        return editElement(next, e.id, { x: bb.minX + hw + (e.x - (b.minX + hw)) });
       case 'der':
-        return { ...e, x: bb.maxX - hw + (e.x - (b.maxX - hw)) };
+        return editElement(next, e.id, { x: bb.maxX - hw + (e.x - (b.maxX - hw)) });
       case 'centro-h':
-        return { ...e, x: (bb.minX + bb.maxX) / 2 + (e.x - (b.minX + b.maxX) / 2) };
+        return editElement(next, e.id, { x: (bb.minX + bb.maxX) / 2 + (e.x - (b.minX + b.maxX) / 2) });
       case 'arriba':
-        return { ...e, y: bb.minY + hh + (e.y - (b.minY + hh)) };
+        return editElement(next, e.id, { y: bb.minY + hh + (e.y - (b.minY + hh)) });
       case 'abajo':
-        return { ...e, y: bb.maxY - hh + (e.y - (b.maxY - hh)) };
+        return editElement(next, e.id, { y: bb.maxY - hh + (e.y - (b.maxY - hh)) });
       case 'centro-v':
-        return { ...e, y: (bb.minY + bb.maxY) / 2 + (e.y - (b.minY + b.maxY) / 2) };
+        return editElement(next, e.id, { y: (bb.minY + bb.maxY) / 2 + (e.y - (b.minY + b.maxY) / 2) });
     }
-  });
+  }, doc);
 }
 
 export function distribute(doc: DesignDoc, ids: string[], axis: 'h' | 'v'): DesignDoc {
-  const els = doc.elements.filter((e) => ids.includes(e.id)).sort((a, b) => (axis === 'h' ? a.x - b.x : a.y - b.y));
+  const roots = componentRoots(doc, ids);
+  const els = doc.elements.filter((e) => roots.includes(e.id)).sort((a, b) => (axis === 'h' ? a.x - b.x : a.y - b.y));
   if (els.length < 3) return doc;
   const first = axis === 'h' ? els[0].x : els[0].y;
   const last = axis === 'h' ? els[els.length - 1].x : els[els.length - 1].y;
   const step = (last - first) / (els.length - 1);
   const pos = new Map(els.map((e, i) => [e.id, first + step * i]));
-  return updateElements(doc, ids, (e) => (axis === 'h' ? { ...e, x: pos.get(e.id)! } : { ...e, y: pos.get(e.id)! }));
+  return els.reduce((next, e) => editElement(next, e.id, axis === 'h' ? { x: pos.get(e.id)! } : { y: pos.get(e.id)! }), doc);
 }
 
 export function groupElements(doc: DesignDoc, ids: string[], viewId: string): { doc: DesignDoc; id: string } {
@@ -134,8 +202,11 @@ export function refreshGroups(doc: DesignDoc): DesignDoc {
       if (g.kind !== 'grupo') return g;
       const kids = doc.elements.filter((e) => e.parentId === g.id);
       if (!kids.length) return g;
-      const bb = selectionBBox(kids);
-      return { ...g, x: (bb.minX + bb.maxX) / 2, y: (bb.minY + bb.maxY) / 2, w: bb.maxX - bb.minX, h: bb.maxY - bb.minY };
+      const angle = g.rotation * Math.PI / 180;
+      const corners = kids.flatMap(e => elementCorners(e)).map(p => ({ x: p.x * Math.cos(angle) + p.y * Math.sin(angle), y: -p.x * Math.sin(angle) + p.y * Math.cos(angle) }));
+      const bb = bboxOf(corners);
+      const cx = (bb.minX + bb.maxX) / 2, cy = (bb.minY + bb.maxY) / 2;
+      return { ...g, x: cx * Math.cos(angle) - cy * Math.sin(angle), y: cx * Math.sin(angle) + cy * Math.cos(angle), w: bb.maxX - bb.minX, h: bb.maxY - bb.minY };
     })
   };
 }
@@ -143,7 +214,14 @@ export function refreshGroups(doc: DesignDoc): DesignDoc {
 /** Elementos afectados al mover o transformar una selección (incluye hijos de grupos). */
 export function expandSelection(doc: DesignDoc, ids: string[]): string[] {
   const out = new Set(ids);
-  for (const e of doc.elements) if (e.parentId && out.has(e.parentId)) out.add(e.id);
+  let added = true;
+  while (added) {
+    added = false;
+    for (const e of doc.elements) if (e.parentId && out.has(e.parentId) && !out.has(e.id)) {
+      out.add(e.id);
+      added = true;
+    }
+  }
   return [...out];
 }
 

@@ -16,6 +16,7 @@ import { MEASURE_BY_KEY } from '../sizes/measurements';
 import { getFile } from '../db';
 import type { Pt } from '../geom/vec';
 import { APP_VERSION } from '../../store/app';
+import { componentMaterials, isComponentElementId } from '../../features/customize/componentDesign';
 
 export interface SummaryCtx {
   profiles: Record<string, Profile>;
@@ -40,14 +41,17 @@ function drawView(fd: FlowDoc, doc: DesignDoc, view: DesignView, fabrics: Record
   for (const d of view.details ?? []) fd.cv.strokePath(parseSvgPath(d.d), d.style === 'pespunte' ? { width: 0.35, dash: [1.4, 1], gray: 0.1 } : { width: 0.35, dash: [], gray: 0.2 }, tx);
   if (view.source.type === 'foto') fd.cv.rect(box.x, box.y, box.w, box.h, PDF_STYLES.referencia);
   const els = doc.elements.filter((e) => e.viewId === view.id && !e.hidden && e.kind !== 'grupo');
-  els.forEach((e, i) => {
+  let number=0;
+  els.forEach((e) => {
     const cmds = elementWorldCmds(e);
     const color = e.fill.type === 'color' ? e.fill.color : e.fill.type === 'tela' ? fabrics[e.fill.fabricId]?.color : undefined;
     if (color && e.kind !== 'texto' && e.kind !== 'imagen') fd.cv.fillPathRgb(cmds, fd.fillColor(color), tx);
     fd.cv.strokePath(cmds, e.technique === 'bordado' ? PDF_STYLES.bordado : { width: 0.45, dash: [], gray: 0.05 }, tx);
-    const b = cmdsBBox(cmds);
-    const p = tx({ x: b.maxX, y: b.minY });
-    fd.cv.text(`${i + 1}`, p.x + 1.5, p.y, 2.4, { bold: true });
+    if(!isComponentElementId(e.id)) {
+      const b = cmdsBBox(cmds);
+      const p = tx({ x: b.maxX, y: b.minY });
+      fd.cv.text(`${++number}`, p.x + 1.5, p.y, 2.4, { bold: true });
+    }
   });
   fd.cv.text(view.label, box.x + box.w / 2, box.y + box.h + 4, 3, { anchor: 'middle', bold: true });
 }
@@ -72,7 +76,7 @@ export async function buildSummaryPdf(p: Project, ctx: SummaryCtx): Promise<Uint
   const doc = p.design;
   if (doc && doc.views.length) {
     fd.heading('Vistas del diseño');
-    const views = doc.views.slice(0, 6);
+    const views = doc.views;
     for (let i = 0; i < views.length; i += 2) {
       const h = 92;
       fd.ensure(h + 10);
@@ -81,7 +85,30 @@ export async function buildSummaryPdf(p: Project, ctx: SummaryCtx): Promise<Uint
       if (views[i + 1]) drawView(fd, doc, views[i + 1], ctx.fabrics, { x: fd.m + w + 8, y: fd.y, w, h });
       fd.y += h + 10;
     }
-    fd.para('Vista de apariencia plana: muestra colores y ubicaciones a escala, no simula caída ni ajuste del tejido. Los números identifican cada elemento.', 2.6);
+    fd.para('Vista de apariencia plana: muestra colores y ubicaciones a escala, no simula caída ni ajuste del tejido. Los números identifican los dibujos del estudio; los complementos se detallan en la lista de piezas.', 2.6);
+  }
+
+  // Preserve the actual reference images as well as the schematic placement views.
+  if (ctx.includePhotos !== false) {
+    const photos = new Map<string,string>();
+    for (const reference of p.references) photos.set(reference.corrected?.fileId ?? reference.fileId, reference.name);
+    for (const view of doc?.views ?? []) if (view.source.type === 'foto') photos.set(view.source.fileId, view.label);
+    for (const element of doc?.elements ?? []) if (!element.hidden && element.kind === 'imagen' && element.image) photos.set(element.image.fileId, `${element.name} · ${formatLength(element.w,u)} × ${formatLength(element.h,u)}`);
+    const usedFabricIds = new Set([...p.fabricIds, ...(doc?.elements.flatMap(element=>element.fill.type==='tela'?[element.fill.fabricId]:[]) ?? []), ...(doc?.views.flatMap(view=>Object.values(view.zoneFills??{}).flatMap(fill=>fill.type==='tela'?[fill.fabricId]:[])) ?? [])]);
+    for (const id of usedFabricIds) {
+      const fabric=ctx.fabrics[id];
+      if(fabric?.photo) photos.set(fabric.photo.processedFileId??fabric.photo.originalFileId, `Muestra de tela · ${fabric.name}${fabric.calibration?' · calibrada':' · referencia visual sin calibrar'}`);
+    }
+    if(photos.size) {
+      fd.heading('Imágenes y muestras de referencia');
+      fd.para('Estas imágenes muestran las referencias y telas elegidas. Su tamaño en esta ficha es ilustrativo; utiliza las plantillas 1:1 para cortar.',2.7);
+      for(const [id,label] of photos) {
+        const file=await getFile(id);
+        fd.para(label,2.9,{bold:true});
+        if(file && /jpe?g|png/.test(file.type)) await fd.image(new Uint8Array(await file.blob.arrayBuffer()),file.type,100,85);
+        else fd.para('La imagen no está disponible en formato JPG/PNG en este dispositivo.',2.6);
+      }
+    }
   }
 
   // Medidas
@@ -102,13 +129,29 @@ export async function buildSummaryPdf(p: Project, ctx: SummaryCtx): Promise<Uint
     const allowances = new Set<string>();
     for (const pc of built.pieces) for (const e of pc.edges) if (e.allowance > 0) allowances.add(`${e.label}: ${formatLength(e.allowance, u)}`);
     fd.para(`Márgenes por borde (fuera de la prenda terminada): ${[...allowances].slice(0, 12).join(' · ')}.`, 2.7);
+    for(const assumption of built.result.assumptions) fd.para(`Supuesto de construcción: ${assumption}`,2.7,{gap:.5});
   } else if (ver) {
     const rows = Object.entries(ver.values).map(([k, v]) => [MEASURE_BY_KEY[k as keyof typeof MEASURE_BY_KEY]?.label ?? k, formatLength(v as number, u)]);
     if (rows.length) fd.table(['Medida corporal', 'Valor'], rows, [3, 1]);
   }
 
+  if(built?.pieces.length) {
+    fd.heading('Todas las piezas y sus medidas');
+    fd.para('Medidas de la caja de cada plantilla: ancho × alto. La línea de costura define la pieza terminada; el contorno de corte incluye los márgenes. Una pieza al doblez se despliega al cortar y no equivale a la medida total de la prenda.',2.7);
+    for(const piece of built.pieces) {
+      const seam=cmdsBBox(pieceSeamCmds(piece));
+      const cut=built.cuts.get(piece.id);
+      const box=cut?bboxOf(cut.points):undefined;
+      fd.para(`${piece.name} · ${piece.id}`,3,{bold:true,gap:.5});
+      fd.para(`${piece.cut.onFold?`Cortar ${piece.cut.qty} al doblez`:`Cortar ${piece.cut.qty}${piece.cut.mirrorPairs?' en pares simétricos':''}`} · ${piece.cut.fabric}. Línea de costura: ${formatLength(seam.maxX-seam.minX,u)} × ${formatLength(seam.maxY-seam.minY,u)}.${box?` Corte: ${formatLength(box.maxX-box.minX,u)} × ${formatLength(box.maxY-box.minY,u)}.`:''}`,2.8,{gap:.6});
+      fd.para(`Márgenes y acabados: ${piece.edges.map(edge=>`${edge.label}: ${formatLength(edge.allowance,u)} (${edge.finish})`).join('; ')}.`,2.6,{gap:1.6});
+    }
+  }
+
   // Telas y materiales
   fd.heading('Telas y materiales');
+  const componentMats=componentMaterials(p,ctx.fabrics);
+  if(componentMats.length) fd.table(['Complemento','Tela o color elegido'],componentMats.map(material=>[material.name, `${material.fabricName??'Tela por elegir'}${material.color?` · ${material.color}`:''}`]),[1,1]);
   const fabs = p.fabricIds.map((id) => ctx.fabrics[id]).filter(Boolean);
   if (fabs.length)
     fd.table(
@@ -124,7 +167,7 @@ export async function buildSummaryPdf(p: Project, ctx: SummaryCtx): Promise<Uint
     }
     for (const m of built.result?.materials ?? []) fd.para(`${m.label}: ${m.qty}${m.note ? ` (${m.note})` : ''}`, 2.8, { gap: 0.6 });
   }
-  const cutouts = doc ? computeCutouts(doc, ctx.fabrics, u) : [];
+  const cutouts = doc ? computeCutouts({...doc,elements:doc.elements.filter(element=>!isComponentElementId(element.id))}, ctx.fabrics, u) : [];
   for (const r of materialSummary(cutouts, u)) fd.para(`${r.label}: ${r.detail}`, 2.8, { gap: 0.6 });
   for (const m of p.materialUses) fd.para(`${m.label}: ${m.qty}${m.notes ? ` (${m.notes})` : ''}`, 2.8, { gap: 0.6 });
 

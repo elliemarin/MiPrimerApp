@@ -3,7 +3,7 @@ import { BBox, Pt, bboxOf, norm, sub } from '../geom/vec';
 import { flattenCubic } from '../geom/bezier';
 import { shelfPack } from '../geom/pack';
 import type { Drawable } from '../draw/drawable';
-import { STYLE_LABEL, translateDrawable } from '../draw/drawable';
+import { STYLE_LABEL, translateDrawable, labelBounds } from '../draw/drawable';
 import type { PathCmd } from '../draw/paths';
 import { PDF_STYLES, PdfCanvas, newPdf } from './canvas';
 import { TileGrid, TileSettings, computeGrid, contentBox, pageSize, tileRect, Tile } from './tile';
@@ -78,10 +78,11 @@ function segTouchesRect(a: Pt, b: Pt, r: BBox): boolean {
 
 export function tilesWithContent(grid: TileGrid, drawables: Drawable[]): Set<string> {
   const segs = drawables.flatMap(drawableSegments);
+  const labels=drawables.flatMap(drawable=>drawable.labels.map(labelBounds));
   const out = new Set<string>();
   for (const t of grid.tiles) {
     const r = tileRect(grid, t);
-    if (segs.some(([a, b]) => segTouchesRect(a, b, r))) out.add(t.code);
+    if (segs.some(([a, b]) => segTouchesRect(a, b, r)) || labels.some(box=>box.minX<=r.maxX && box.maxX>=r.minX && box.minY<=r.maxY && box.maxY>=r.minY)) out.add(t.code);
   }
   return out;
 }
@@ -166,7 +167,15 @@ function addFooter(cv: PdfCanvas, s: TileSettings, code: string, sub1: string, i
   cv.text(sub1, s.margin + 1, top + 11, 2.5);
   drawBar(cv, (w - 100) / 2, top + 8);
   cv.text('Imprimir al 100 %, sin ajustar a la página', w / 2, top + 11.8, 2.4, { anchor: 'middle' });
-  cv.text(info.footer, w - s.margin - 1, top + 5.5, 2.5, { anchor: 'end' });
+  // Keep the project name clear of the calibration bar and its “10 cm” label.
+  const right = w - s.margin - 1;
+  const available = Math.max(8, right - ((w + 100) / 2 + cv.textWidthMm('10 cm', 2.4) / 2 + 3));
+  let footer = info.footer;
+  if (cv.textWidthMm(footer, 2.5) > available) {
+    while (footer && cv.textWidthMm(`${footer}…`, 2.5) > available) footer = footer.slice(0, -1);
+    footer = `${footer}…`;
+  }
+  cv.text(footer, right, top + 5.5, 2.5, { anchor: 'end' });
   cv.text(`Página ${pageNo} de ${total}`, w - s.margin - 1, top + 10, 2.5, { anchor: 'end' });
 }
 

@@ -58,7 +58,7 @@ export function ExportPanel({ project, state, built }: { project: Project; state
   const withContent = grid ? tilesWithContent(grid, drawables) : new Set<string>();
   const pages = [...withContent].filter((c) => !excluded.includes(c));
 
-  const panelBlocked = built?.issues.some(issue=>issue.level==='error'&&issue.code.startsWith('panel-')) ?? false;
+  const panelBlocked = built?.issues.some(issue=>issue.level==='error'&&/^(panel-|component-)/.test(issue.code)) ?? false;
   const doExport = async (share: boolean) => {
     if(panelBlocked) return;
     if (!built) return;
@@ -105,7 +105,8 @@ export function ExportPanel({ project, state, built }: { project: Project; state
   const c = contentBox(tile);
   return (
     <div className="stack-lg">
-      {panelBlocked&&<Notice tone="err">Los cortes de paneles necesitan revisión. Corrige los cortes en el estudio o restaura una versión antes de exportar; no se exportará la pieza base en lugar de los paneles.</Notice>}
+      <a className="btn" href={`#/confeccion/${project.id}`}>PDF con piezas, materiales e instrucciones</a>
+      {panelBlocked&&<Notice tone="err">Los paneles o complementos necesitan revisión. Corrige los cortes en el estudio o las medidas en Personalizar antes de exportar. Revisa los detalles en Revisión.</Notice>}
       {!panelBlocked&&errors.length > 0 && <Notice tone="err">El patrón tiene {errors.length} errores de geometría. Puedes exportar, pero revisa la pestaña Revisión primero.</Notice>}
       <section className="stack">
         <h3 className="section-title" style={{ margin: 0 }}>Piezas</h3>

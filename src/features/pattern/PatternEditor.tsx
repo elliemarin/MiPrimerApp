@@ -19,6 +19,7 @@ import { snapToEdge } from '../../lib/image';
 import type { Piece } from '../../lib/pattern/types';
 import { OverlaySvg } from './Overlays';
 import { useFileUrl } from '../../ui/components';
+import { ProjectJourney } from '../../ui/ProjectJourney';
 
 export type Tool = 'mover' | 'puntos' | 'medir' | 'comparar' | 'trazar' | 'calibrar';
 type PanelKey = 'medidas' | 'pieza' | 'revision' | 'capas' | 'exportar';
@@ -409,6 +410,7 @@ export function PatternEditor({ projectId }: { projectId: string }) {
           {errors ? `${errors} ${errors === 1 ? 'error' : 'errores'}` : warnings ? `${warnings} ${warnings === 1 ? 'aviso' : 'avisos'}` : 'Verificado'}
         </button>
       </div>
+      <ProjectJourney projectId={projectId} step="base" />
       <div className="ed-body">
         <div className="ed-rail" role="toolbar" aria-label="Herramientas">
           {TOOLS.map((t) => (

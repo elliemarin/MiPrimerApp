@@ -221,3 +221,36 @@ la figura elegida y limita su posición a las dimensiones del lienzo. Usa
 `removeElements` y el historial existentes; el botón no propaga PointerDown al
 lienzo, tiene área44×44px y se desactiva con selección bloqueada. CSS específico
 `.selection-delete`. Smoke móvil en `tests/browser/delete_selection_smoke.py`.
+
+## 13. Recorrido guiado, complementos y PDF de confección
+
+- `ui/ProjectJourney.tsx`: Base/Personalizar/Estudio/PDF conservando proyecto.
+  Nuevas rutas `personalizar/:id` y `confeccion/:id`; creación desde modelos,
+  motores o intervención abre `CustomizePage` antes del estudio.
+- `data/components.ts`: 27 presets contextuales originales. Motor
+  `lib/pattern/components.ts` con diez construcciones reales; extensión opcional
+  `PatternState.components`. Engine agrega piezas/materiales/pasos antes de
+  panelizar y valida medidas/márgenes/colocaciones/ajustes manuales.
+- `features/customize/componentDesign.ts`: grupos y partes con IDs propios,
+  snapshot `DesignDoc.componentSelections`, sincronización, lectura desde
+  historial, normalización paramétrica y detección de cambios incompatibles.
+  StudioEditor actualiza la definición al guardar y normaliza al terminar
+  gestos. Inspector/ops conservan el vínculo al dimensionar/duplicar/borrar.
+- `lib/pdf/projectPack.ts` prepara, valida y fusiona ficha+patrones+
+  aplicaciones+bordados vectoriales, sin escalar geometría. Dos modos:
+  confección completa con base real, o intervención con base no incluida.
+  `SewingPackSheet` revisa y congela dependencias; `pdf-confeccion` registra
+  el documento final con manifiesto adjunto, inventario e índice paginado.
+- `summary.ts` imprime todas las medidas/márgenes/materiales/pasos y referencias;
+  `FlowDoc.table` envuelve celdas y conserva contenido al pasar de página.
+- `draw/drawable.ts` envuelve etiquetas con métricas Helvetica y calcula sus
+  cuatro esquinas giradas; `pdf/export.ts` incluye hojas con solo texto y
+  mantiene el pie separado de la barra de control. No cambia la escala física.
+- `Board.tsx` reconoce doble toque solo entre dos toques breves y cercanos;
+  arrastres, trazos largos y pellizcos cancelan la candidatura. Se evita que
+  dibujar y tocar otro objeto rápidamente deje seleccionada la figura anterior.
+
+Contrato, comprobaciones y límites físicos detallados en
+`docs/RECORRIDO_CONFECCION.md`. Las posiciones sobre dibujos son ilustrativas;
+solo `placement.pieceId` define marcas físicas exactas. Los complementos son
+experimentales hasta imprimir y coser muestras.

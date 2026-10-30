@@ -89,20 +89,43 @@ export class FlowDoc {
   table(head: string[], rows: string[][], widths: number[], size = 2.8) {
     const total = widths.reduce((a, b) => a + b, 0);
     const ws = widths.map((w) => (w / total) * this.width);
-    const rowH = size * 2.1;
-    const drawRow = (cells: string[], bold: boolean) => {
-      this.ensure(rowH);
-      let x = this.m;
-      cells.forEach((c, i) => {
-        const txt = this.wrap(c, size, ws[i] - 2, bold)[0] ?? '';
-        this.cv.text(txt, x + 1, this.y + size * 1.3, size, { bold });
-        x += ws[i];
+    const lh = size * 1.5;
+    const bottom = this.h - this.m - 6;
+    const linesFor = (cells: string[], bold: boolean) => cells.map((cell, index) => this.wrap(cell, size, ws[index]-2, bold));
+    const header = linesFor(head, true);
+    const headerLines = Math.max(1, ...header.map(lines => lines.length));
+    const paint = (cells: string[][], offset: number, count: number, bold: boolean) => {
+      cells.forEach((lines, index) => {
+        const x = this.m + ws.slice(0,index).reduce((sum,width) => sum+width, 0);
+        lines.slice(offset,offset+count).forEach((line,lineIndex) => this.cv.text(line, x+1, this.y+size*1.3+lineIndex*lh, size, { bold }));
       });
-      this.y += rowH;
+      this.y += count*lh+size*.6;
       this.cv.line({ x: this.m, y: this.y - 0.6 }, { x: this.w - this.m, y: this.y - 0.6 }, { width: 0.25, dash: [], gray: 0.75 });
     };
-    drawRow(head, true);
-    for (const r of rows) drawRow(r, false);
+    this.ensure((headerLines+1)*lh+size*1.2);
+    paint(header,0,headerLines,true);
+    for (const row of rows) {
+      const cells = linesFor(row, false);
+      const count = Math.max(1,...cells.map(lines=>lines.length));
+      const rowH = count*lh+size*.6;
+      // Keep ordinary rows together. Very long notes may continue across pages.
+      if (this.y+rowH>bottom && rowH<(bottom-this.m-headerLines*lh-size*1.2)) {
+        this.newPage();
+        paint(header,0,headerLines,true);
+      }
+      let offset=0;
+      while(offset<count) {
+        let available=Math.floor((bottom-this.y-size*.6)/lh);
+        if(available<1) {
+          this.newPage();
+          paint(header,0,headerLines,true);
+          available=Math.max(1,Math.floor((bottom-this.y-size*.6)/lh));
+        }
+        const chunk=Math.min(count-offset,available);
+        paint(cells,offset,chunk,false);
+        offset+=chunk;
+      }
+    }
     this.y += 3;
   }
   async image(bytes: Uint8Array, type: string, maxW: number, maxH: number) {

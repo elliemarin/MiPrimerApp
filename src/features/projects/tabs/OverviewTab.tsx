@@ -37,6 +37,10 @@ export function OverviewTab({ project, onZip, zipBusy }: { project: Project; onZ
   return (
     <div className="stack-lg">
       <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+        <a className="start-card" href={`#/personalizar/${project.id}`}>
+          <span className="ic"><Icon name="plus" /></span>
+          <span className="grow"><span className="t" style={{ display: 'block' }}>Personalizar la base</span><span className="s">Bolsillos, cierres, solapas y complementos para herramientas</span></span>
+        </a>
         <a className="start-card" href={`#/patronaje/${project.id}`}>
           <span className="ic"><Icon name="patronaje" /></span>
           <span className="grow">
@@ -79,6 +83,7 @@ export function OverviewTab({ project, onZip, zipBusy }: { project: Project; onZ
         </div>
       )}
       <div className="row-wrap">
+        <a className="btn btn-primary" href={`#/confeccion/${project.id}`}><Icon name="pdf" />PDF de confección</a>
         <Button icon="pdf" onClick={() => void sheet()} disabled={busy}>{busy ? 'Generando…' : 'Ficha del proyecto (PDF)'}</Button>
         <Button icon="zip" onClick={onZip} disabled={zipBusy}>{zipBusy ? 'Preparando ZIP…' : 'Proyecto completo (ZIP)'}</Button>
       </div>

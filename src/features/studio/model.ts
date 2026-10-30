@@ -1,5 +1,6 @@
 import type { StudioPanelCut } from './panelWorkflow';
 import type { FigurineOptions } from '../../lib/draw/figurine';
+import type { PatternComponent } from '../../lib/pattern/components';
 import type { Pt, Mat } from '../../lib/geom/vec';
 import { matMul, matRotate, matScale, matTranslate, matApply } from '../../lib/geom/vec';
 import { uid, nowIso } from '../../lib/ids';
@@ -193,6 +194,8 @@ export interface Guide {
 }
 
 export interface DesignDoc {
+  /** Complement definitions owned by this design/history, including recently deleted ones for Undo. */
+  componentSelections?: PatternComponent[];
   /** Cortes de construcción sobre piezas reales del patrón, en milímetros. */
   panelCuts?: StudioPanelCut[];
   /** Preferencias del figurín de presentación, sin alterar el patrón. */

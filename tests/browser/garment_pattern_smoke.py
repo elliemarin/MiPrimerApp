@@ -11,7 +11,10 @@ with sync_playwright() as p:
  page.get_by_role('button',name='Crear proyecto con este modelo',exact=True).click()
  page.get_by_label('Talla',exact=True).select_option('M92')
  page.get_by_role('button',name='Crear proyecto',exact=True).click()
- page.wait_for_url('**/#/patronaje/**')
+ page.wait_for_url('**/#/personalizar/**')
+ pid=page.url.rsplit('/',1)[-1]
+ page.goto(os.environ.get('HILVANA_TEST_URL','http://localhost:5173')+'/#/patronaje/'+pid)
+ page.wait_for_load_state('networkidle')
  page.get_by_role('button',name='Exportar',exact=True).last.click()
  with page.expect_download() as info: page.get_by_role('button',name='Descargar PDF a escala real',exact=True).last.click()
  file='/tmp/hilvana-haori-patron.pdf';info.value.save_as(file)

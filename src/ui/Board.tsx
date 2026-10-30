@@ -96,8 +96,9 @@ export function Board({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, Pt>());
-  const gesture = useRef<{ mode: 'tool' | 'pan' | 'pinch' | 'pinch-tool' | null; last?: Pt; dist?: number; mid?: Pt; start?: BoardPinch }>({ mode: null });
-  const lastTap = useRef(0);
+  const gesture = useRef<{ mode: 'tool' | 'pan' | 'pinch' | 'pinch-tool' | 'double-tap' | null; last?: Pt; dist?: number; mid?: Pt; start?: BoardPinch; down?: BoardPointer }>({ mode: null });
+  const lastTap = useRef<{ at: number; screen: Pt; pointerType: string }>();
+  const tap = useRef<{ pointerId: number; startedAt: number; screen: Pt; moved: boolean; pointerType: string }>();
   const { view, setView, zoomAt, size, toWorld } = vp;
   const [dims, setDims] = useState({ w: 800, h: 600 });
 
@@ -167,6 +168,8 @@ export function Board({
     e.currentTarget.setPointerCapture?.(e.pointerId);
     pointers.current.set(e.pointerId, local(e));
     if (pointers.current.size === 2) {
+      tap.current = undefined;
+      lastTap.current = undefined;
       if (gesture.current.mode === 'tool') handlers.onUp?.(bp(e));
       const sample = pinchSample(e);
       if (handlers.onPinchStart?.(sample)) {
@@ -175,18 +178,19 @@ export function Board({
         const [a, b] = [...pointers.current.values()];
         gesture.current = { mode: 'pinch', dist: Math.hypot(a.x - b.x, a.y - b.y), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
       }
-      lastTap.current = 0;
       return;
     }
     const now = Date.now();
     const p = bp(e);
-    if (now - lastTap.current < 300 && handlers.onDoubleTap) {
-      handlers.onDoubleTap(p);
-      lastTap.current = 0;
+    const middle = e.button === 1 || e.altKey;
+    tap.current = !middle && e.button === 0 ? { pointerId: e.pointerId, startedAt: now, screen: p.screen, moved: false, pointerType: e.pointerType } : undefined;
+    const previous = lastTap.current;
+    lastTap.current = undefined;
+    if (tap.current && previous && now - previous.at < 300 && previous.pointerType === e.pointerType && Math.hypot(p.screen.x - previous.screen.x, p.screen.y - previous.screen.y) <= 20 && handlers.onDoubleTap) {
+      // Espera a que termine el segundo toque: si se arrastra, sigue siendo una herramienta.
+      gesture.current = { mode: 'double-tap', down: p };
       return;
     }
-    lastTap.current = now;
-    const middle = e.button === 1 || (e as React.PointerEvent).altKey;
     if (!middle && handlers.onDown?.(p)) gesture.current = { mode: 'tool' };
     else gesture.current = { mode: 'pan', last: local(e) };
   };
@@ -196,7 +200,15 @@ export function Board({
       return;
     }
     pointers.current.set(e.pointerId, local(e));
-    const g = gesture.current;
+    let g = gesture.current;
+    const activeTap = tap.current;
+    if (activeTap?.pointerId === e.pointerId && Math.hypot(local(e).x - activeTap.screen.x, local(e).y - activeTap.screen.y) > 8) activeTap.moved = true;
+    if (g.mode === 'double-tap') {
+      if (!activeTap?.moved && activeTap && Date.now() - activeTap.startedAt <= 250) return;
+      const down = g.down!;
+      gesture.current = handlers.onDown?.(down) ? { mode: 'tool' } : { mode: 'pan', last: down.screen };
+      g = gesture.current;
+    }
     if (g.mode === 'pinch-tool' && pointers.current.size >= 2) {
       const sample = pinchSample(e, g.start);
       handlers.onPinchMove?.(sample);
@@ -222,12 +234,22 @@ export function Board({
   const onPointerUp = (e: React.PointerEvent) => {
     if (!pointers.current.has(e.pointerId)) return;
     const g = gesture.current;
+    const activeTap = tap.current;
+    const shortTap = e.type === 'pointerup' && activeTap?.pointerId === e.pointerId && !activeTap.moved && Date.now() - activeTap.startedAt <= 250 && Math.hypot(local(e).x - activeTap.screen.x, local(e).y - activeTap.screen.y) <= 8;
     // Termina una sola vez, antes de retirar las coordenadas del dedo.
     if (g.mode === 'pinch-tool' && pointers.current.size >= 2) {
       if (e.type === 'pointerup') pointers.current.set(e.pointerId, local(e));
       handlers.onPinchEnd?.(pinchSample(e, g.start));
       gesture.current = { mode: null };
-    } else if (g.mode === 'tool') handlers.onUp?.(bp(e));
+    } else if (g.mode === 'double-tap') {
+      if (shortTap) handlers.onDoubleTap?.(bp(e));
+      else if (e.type === 'pointerup' && g.down && handlers.onDown?.(g.down)) handlers.onUp?.(bp(e));
+      gesture.current = { mode: null };
+    } else {
+      if (g.mode === 'tool') handlers.onUp?.(bp(e));
+      if (shortTap && activeTap) lastTap.current = { at: Date.now(), screen: local(e), pointerType: activeTap.pointerType };
+    }
+    tap.current = undefined;
     pointers.current.delete(e.pointerId);
     // El dedo restante queda inerte: no puede dibujar ni mover por accidente.
     if (pointers.current.size === 0 || g.mode === 'pinch') gesture.current = { mode: null };

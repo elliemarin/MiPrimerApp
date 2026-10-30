@@ -6,9 +6,10 @@ import { Button, Chip, Field, LengthInput, Notice, NumberInput, Segmented, Selec
 import { Icon } from '../../ui/Icon';
 import { formatLength } from '../../lib/units';
 import { BACKING_LABEL, Backing, CUT_TECHNIQUES, DesignDoc, DesignElement, DesignView, EDGE_ALLOWANCE, EDGE_LABEL, EdgeFinish, Fill, STITCH_LABEL, StitchStyle, TECHNIQUE_LABEL, Technique } from './model';
-import { alignContinuity, alignElements, continuationTarget, continuityChecks, createContinuation, distribute, duplicateElements, groupElements, removeElements, reorder, techniqueDefaults, updateElements } from './ops';
+import { alignContinuity, alignElements, continuationTarget, continuityChecks, createContinuation, distribute, duplicateElements, editElement, groupElements, removeElements, reorder, techniqueDefaults, updateElements } from './ops';
 import { zoneOf } from './despiece';
 import { navigate } from '../../ui/router';
+import { componentElementId, componentGroupId, componentIdForElement } from '../customize/componentDesign';
 
 const SWATCHES = ['#1d2420', '#ffffff', '#c0582d', '#d9a441', '#6c8f5e', '#2f5d7c', '#8a4fa3', '#b4273a', '#e8d5b5', '#9aa79f'];
 
@@ -59,7 +60,10 @@ export function Inspector({ doc, view, selected, commit, setSel, setTool, projec
     );
   }
   const el = selected[0];
-  const set = (patch: Partial<DesignElement>) => commit(updateElements(doc, [el.id], (e) => ({ ...e, ...patch })));
+  const componentId = componentIdForElement(el.id);
+  const component = doc.componentSelections?.find(c => c.id === componentId);
+  const body = component ? doc.elements.find(e => e.id === componentElementId(component.id, 'cuerpo')) : undefined;
+  const set = (patch: Partial<DesignElement>) => commit(editElement(doc, el.id, patch));
   const zone = zoneOf(view, el);
   const cut = CUT_TECHNIQUES.includes(el.technique);
   const cont = continuationTarget(doc, view, el);
@@ -81,14 +85,24 @@ export function Inspector({ doc, view, selected, commit, setSel, setTool, projec
         )}
         <div className="row-wrap">
           <Button size="sm" icon="copy" onClick={() => { const r = duplicateElements(doc, [el.id]); commit(r.doc); setSel(r.ids); }}>Duplicar</Button>
-          <Button size="sm" icon="mirror" onClick={() => set({ flipX: !el.flipX })}>Reflejar</Button>
+          {(!component || el.kind === 'grupo') && <Button size="sm" icon="mirror" onClick={() => set({ flipX: !el.flipX })}>Reflejar</Button>}
           <Button size="sm" icon="up" onClick={() => commit(reorder(doc, el.id, 'frente'))}>Al frente</Button>
           <Button size="sm" icon={el.locked ? 'lock' : 'unlock'} onClick={() => set({ locked: !el.locked })}>{el.locked ? 'Bloqueado' : 'Bloquear'}</Button>
           <Button size="sm" variant="danger" icon="trash" onClick={() => { commit(removeElements(doc, [el.id])); setSel([]); }}>Eliminar</Button>
         </div>
       </div>
 
-      {el.kind !== 'grupo' && (
+      {component && <section className="stack">
+        <Notice>Este complemento tiene piezas de confección. Su tamaño actualiza el patrón; las telas y colores se eligen por parte.</Notice>
+        <Button size="sm" onClick={() => navigate(`/personalizar/${projectId}`)}>Cambiar tipo, cantidad o cierre</Button>
+        {el.kind === 'grupo' ? <div className="row-wrap">
+          {doc.elements.filter(part => componentIdForElement(part.id) === component.id && ['cuerpo', 'solapa'].some(key => part.id === componentElementId(component.id, key))).map(part =>
+            <Button key={part.id} size="sm" icon="palette" onClick={() => setSel([part.id])}>{part.id === componentElementId(component.id, 'cuerpo') ? 'Tela y color del cuerpo' : 'Tela y color de la solapa'}</Button>
+          )}
+        </div> : <Button size="sm" icon="move" onClick={() => setSel([componentGroupId(component.id)])}>Elegir el complemento completo</Button>}
+      </section>}
+
+      {el.kind !== 'grupo' && !component && (
         <section className="stack">
           <h3 className="section-title" style={{ margin: 0 }}>Técnica</h3>
           <Select value={el.technique} onChange={(t: Technique) => set(techniqueDefaults(t))} options={Object.entries(TECHNIQUE_LABEL).map(([value, label]) => ({ value: value as Technique, label }))} />
@@ -149,14 +163,14 @@ export function Inspector({ doc, view, selected, commit, setSel, setTool, projec
         </section>
       )}
 
-      <section className="stack">
+      {(!component || el.kind === 'grupo') && <section className="stack">
         <h3 className="section-title" style={{ margin: 0 }}>Tamaño y posición</h3>
         <div className="grid-2">
-          <Field label="Ancho">
-            <LengthInput mm={el.w} min={0.5} max={5000} onChange={(v) => v && set({ w: v })} />
+          <Field label={body ? 'Ancho terminado del cuerpo' : 'Ancho'}>
+            <LengthInput mm={body?.w ?? el.w} min={0.5} max={5000} onChange={(v) => v && set({ w: body ? el.w * v / body.w : v })} />
           </Field>
-          <Field label="Alto">
-            <LengthInput mm={el.h} min={0.5} max={5000} onChange={(v) => v && set({ h: v })} />
+          <Field label={body ? 'Alto terminado del cuerpo' : 'Alto'}>
+            <LengthInput mm={body?.h ?? el.h} min={0.5} max={5000} onChange={(v) => v && set({ h: body ? el.h * v / body.h : v })} />
           </Field>
           <Field label="Desde el centro" hint="Horizontal">
             <LengthInput mm={el.x - (view.seams?.center ?? 0)} min={-5000} max={5000} onChange={(v) => v !== undefined && set({ x: v + (view.seams?.center ?? 0) })} />
@@ -168,9 +182,9 @@ export function Inspector({ doc, view, selected, commit, setSel, setTool, projec
         <Field label={`Rotación ${Math.round(el.rotation)}°`}>
           <input type="range" min={0} max={359} step={1} value={el.rotation} onChange={(e) => set({ rotation: Number(e.target.value) })} />
         </Field>
-      </section>
+      </section>}
 
-      <section className="stack">
+      {!component && <section className="stack">
         <h3 className="section-title" style={{ margin: 0 }}>Zona de la prenda</h3>
         <div className="row-wrap">
           <Chip tone={zone ? 'ok' : 'off'}>{zone ? zone.label : 'Fuera de las zonas'}</Chip>
@@ -186,9 +200,9 @@ export function Inspector({ doc, view, selected, commit, setSel, setTool, projec
           <Button size="sm" icon="crop" onClick={() => setTool('recorte')}>Recorte libre</Button>
           {el.clip && <Button size="sm" variant="ghost" onClick={() => set({ clip: undefined })}>Quitar recorte</Button>}
         </div>
-      </section>
+      </section>}
 
-      {(cont || checks.length > 0) && (
+      {!component && (cont || checks.length > 0) && (
         <section className="stack">
           <h3 className="section-title" style={{ margin: 0 }}>Continuidad entre vistas</h3>
           {cont && !checks.some((c) => c.view.id === cont.target.id) && (
@@ -216,6 +230,7 @@ export function Inspector({ doc, view, selected, commit, setSel, setTool, projec
 
 function TechniqueAll({ doc, ids, commit }: { doc: DesignDoc; ids: string[]; commit: (d: DesignDoc) => void }) {
   const [t, setT] = useState<Technique>('collage');
+  const editableIds = ids.filter(id => !doc.componentSelections?.some(c => componentIdForElement(id) === c.id));
   return (
     <div className="stack">
       <div className="field-label">Técnica para todos</div>
@@ -223,8 +238,9 @@ function TechniqueAll({ doc, ids, commit }: { doc: DesignDoc; ids: string[]; com
         <div className="grow">
           <Select value={t} onChange={setT} options={Object.entries(TECHNIQUE_LABEL).map(([value, label]) => ({ value: value as Technique, label }))} />
         </div>
-        <Button size="sm" onClick={() => commit(updateElements(doc, ids, (e) => ({ ...e, ...techniqueDefaults(t) })))}>Aplicar</Button>
+        <Button size="sm" disabled={!editableIds.length} onClick={() => commit(updateElements(doc, editableIds, (e) => ({ ...e, ...techniqueDefaults(t) })))}>Aplicar</Button>
       </div>
+      {editableIds.length !== ids.length && <p className="tiny muted">Los complementos conservan su patrón. Agrega el bordado o aplique como un elemento sobre ellos.</p>}
     </div>
   );
 }

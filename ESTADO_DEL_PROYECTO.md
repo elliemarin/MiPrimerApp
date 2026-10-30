@@ -12,12 +12,71 @@ Actualízalo al terminar cada tarea.
 
 ```bash
 npm install
-npm test            # 372 pruebas: geometría, paneles, catálogo, patrones, PDF, materiales y diseño
+npm test            # 450 pruebas: geometría, complementos, paneles, PDF, catálogo y estudio
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
+
+## Recorrido guiado y complementos de confección (2026-10-30)
+
+La creación desde Biblioteca, Base o Intervención ahora lleva a **Personalizar**:
+**Base → Personalizar → Estudio → PDF**, siempre dentro del mismo proyecto.
+La barra permite volver a las medidas o a cualquier paso. Los proyectos previos
+siguen abriéndose con sus datos; no hay migración destructiva.
+
+- **27 opciones originales sobre diez construcciones**: bolsillos de parche,
+  punta, redondeados, con botón/velcro/cierre, cargo con fuelle, organizadores
+  de tres canales, trabillas y lazo para herramienta. Incluye presets para
+  teléfono, lápices, reglas, tijeras con protector y cinta métrica. Las
+  recomendaciones dependen de la familia de la base; Todos permite explorar.
+- Personalizar ajusta ancho/alto terminados, cantidad, fondo del cargo y
+  ubicación. Tocar la vista coloca el complemento; también hay coordenadas
+  accesibles. La posición en el dibujo es **ilustrativa** y debe comprobarse
+  sobre la prenda; no se presenta como un traslado automático al patrón base.
+- Cada opción genera piezas reales con IDs estables, hilo, cantidades,
+  márgenes por borde una sola vez, medidas verificadas, materiales y pasos
+  de montaje. El cargo incluye cuerpo, fuelle U coincidente con piquetes y
+  dos caras de solapa. El cierre incluye cuerpo, respaldo y vistas. Las
+  trabillas duplican el ancho de tubo y reservan los extremos para fijación.
+- El estudio conserva el vínculo: mover, dimensionar, duplicar, borrar,
+  Deshacer/Rehacer, telas y colores actualizan la definición de confección.
+  Cuerpo y solapa se pueden pintar por separado. Los detalles constructivos
+  se regeneran al dimensionar el conjunto; modificar una parte estructural
+  por separado exige revisión y bloquea el PDF en vez de imprimir otra cosa.
+- **Dibujar en estudio** abre el lápiz. Se conservan la biblioteca de figuras,
+  apliques, bordados, fotos como tela y paneles de collage anteriores. Los
+  bocetos sin técnica se declaran referencia; no se inventan piezas ocultas.
+- **PDF de confección** reúne en un archivo la ficha, vistas y referencias,
+  medidas de cada pieza con/sin margen, cantidades/materiales, plano de corte
+  estimado, guía con casillas, patrones base+complementos+paneles, plantillas
+  de aplicaciones/refuerzos y guías de bordado 1:1. Lleva índice por páginas,
+  cuadrados de control, versiones congeladas y manifiesto JSON adjunto.
+- Si se interviene una prenda sin patrón base, el botón y la portada dicen
+  **PDF de intervención**: entrega los complementos y decoraciones, sin
+  prometer el patrón para confeccionar la prenda original. Los cortes sobre
+  los propios complementos también se resuelven en este modo.
+- Se bloquea la exportación completa ante geometría inválida, medidas
+  faltantes, paneles obsoletos, partes incompatibles o piezas excluidas;
+  se ofrecen enlaces para corregirlas. Las exportaciones se conservan y
+  detectan cambios posteriores de diseño, patrón o medidas.
+
+**Estado físico:** todos los complementos son experimentales hasta imprimir y
+coser muestras. No cambian la talla/holgura de la base. Un figurín no verifica
+ajuste, una ilustración no define el despiece, y las guías de bordado del PDF
+no son archivos de puntadas. Se mantienen los límites de HD9120/CREATIVATE.
+
+Detalles técnicos, pruebas y próximos pasos en
+[docs/RECORRIDO_CONFECCION.md](docs/RECORRIDO_CONFECCION.md).
+
+**Verificado:** 450 pruebas, TypeScript y build de producción; Chromium móvil
+390×844 y escritorio 1440×1000. Recorrido real con pantalón M92, tres complementos,
+redimensionado/duplicación/borrado/Deshacer, dibujo, color y aplique: PDF único de
+47 páginas, nueve plantillas y guías, con controles de 50/100 mm correctos.
+Intervención sin base: siete páginas con el bolsillo y su montaje. Probados
+guardado/recarga, exclusiones y recuperación, nombres completos en piezas
+pequeñas, gestos y regresiones de paneles/haori. Safari y muestras físicas pendientes.
 
 ## Basurita en la selección del estudio (2026-10-30)
 
@@ -420,8 +479,9 @@ el intento inicial; esta bitácora del repositorio es el estado más reciente.
    a `implementado` en `src/data/catalog.ts`.
 3. **Más patrones** siguiendo `AGENTS.md §5`: bloque de torso y manga para
    camiseta, sudadera y body de bebé. Cada uno entra como `experimental`.
-4. **Bolsillos** como módulo reutilizable (parche, laterales, cargo) para
-   pantalones y faldas.
+4. **Ampliar complementos**: ya hay módulo reutilizable de bolsillos aplicados,
+   cargo, cierres y trabillas. Faltan bolsillos internos/laterales que modifiquen
+   las costuras de la base; primero imprimir y coser las muestras existentes.
 5. **Plano de corte manual**: acomodar piezas sobre el ancho real de la tela
    (hoy se estima por rectángulos).
 6. **Exportación de patrón por tallas anidadas** en un solo PDF.
