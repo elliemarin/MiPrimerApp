@@ -4,6 +4,15 @@ import type { DesignView, Fill, Zone } from '../studio/model';
 
 const normalized = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
+// These assembled objects have explicit face/lining roles. Matching a generic
+// "base" by its label could pick interfacing or the reverse face instead.
+const COSTUME_SURFACES: Record<string, Record<string, string>> = {
+  'capa-semicircular': { delantero: 'exterior', espalda: 'exterior' },
+  'corona-textil': { base: 'exterior', reverso: 'reverso' },
+  'sombrero-mago': { copa: 'cono', ala: 'ala' },
+  'orejas-diadema': { 'oreja-izquierda': 'frente', 'oreja-derecha': 'frente' }
+};
+
 function pieceScore(view: DesignView, zone: Zone, back: boolean): number {
   if (view.source.type !== 'pieza' || view.source.pieceId.startsWith('componente-')) return -1;
   const id = normalized(view.source.pieceId), label = normalized(view.label), value = `${id} ${label}`;
@@ -35,9 +44,11 @@ export function modelMaterials(project: Project, flat: FlatView): { fills: Recor
   const original = doc.views.find(view => view.source.type === 'plantilla' && view.source.view === flat.key);
   const fills: Record<string, Fill> = { ...original?.zoneFills };
   let omittedPanels = false;
+  const costume = COSTUME_SURFACES[project.pattern?.generatorId ?? ''];
   for (const zone of flat.zones) {
     const ranked = (part: Zone) => doc.views.map(view => ({ view, score: pieceScore(view, part, back) })).filter(item => item.score > 0).sort((a,b) => b.score - a.score)[0]?.view;
-    let physical = ranked(zone);
+    let physical = costume ? doc.views.find(view => view.source.type === 'pieza' && view.source.pieceId === costume[zone.id]) : ranked(zone);
+    if (costume && !costume[zone.id]) continue; // Purchased headband is a reference, not a generated fabric piece.
     if (!physical && ['pretina','cuello','puno','canesu'].includes(zone.type)) {
       // A casing/hem/bound neckline can be part of a main piece. It inherits
       // that piece's material only when no separately cut trim exists.

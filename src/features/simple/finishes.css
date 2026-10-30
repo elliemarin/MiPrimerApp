@@ -13,6 +13,12 @@
 .finish-swatch { width: 32px; height: 32px; border: 1px dashed var(--line-strong); border-radius: 50%; flex: none; }
 .finish-colors { display: flex; flex-wrap: wrap; gap: 12px; }
 .finish-colors button { width: 44px; height: 44px; border: 1px solid var(--line-strong); border-radius: 50%; }
+.fabric-tray.is-dialog { padding: 0; border-bottom: 0; outline: none; }
+.fabric-tray.is-dialog>.row { flex-wrap: wrap; }
+.fabric-tray.is-dialog>.row>.grow { flex: 1 1 100%; }
+.fabric-tray.is-dialog .fabric-swatches { display: grid; grid-template-columns: repeat(auto-fill,minmax(76px,1fr)); overflow: visible; gap: 10px; padding-block: 14px; }
+.fabric-tray.is-dialog .fabric-swatch { cursor: pointer; touch-action: pan-y; }
+.fabric-tray.is-dialog .fabric-swatch>img,.fabric-tray.is-dialog .fabric-swatch>div { width: 100%; height: 60px; }
 .finish-footer { position: fixed; z-index: 9; inset: auto 0 0 236px; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 24px; border-top: 1px solid var(--line); background: var(--surface); }
 .finish-final-actions { justify-content: flex-end; }
 @media(max-width:600px) { .finish-footer { flex-wrap: wrap; gap: 7px; } .finish-final-actions { width: 100%; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 8px; } .finish-final-actions .btn { padding-inline: 8px; font-size: 12px; } }

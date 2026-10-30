@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Pt } from '../../lib/geom/vec';
 import { useApp } from '../../store/app';
 import { Fabric } from '../../store/types';
@@ -9,7 +9,7 @@ import { importFabricPhoto } from '../../lib/fabricPhoto';
 import { newestFabrics, matchesOwnFabric } from '../../lib/fabricOrder';
 import { saveFabricSamples } from '../../lib/fabricSave';
 import { navigate } from '../../ui/router';
-import { Button, FilePick, IconButton, TextInput, Thumb } from '../../ui/components';
+import { Button, FilePick, IconButton, Sheet, TextInput, Thumb } from '../../ui/components';
 
 export type FabricChoice = { source: 'propia' | 'catalogo'; id: string };
 const pending = new Map<string, Promise<Fabric>>();
@@ -31,7 +31,7 @@ export async function resolveFabricChoice(choice: FabricChoice): Promise<Fabric>
   return pending.get(choice.id)!;
 }
 
-export function FabricTray({modelId,activeId,onChoose,onDrop,onClose,immediate=false}:{modelId?:string;activeId:string|null;onChoose:(id:string)=>void;onDrop:(choice:FabricChoice,point:Pt)=>void;onClose:()=>void;immediate?:boolean}) {
+export function FabricTray({modelId,activeId,onChoose,onDrop,onClose,immediate=false,dialogTitle}:{modelId?:string;activeId:string|null;onChoose:(id:string)=>void;onDrop:(choice:FabricChoice,point:Pt)=>void;onClose:()=>void;immediate?:boolean;dialogTitle?:string}) {
   const fabrics=useApp(s=>s.fabrics);
   const [q,setQ]=useState('');
   const [own,setOwn]=useState(()=>Object.keys(useApp.getState().fabrics).length>0);
@@ -39,6 +39,8 @@ export function FabricTray({modelId,activeId,onChoose,onDrop,onClose,immediate=f
   const suppressClick=useRef(false);
   const [busy,setBusy]=useState(false);
   const [ghost,setGhost]=useState<Pt|null>(null);
+  const tray=useRef<HTMLElement>(null);
+  useEffect(()=>{if(dialogTitle)tray.current?.focus({preventScroll:true});},[dialogTitle]);
   const gesture=useRef<{choice:FabricChoice;start:Pt;moved:boolean}|null>(null);
   const recommendations=recommendFabrics(modelId?findModel(modelId):undefined);
   const list=q?FABRIC_LIBRARY.filter(f=>searchLibraryFabric(f,q)):!all&&recommendations.length?recommendations.map(r=>r.fabric):FABRIC_LIBRARY;
@@ -64,7 +66,7 @@ export function FabricTray({modelId,activeId,onChoose,onDrop,onClose,immediate=f
     }
   };
   const active = activeId ? fabrics[activeId] : undefined;
-  const attrs=(choice:FabricChoice)=>({
+  const attrs=(choice:FabricChoice)=>immediate?{onClick:()=>{if(!busy)void choose(choice);}}:({
     draggable:true,
     onDragStart:(e:React.DragEvent)=>{e.dataTransfer.setData('application/x-hilvana-fabric',JSON.stringify(choice));e.dataTransfer.effectAllowed='copy';},
     onPointerDown:(e:React.PointerEvent)=>{
@@ -84,12 +86,12 @@ export function FabricTray({modelId,activeId,onChoose,onDrop,onClose,immediate=f
     onPointerCancel:()=>{gesture.current=null;setGhost(null);},
     onClick:()=>{if(!busy&&!suppressClick.current)void choose(choice);}
   });
-  return <section className="fabric-tray" aria-label="Telas para el estudio">
+  const content=<section ref={tray} tabIndex={dialogTitle?-1:undefined} className={`fabric-tray${dialogTitle?' is-dialog':''}`} aria-label="Telas para el estudio">
     <div className="row" style={{gap:8}}>
       <Button size="sm" variant={own?'primary':'ghost'} onClick={()=>setOwn(true)}>Mis telas</Button>
       <Button size="sm" variant={own?'ghost':'primary'} onClick={()=>setOwn(false)}>Catálogo</Button>
       <div className="grow"><TextInput value={q} onChange={setQ} placeholder="Buscar tela…" aria-label="Buscar tela para el estudio" /></div>
-      <IconButton icon="close" label="Cerrar telas" onClick={onClose}/>
+      {!dialogTitle&&<IconButton icon="close" label="Cerrar telas" onClick={onClose}/>}
     </div>
     <div className="row-wrap" style={{gap:6,marginTop:6}}>
       <FilePick accept="image/*" capture onFiles={files=>void addPhotos(files)}>{open=><Button size="sm" icon="camera" disabled={busy} onClick={open}>Tomar foto</Button>}</FilePick>
@@ -110,4 +112,5 @@ export function FabricTray({modelId,activeId,onChoose,onDrop,onClose,immediate=f
     <p className="tiny muted" role="status" style={{margin:0}}>{busy?'Preparando tela…':immediate?'Toca una tela para aplicarla. Tus fotos se guardan aquí, las nuevas primero.':own?'Tus telas, de la más nueva a la más antigua. Elige una y toca la parte que quieres vestir.':'Elige una tela sugerida o guarda una foto de la tuya. Las fotos sin calibrar son referencias visuales.'}</p>
     {ghost&&<div aria-hidden="true" style={{position:'fixed',left:ghost.x-22,top:ghost.y-22,width:44,height:44,borderRadius:6,background:'var(--mat)',border:'3px solid var(--tape)',pointerEvents:'none',zIndex:999}}/>}
   </section>;
+  return dialogTitle?<Sheet title={dialogTitle} onClose={onClose}>{content}</Sheet>:content;
 }

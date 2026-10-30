@@ -472,12 +472,53 @@ function bagView(key: FlatViewKey, kind: 'tote' | 'neceser' | 'bandolera', objec
   return finishView(key, zones, details, [], 0, 'Boca', { center: 0 });
 }
 
-export type AccessoryKind = 'babero' | 'gorro' | 'parche' | 'cojin' | 'funda-bebida' | 'dona' | 'bandana' | 'rectangulo' | 'delantal' | 'antifaz' | 'banderin' | 'funda-solapa' | 'bolsa-jareta' | 'estuche-plano' | 'banda-lazo' | 'organizador' | 'sombrero' | 'corbata' | 'pajarita' | 'mitones' | 'zapatillas' | 'portacubiertos' | 'fundasilla' | 'cesto';
+export type AccessoryKind = 'babero' | 'gorro' | 'parche' | 'cojin' | 'funda-bebida' | 'dona' | 'bandana' | 'rectangulo' | 'delantal' | 'antifaz' | 'banderin' | 'funda-solapa' | 'bolsa-jareta' | 'estuche-plano' | 'banda-lazo' | 'organizador' | 'sombrero' | 'corbata' | 'pajarita' | 'mitones' | 'zapatillas' | 'portacubiertos' | 'fundasilla' | 'cesto' | 'corona' | 'sombrero-mago' | 'orejas';
 
-function accessoryView(key: FlatViewKey, kind: AccessoryKind, object?: { width: number; height: number; label: string }): FlatView {
+/** Finished costume accessories. These surfaces are illustrations; their actual
+ * cut outlines, allowances and assembly belong to the independent generators. */
+function costumeAccessoryView(key: FlatViewKey, kind: AccessoryKind, w: number, h: number, detailCount = 5): FlatView {
+  const zones: Zone[] = [], details: FlatView['details'] = [];
+  if (kind === 'corona') {
+    zones.push(zone('reverso', 'Interior de la corona', 'base', `M${-w*.46} ${h*.58} Q0 ${h*.32} ${w*.46} ${h*.58} L${w*.46} ${h*.87} Q0 ${h*.57} ${-w*.46} ${h*.87} Z`));
+    const peaks = detailCount === 7 ? 7 : 5;
+    const points: P[] = [[-w*.5,h*.87]];
+    const edge: P[] = [[-w*.46,h*.69]];
+    for(let index=0;index<peaks*2-1;index++) {
+      const x=-w*.49+index*w*.98/(peaks*2-2);
+      const perspective=Math.pow(Math.abs(x)/(w*.49),1.35)*h*.32;
+      const y=perspective+(index%2?h*.42:0);
+      points.push([x,y]);
+      edge.push([x*.92,y+h*.09]);
+    }
+    points.push([w*.5,h*.87]); edge.push([w*.46,h*.69]);
+    zones.push(zone('base', 'Exterior de la corona', 'base', points.map((p,i)=>(i?Lp:M)(p)).join(' ')+` Q0 ${h*1.12} ${-w*.5} ${h*.87} Z`));
+    details.push({d:`M${-w*.47} ${h*.76} Q0 ${h*.98} ${w*.47} ${h*.76}`,style:'pespunte'});
+    details.push({d:edge.map((p,i)=>(i?Lp:M)(p)).join(' '),style:'pespunte'});
+  } else if (kind === 'sombrero-mago') {
+    const y=h*.83, r=h*.10, neck=w*.255;
+    zones.push(zone('ala', 'Ala del sombrero', 'base', `M${-w/2} ${y} C${-w/2} ${y-r*1.34} ${w/2} ${y-r*1.34} ${w/2} ${y} C${w/2} ${y+r*1.34} ${-w/2} ${y+r*1.34} ${-w/2} ${y} Z`));
+    zones.push(zone('copa', 'Cono del sombrero', 'base', `M${-neck} ${y} L0 0 L${neck} ${y} Q0 ${y+r*.65} ${-neck} ${y} Z`));
+    details.push({d:`M${-w*.47} ${y+1} C${-w*.47} ${y+r*1.1} ${w*.47} ${y+r*1.1} ${w*.47} ${y+1}`,style:'pespunte'});
+    details.push({d:`M${-neck*.96} ${y-h*.014} Q0 ${y+r*.58-h*.014} ${neck*.96} ${y-h*.014}`,style:'costura'});
+    details.push({d:`M0 ${h*.035} L${neck*.51} ${y-h*.01}`,style:'costura'});
+  } else {
+    const earW=(w-45)/2, earH=h-30, gap=45;
+    zones.push(zone('diadema-referencia', 'Diadema comprada · no incluida en el patrón', 'otra', `M${-w*.51} ${h} Q${-w*.43} ${earH*.75} 0 ${earH*.75} Q${w*.43} ${earH*.75} ${w*.51} ${h} L${w*.47} ${h} Q${w*.38} ${earH*.83} 0 ${earH*.83} Q${-w*.38} ${earH*.83} ${-w*.47} ${h} Z`));
+    for (const side of [-1,1]) {
+      const cx=side*(earW+gap)/2, tilt=side*earW*.12;
+      zones.push(zone(side<0?'oreja-izquierda':'oreja-derecha',side<0?'Oreja izquierda':'Oreja derecha','base',`M${cx-earW/2} ${earH*.92} C${cx-earW*.38} ${earH*.46} ${cx-earW*.18+tilt} 0 ${cx+tilt} 0 C${cx+earW*.18+tilt} 0 ${cx+earW*.38} ${earH*.46} ${cx+earW/2} ${earH*.92} Z`));
+      details.push({d:`M${cx-earW*.39} ${earH*.85} C${cx-earW*.3} ${earH*.48} ${cx-earW*.12+tilt} ${earH*.1} ${cx+tilt} ${earH*.1} C${cx+earW*.12+tilt} ${earH*.1} ${cx+earW*.3} ${earH*.48} ${cx+earW*.39} ${earH*.85} Z`,style:'pespunte'});
+      details.push({d:line([cx-earW*.34,earH*.92],[cx+earW*.34,earH*.92]),style:'costura'});
+    }
+  }
+  return finishView(key,zones,details,[],0,'Referencia visual del accesorio',{center:0},Math.max(w,h)*.035);
+}
+
+function accessoryView(key: FlatViewKey, kind: AccessoryKind, object?: { width: number; height: number; label: string; detailCount?: number }): FlatView {
   const zones: Zone[] = [];
   const details: FlatView['details'] = [];
   const w=object?.width??260, h=object?.height??190;
+  if (['corona','sombrero-mago','orejas'].includes(kind)) return costumeAccessoryView(key,kind,w,h,object?.detailCount);
   if (['funda-solapa','bolsa-jareta','estuche-plano','banda-lazo','organizador','sombrero','corbata','pajarita','mitones','zapatillas','portacubiertos','fundasilla','cesto'].includes(kind)) {
     return extraAccessoryView(key,kind,w,h,object?.label);
   }
@@ -625,7 +666,21 @@ function relaxedView(key: FlatViewKey,o:TopOpts):FlatView {
 
 function capeView(key:FlatViewKey,o:TopOpts):FlatView {
   const back=key==='espalda', W=480*(o.fit??1), L=o.length;
-  const body=o.style==='capa'?`M-85 0 Q${-W} 70 ${-W} ${L*.7} Q0 ${L+100} ${W} ${L*.7} Q${W} 70 85 0 L85 60 Q0 105 -85 60 Z`:`M${-W} 0 L-85 0 L-85 65 Q0 105 85 65 L85 0 L${W} 0 L${W} ${L} L${-W} ${L} Z`;
+  if(o.style==='capa') {
+    const outer=(sign:number)=>`M${sign*85} 0 C${sign*W*.34} ${L*.06} ${sign*W*.87} ${L*.25} ${sign*W} ${L*.72} Q${sign*W*.76} ${L*.97} ${sign*50} ${L} Q${sign*20} ${L*.58} 0 75 Q${sign*45} 62 ${sign*85} 0 Z`;
+    const body=back?`M-85 0 C${-W*.34} ${L*.06} ${-W*.87} ${L*.25} ${-W} ${L*.72} Q${-W*.72} ${L*1.08} 0 ${L} Q${W*.72} ${L*1.08} ${W} ${L*.72} C${W*.87} ${L*.25} ${W*.34} ${L*.06} 85 0 Q0 58 -85 0 Z`:outer(-1)+' '+outer(1);
+    const zones=[zone(back?'espalda':'delantero',back?'Espalda de la capa':'Frentes de la capa abierta','base',body)];
+    const details:FlatView['details']=[];
+    for(const sign of [-1,1]) {
+      details.push({d:`M${sign*100} ${L*.16} Q${sign*W*.27} ${L*.55} ${sign*W*.25} ${L*.92}`,style:'pliegue'});
+      details.push({d:`M${sign*W*.48} ${L*.33} Q${sign*W*.51} ${L*.58} ${sign*W*.59} ${L*.89}`,style:'pliegue'});
+    }
+    if(back) details.push({d:line([0,30],[0,L-12]),style:'costura'});
+    else for(const sign of [-1,1]) details.push({d:`M${sign*8} 89 Q${sign*27} ${L*.58} ${sign*58} ${L-12}`,style:'pespunte'});
+    if(o.neck==='capucha') zones.push(zone('capucha','Capucha','capucha','M-105 40 C-165 -210 165 -210 105 40 Q0 90 -105 40 Z'));
+    return finishView(key,zones,details,[],0,'Hombro',{center:0});
+  }
+  const body=`M${-W} 0 L-85 0 L-85 65 Q0 105 85 65 L85 0 L${W} 0 L${W} ${L} L${-W} ${L} Z`;
   const zones=[zone(back?'espalda':'delantero',back?'Espalda':'Frente del poncho','base',body)];
   const details:FlatView['details']=[];
   if(o.closure!=='ninguno'&&!back) details.push({d:line([0,80],[0,L]),style:'costura'});
@@ -718,7 +773,7 @@ export interface FlatSpec {
   baby?: { legs: 'body' | 'mameluco'; sleeve: TopOpts['sleeve'] };
   bag?: 'tote' | 'neceser' | 'bandolera';
   accessory?: AccessoryKind;
-  object?: { width: number; height: number; label: string };
+  object?: { width: number; height: number; label: string; detailCount?: number };
   pinafore?: { skirtLength: number; bibWidth: number; bibHeight: number; fullness: number };
   /** Pijama: conjunto de superior y pantalón. */
   set?: boolean;

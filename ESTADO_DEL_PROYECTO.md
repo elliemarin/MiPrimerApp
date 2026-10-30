@@ -12,16 +12,65 @@ Actualízalo al terminar cada tarea.
 
 ```bash
 npm install
-npm test            # 2294 pruebas: patrones, materiales, figurines, PDF y láminas
+npm test            # 2349 pruebas: patrones, disfraces, materiales, PDF y láminas
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Diseños agrupados, disfraces y muestras documentadas (2026-10-30)
+
+**Este es el relevo más reciente.** La biblioteca reúne **1,804 recetas en 69
+diseños con patrón**. Las medidas y versiones se eligen dentro de cada diseño.
+
+- Una tarjeta por construcción: largos, capacidades, asas y otras medidas
+  pasan a selectores antes de crear. Se conservan todos los IDs, parámetros,
+  enlaces anteriores y proyectos. Las variantes se resuelven a recetas reales;
+  no se inventan combinaciones cuando una opción exige ajustar otra medida.
+- Talla corporal separada de medidas del diseño: Chica/Mediana/Grande, meses o
+  medidas propias. Los presets de adultos se excluyen al elegir bebé, incluso
+  si se cambia de destinatario después de haber elegido un largo adulto.
+- Búsqueda y filtros operan antes de agrupar; el representante cumple la
+  selección. Buscar o cambiar destinatario/tela/ajuste conserva la colección.
+- **Elegir una tela o subir foto** abre inmediatamente una hoja visible en
+  Acabados. Incluye buscador, catálogo, cámara y carrete. Aplicar/cerrar/Escape
+  devuelve el foco a la parte. La bandeja de arrastre continúa en Estudio.
+- Nueva colección **Disfraces**: capa semicircular reversible, corona de cinco
+  o siete puntas, sombrero cónico con ala y orejas para diadema. Cuatro motores
+  y quince recetas agrupadas, con piezas, márgenes, medidas, materiales y pasos
+  reales. Ilustraciones propias y vista de materiales/fotos por pieza.
+- **Qué incluye el patrón** muestra despiece, cantidades, medidas/márgenes,
+  materiales, instrucciones y alcance. Calcula una referencia con el motor
+  real sin guardar proyectos/perfiles; informa su comprobación geométrica.
+- **Patrones con muestra confeccionada** reúne diez fuentes externas concretas,
+  con búsqueda, categorías y fichas detalladas. Documenta muestras de sus
+  autores y enlaza el original; no afirma verificación física de Hilvana ni
+  garantía del 100 %. Los PDF externos todavía no son editables en el estudio.
+
+**Verificado:** 2,349 pruebas en 50 archivos, TypeScript y build para Pages.
+Chromium 320/390/1440 px: agrupación, selección de medidas, filtros combinados,
+bebé 0–6, enlaces anteriores, materiales visibles y persistencia, fichas sin
+guardar, fuentes y navegación directa. Regresión de confección: PDF de 32 y
+69 páginas, doce plantillas en el proyecto completo. Nuevos PDF: capa de 24
+páginas/dos plantillas y sombrero de 22/seis, con controles de 50/100 mm y
+manifiestos válidos. Se comprueban extremos de medidas, márgenes independientes
+y unión cono/ala con diferencia inferior a 0,02 mm. Regresión editorial aprobada
+en tres anchos y sin Web Share: PNG/ZIP, prompt y transferencia conservados.
+
+**Pendiente:** imprimir y coser las cuatro construcciones nuevas, registrar
+fotos/medidas/telas y corregir lo observado antes de promover su estado. Siguen
+**Experimental**. Probar cámara, accesibilidad y compartir nativo en iPhone;
+revisar periódicamente los enlaces y correcciones de los autores externos.
+
+Relevo: [docs/DISENOS_Y_MEDIDAS.md](docs/DISENOS_Y_MEDIDAS.md),
+[docs/DISFRACES_Y_PATRONES_CON_MUESTRA.md](docs/DISFRACES_Y_PATRONES_CON_MUESTRA.md),
+[docs/DISFRACES_ORIGINALES.md](docs/DISFRACES_ORIGINALES.md) y
+[fuentes revisadas](docs/FUENTES_PATRONES_SELECCIONADOS.md).
+
 ## Láminas editoriales para el ChatGPT personal (2026-10-30)
 
-**Este es el relevo más reciente.** Se añade **Preparar lámina** al terminar en
+Se añade **Preparar lámina** al terminar en
 Acabados, al ver el modelo y desde el PDF de confección.
 
 - Una prenda/accesorio o hasta seis proyectos por look, con nombre, número y

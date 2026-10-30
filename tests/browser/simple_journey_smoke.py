@@ -238,9 +238,11 @@ def run_search_and_baby_size(browser, width=390):
     no_overflow(page)
     counts = page.evaluate('''async()=>{
       const {CATALOG}=await import('/src/data/catalog.ts');
+      const {groupCatalog}=await import('/src/features/library/groups.ts');
       const {COMPONENT_OPTIONS}=await import('/src/data/components.ts');
       const {EMBROIDERY_MOTIFS}=await import('/src/data/embroideryMotifs.ts');
-      return{patterns:CATALOG.filter(m=>m.generatorId&&!m.studioOnly&&m.status!=='pendiente').length,extras:COMPONENT_OPTIONS.length,motifs:EMBROIDERY_MOTIFS.length};
+      const available=CATALOG.filter(m=>m.generatorId&&!m.studioOnly&&m.status!=='pendiente');
+      return{patterns:available.length,designs:groupCatalog(available).length,extras:COMPONENT_OPTIONS.length,motifs:EMBROIDERY_MOTIFS.length};
     }''')
     assert counts['patterns'] >= 1600 and counts['extras'] >= 200 and counts['motifs'] >= 300, counts
     assert 0 < page.locator('.simple-pattern-card').count() <= 24
@@ -248,10 +250,13 @@ def run_search_and_baby_size(browser, width=390):
     page.wait_for_function("document.querySelector('.simple-pattern-card')?.textContent.toLowerCase().includes('hoodie')")
     hoodies = card_models(page)
     assert all(model['generatorId'] == 'sudadera-capucha-holgada' and model['params']['capucha'] == 'si' for model in hoodies), hoodies
-    page.get_by_role('button', name='Ver más patrones', exact=True).click()
-    assert page.locator('.simple-pattern-card').count() == 48
+    assert len(hoodies) == 1, 'Las medidas de hoodie deben reunirse en un diseño'
+    assert page.get_by_role('button', name='Ver más diseños', exact=True).count() == 0
 
     search.fill('')
+    if counts['designs'] > 24:
+        page.get_by_role('button', name='Ver más diseños', exact=True).click()
+        assert page.locator('.simple-pattern-card').count() == min(48, counts['designs'])
     page.get_by_role('button', name='Pantalones', exact=True).click()
     page.get_by_role('button', name=re.compile('^Filtros')).click()
     page.locator('#search-recipient').select_option('bebe')

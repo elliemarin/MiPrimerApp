@@ -39,7 +39,7 @@ export function matches(m: CatalogModel, f: Filters): boolean {
     const withoutHood = query.includes('sin capucha');
     if (withoutHood && hood) return false;
     if (!withoutHood && query.split(/\s+/).some(word => ['hoodie','hoodies','hoddie','hoddies','capucha'].includes(word)) && !hood) return false;
-    const hay = normalizeSearch(`${m.name} ${m.sub} ${m.collection ?? ''} ${m.variantLabel ?? ''} ${(m.searchTerms ?? []).join(' ')} ${m.description} ${TYPE_LABEL[m.type]} ${m.recommendedFabrics.join(' ')} ${m.recipients.join(' ')} ${m.fits.join(' ')} ${m.variants.map(v=>`${v.name} ${v.text}`).join(' ')}`);
+    const hay = normalizeSearch(`${m.name} ${m.designGroup?.name ?? ''} ${m.sub} ${m.collection ?? ''} ${m.variantLabel ?? ''} ${(m.searchTerms ?? []).join(' ')} ${m.description} ${TYPE_LABEL[m.type]} ${m.recommendedFabrics.join(' ')} ${m.recipients.join(' ')} ${m.fits.join(' ')} ${m.variants.map(v=>`${v.name} ${v.text}`).join(' ')}`);
     if (!query.split(/\s+/).every(w => (synonyms[w] ?? [w]).some(term=>hay.includes(term)))) return false;
   }
   if (f.recipient !== 'todos' && !m.recipients.includes(f.recipient)) return false;

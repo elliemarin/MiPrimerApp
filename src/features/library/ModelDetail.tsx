@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { findModel, RECIPIENT_LABEL, type CatalogModel, type Recipient } from '../../data/catalog';
 import { Button, Empty, Notice } from '../../ui/components';
 import { FlatArt, getFlat } from '../../ui/FlatArt';
@@ -9,6 +9,8 @@ import { ModelStartSheet } from './ModelStartSheet';
 import { modelHasPattern } from './filters';
 import { ModelIllustration } from './ModelIllustration';
 import { supportsModelIllustration } from '../../lib/draw/garmentComposition';
+import { findCatalogGroup } from './groups';
+import { ModelPatternDetails } from './ModelPatternDetails';
 import './simpleLibrary.css';
 
 export function tablesFor(model: CatalogModel, recipient?: Recipient): SizeTable[] {
@@ -24,8 +26,11 @@ export function ModelDetail({ id }: { id: string }) {
   const [intent,setIntent] = useState<'pattern'|'customize'>();
   const [view,setView] = useState('frente');
   const [presentation,setPresentation] = useState<'prenda'|'figurin'>('prenda');
+  useEffect(() => { setIntent(undefined); setView('frente'); setPresentation('prenda'); }, [id]);
   if (!model) return <div className="page"><Empty icon="biblioteca" title="No encontramos esta base" action={<Button onClick={()=>goBack('/biblioteca')}>Ver prendas y accesorios</Button>}/></div>;
   const available = modelHasPattern(model);
+  const group = findCatalogGroup(model.id);
+  const grouped = !!group && group.models.length > 1;
   const experimental = model.status === 'experimental' || (model.generatorId && getGenerator(model.generatorId)?.status === 'experimental');
   const flat = getFlat(model.id,model.flat);
   const recipient = model.recipients.find(value=>value===queryParam('para'));
@@ -40,23 +45,23 @@ export function ModelDetail({ id }: { id: string }) {
         {presentation==='figurin'&&<p className="tiny muted model-illustration-note">Ilustración de la silueta. El ajuste se comprueba con las medidas del patrón.</p>}
       </div>
       <div className="simple-model-copy stack-lg">
-        <div><h1>{model.name}</h1><p className="muted" style={{marginTop:12}}>{model.description}</p></div>
+        <div><h1>{grouped ? group.name : model.name}</h1><p className="muted" style={{marginTop:12}}>{grouped ? model.description.split('. ')[0] + '.' : model.description}</p>{grouped && <p className="small muted" style={{marginTop:10}}>Elige las medidas del diseño al continuar. Después podrás añadir extras, colores y bordados.</p>}</div>
         <div className="simple-model-actions">
           <Button variant="primary" icon="pdf" disabled={!available} onClick={()=>setIntent('pattern')}>Obtener patrón</Button>
           <Button icon="plus" onClick={()=>setIntent('customize')}>Intervenir</Button>
         </div>
         <p className="small muted">{available?'Descarga las piezas a escala real o añade bolsillos y extras antes de elegir telas, colores y bordados.':'Esta base sirve para intervenir una prenda que ya tienes. Su patrón de confección no está disponible.'}</p>
-        <details className="panel panel-pad small"><summary>Medidas, tela y confección</summary><div className="stack" style={{marginTop:14}}>
+        {available ? <ModelPatternDetails key={`${model.id}-${recipient ?? ''}`} model={model} recipient={recipient} babySize={queryParam('talla') ?? undefined}/> : <details className="panel panel-pad small"><summary>Medidas, tela y confección</summary><div className="stack" style={{marginTop:14}}>
           <p><strong>Para:</strong> {model.recipients.map(value=>RECIPIENT_LABEL[value]).join(', ')}.</p>
           <p><strong>Telas:</strong> {model.recommendedFabrics.join(', ')}.</p>
           <p><strong>Necesitarás:</strong> {model.materials.join(', ')}.</p>
           {model.variantLabel&&<p><strong>Variante:</strong> {model.variantLabel}.</p>}
           {model.variants.map(variant=><p key={variant.name}><strong>{variant.name}:</strong> {variant.text}</p>)}
           <p>La talla se elige antes de crear. Las medidas de los accesorios corresponden al objeto indicado; comprueba el objeto real.</p>
-        </div></details>
-        {available&&experimental&&<Notice>Patrón experimental. Sus medidas y uniones se comprueban por geometría; imprime y cose una muestra antes de usar la tela definitiva.</Notice>}
+        </div></details>}
+        {available&&experimental&&<Notice>Patrón experimental. Prueba de confección pendiente: imprime y cose una muestra antes de usar la tela definitiva.</Notice>}
       </div>
     </div>
-    {intent&&<ModelStartSheet key={intent} model={model} intent={intent} recipient={recipient} babySize={queryParam('talla')??undefined} onClose={()=>setIntent(undefined)}/>}
+    {intent&&<ModelStartSheet key={`${id}-${intent}`} model={model} intent={intent} recipient={recipient} babySize={queryParam('talla')??undefined} onClose={()=>setIntent(undefined)}/>}
   </div>;
 }

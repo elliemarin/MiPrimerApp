@@ -1,10 +1,11 @@
 import type { CatalogModel, Recipient } from './catalog';
 import type { FlatSpec, TopOpts, JacketStyle } from './flats';
 import type { Params } from '../lib/pattern/generator';
+import { withDesignGroup } from './catalogGrouping';
 
 const adult: Recipient[]=['mujer','hombre','unisex'];
 function model(id:string,name:string,type:CatalogModel['type'],sub:string,flat:FlatSpec,extra:Partial<CatalogModel>={}):CatalogModel {
-  return {id,name,type,sub,flat,recipients:adult,difficulty:2,fabrics:['plano'],stretch:'ninguna',fits:['holgado'],techniques:['costura-recta','dobladillo'],status:'pendiente',description:'Diseño de referencia con zonas editables para explorar telas y bordados. Su patrón de confección todavía no se genera.',variants:[],recommendedFabrics:['Lino','Algodón','Gabardina ligera'],materials:['Hilo'],...extra};
+  return withDesignGroup({id,name,type,sub,flat,recipients:adult,difficulty:2,fabrics:['plano'],stretch:'ninguna',fits:['holgado'],techniques:['costura-recta','dobladillo'],status:'pendiente',description:'Diseño de referencia con zonas editables para explorar telas y bordados. Su patrón de confección todavía no se genera.',variants:[],recommendedFabrics:['Lino','Algodón','Gabardina ligera'],materials:['Hilo'],...extra});
 }
 function top(style:JacketStyle,length:number,opts:Partial<TopOpts>={}):FlatSpec {
   return {family:'top',top:{style,type:'chaqueta',sleeve:'larga',neck:'redondo',closure:'ninguno',length,fit:1.12,...opts}};

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { CatalogModel, Recipient } from '../../data/catalog';
 import { useApp } from '../../store/app';
 import { Button, Field, LengthInput, Notice, Select, Sheet } from '../../ui/components';
@@ -12,13 +12,29 @@ import { projectFromModel } from '../../store/projects';
 import { prepareSimpleProject } from '../simple/workflow';
 import { navigate } from '../../ui/router';
 import { formatLength } from '../../lib/units';
+import { findCatalogGroup } from './groups';
+import { ModelVariantPicker } from './ModelVariantPicker';
 
-export function ModelStartSheet({ model, intent, recipient, babySize, onClose }: { model: CatalogModel; intent: 'pattern' | 'customize'; recipient?: Recipient; babySize?: string; onClose: () => void }) {
+export function ModelStartSheet({ model: initialModel, intent, recipient, babySize, onClose }: { model: CatalogModel; intent: 'pattern' | 'customize'; recipient?: Recipient; babySize?: string; onClose: () => void }) {
   const app = useApp();
-  const gen = model.generatorId ? getGenerator(model.generatorId) : undefined;
+  const allGroup = useMemo(() => findCatalogGroup(initialModel.id), [initialModel.id]);
+  const [selectedId, setSelectedId] = useState(initialModel.id);
+  const gen = initialModel.generatorId ? getGenerator(initialModel.generatorId) : undefined;
   const needs = !!gen?.requiredMeasures.length;
-  const kinds = [...new Set((recipient && model.recipients.includes(recipient) ? [recipient] : model.recipients).flatMap(kind => kind === 'unisex' ? ['mujer', 'hombre'] as PersonKind[] : [kind as PersonKind]))];
-  const [kind, setKind] = useState<PersonKind>(kinds.includes('mujer') ? 'mujer' : kinds[0] ?? 'mujer');
+  const recipients = recipient && initialModel.recipients.includes(recipient) ? [recipient] : (allGroup?.models ?? [initialModel]).flatMap(candidate => candidate.recipients);
+  const kinds = [...new Set(recipients.flatMap(value => value === 'unisex' ? ['mujer', 'hombre'] as PersonKind[] : [value as PersonKind]))];
+  const [kind, setKind] = useState<PersonKind>(() => {
+    const initialKinds = (recipient ? [recipient] : initialModel.recipients).flatMap(value => value === 'unisex' ? ['mujer', 'hombre'] as PersonKind[] : [value as PersonKind]);
+    return initialKinds.includes('mujer') ? 'mujer' : initialKinds[0] ?? 'mujer';
+  });
+  const group = useMemo(() => {
+    if (!allGroup || !needs && !recipient) return allGroup;
+    const person = needs ? kind : recipient!;
+    const compatible = allGroup.models.filter(candidate => person !== 'otro' && candidate.recipients.includes(person) || (person === 'mujer' || person === 'hombre') && candidate.recipients.includes('unisex'));
+    return { ...allGroup, models: compatible, representative: compatible.find(candidate => candidate.id === allGroup.representative.id) ?? compatible[0] };
+  }, [allGroup, needs, kind, recipient]);
+  const model = group?.models.find(candidate => candidate.id === selectedId) ?? group?.representative ?? initialModel;
+  const directCostumeMeasures = model.collection === 'Disfraces' && !needs;
   const child = ['bebe','toddler','infantil'].includes(kind);
   const [size, setSize] = useState<QuickSize | 'custom'>('mediana');
   const [code, setCode] = useState(babySize ?? (kind === 'bebe' ? 'B0-3' : kind === 'toddler' ? 'E92' : 'E128'));
@@ -52,9 +68,11 @@ export function ModelStartSheet({ model, intent, recipient, babySize, onClose }:
   };
   return <Sheet title={intent === 'pattern' ? 'Tu patrón' : 'Tu diseño'} onClose={onClose} footer={<Button variant="primary" block onClick={create} disabled={needs && size === 'custom' && !!missing.length}>{intent === 'pattern' ? 'Preparar PDF' : 'Colocar extras'}</Button>}>
     <div className="stack-lg">
-      <strong>{model.name}</strong>
+      <strong>{group?.name ?? model.name}</strong>
+      {group && group.models.length > 1 && <ModelVariantPicker group={group} model={model} unit={app.settings.unit} onChange={next => { setSelectedId(next.id); setObjectParams({}); setError(''); }}/>}
       {needs ? <>
-        {kinds.length > 1 && <Field label="Para quién" htmlFor="simple-kind"><Select id="simple-kind" value={kind} onChange={value => { setKind(value); setCustom({}); }} options={kinds.map(value => ({ value, label: value === 'mujer' ? 'Mujer' : value === 'hombre' ? 'Hombre' : value === 'bebe' ? 'Bebé' : value === 'toddler' ? '1–4 años' : 'Infantil' }))} /></Field>}
+        <h3 className="section-title model-start-size-title">Talla corporal</h3>
+        {kinds.length > 1 && <Field label="Para quién" htmlFor="simple-kind"><Select id="simple-kind" value={kind} onChange={value => { setKind(value); setCustom({}); setObjectParams({}); setError(''); }} options={kinds.map(value => ({ value, label: value === 'mujer' ? 'Mujer' : value === 'hombre' ? 'Hombre' : value === 'bebe' ? 'Bebé' : value === 'toddler' ? '1–4 años' : 'Infantil' }))} /></Field>}
         <div role="group" aria-label="Tamaño" className="row-wrap">
           {!child && (['chica','mediana','grande'] as QuickSize[]).map(value => <button key={value} className="filter-chip" aria-pressed={size === value} onClick={() => setSize(value)}>{QUICK_SIZE_LABEL[value]}</button>)}
           {child && <button className="filter-chip" aria-pressed={size !== 'custom'} onClick={() => setSize('mediana')}>Por {kind === 'bebe' ? 'meses' : 'estatura'}</button>}
@@ -65,7 +83,7 @@ export function ModelStartSheet({ model, intent, recipient, babySize, onClose }:
           <p className="small muted">{['pecho','cintura','cadera','estatura'].filter(key => reference.values[key as keyof MeasureValues]).map(key => `${MEASURE_BY_KEY[key as keyof typeof MEASURE_BY_KEY].label}: ${formatLength(reference.values[key as keyof MeasureValues]!, app.settings.unit)}`).join(' · ')}</p>
           <p className="tiny muted">Tallas de referencia de Hilvana. Comprueba los contornos antes de cortar; también puedes indicar tus medidas.</p>
         </> : <div className="grid-2">{[...new Set([...(gen?.requiredMeasures ?? []), ...(gen?.optionalMeasures ?? [])])].map(key => <Field key={key} label={`${MEASURE_BY_KEY[key].label}${gen?.requiredMeasures.includes(key) ? '' : ' (opcional)'}`} htmlFor={`custom-${key}`} hint={MEASURE_BY_KEY[key].how}><LengthInput id={`custom-${key}`} mm={custom[key]} min={1} max={3000} onChange={value => setCustom(current => ({ ...current, [key]: value }))} /></Field>)}</div>}
-      </> : <div className="stack"><p className="muted small">Este accesorio usa las medidas del objeto indicadas en su ficha. No necesita talla corporal.</p>{gen?.params.some(param=>param.group==='diseno'&&param.type==='length')&&<details className="panel panel-pad"><summary>Ajustar medidas del objeto</summary><div className="grid-2" style={{marginTop:14}}>{gen.params.filter(param=>param.group==='diseno'&&param.type==='length'&&(!param.when||param.when(objectDefaults))).map(param=><Field key={param.key} label={param.label} htmlFor={`object-${param.key}`} hint={param.help}><LengthInput id={`object-${param.key}`} mm={typeof objectDefaults[param.key]==='number'?objectDefaults[param.key] as number:undefined} min={param.min??1} max={param.max??3000} onChange={value=>value!==undefined&&setObjectParams(values=>({...values,[param.key]:value}))}/></Field>)}</div></details>}</div>}
+      </> : <div className="stack"><p className="muted small">{directCostumeMeasures ? 'Ajusta las medidas indicadas para esta versión. Comprueba los contornos antes de cortar.' : 'Este accesorio usa las medidas del objeto indicadas en su ficha. No necesita talla corporal.'}</p>{gen?.params.some(param=>param.group==='diseno'&&param.type==='length')&&<details className="panel panel-pad"><summary>{directCostumeMeasures ? 'Ajustar medidas' : 'Ajustar medidas del objeto'}</summary><div className="grid-2" style={{marginTop:14}}>{gen.params.filter(param=>param.group==='diseno'&&param.type==='length'&&(!param.when||param.when(objectDefaults))).map(param=><Field key={param.key} label={param.label} htmlFor={`object-${param.key}`} hint={param.help}><LengthInput id={`object-${param.key}`} mm={typeof objectDefaults[param.key]==='number'?objectDefaults[param.key] as number:undefined} min={param.min??1} max={param.max??3000} onChange={value=>value!==undefined&&setObjectParams(values=>({...values,[param.key]:value}))}/></Field>)}</div></details>}</div>}
       {error && <Notice tone="err">{error}</Notice>}
       {gen?.status === 'experimental' && <p className="tiny muted">Patrón experimental: comprueba la impresión y cose una muestra.</p>}
     </div>

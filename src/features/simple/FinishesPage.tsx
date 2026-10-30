@@ -37,6 +37,7 @@ export function FinishesPage({projectId}:{projectId:string}) {
   const [targetId,setTargetId]=useState<string>();
   const [palette,setPalette]=useState(false);
   const [fabricTray,setFabricTray]=useState(false);
+  const materialTrigger=useRef<HTMLButtonElement|null>(null);
   const [picker,setPicker]=useState(false);
   const [modelPreview,setModelPreview]=useState(false);
   const [editorial,setEditorial]=useState(false);
@@ -57,7 +58,9 @@ export function FinishesPage({projectId}:{projectId:string}) {
   const active=doc.elements.find(element=>element.id===selected&&element.embroidery);
   const catalogModel=findModel(project.modelId??'');
   const commit=(next:DesignDoc)=>{setLive(undefined);if(designHash(next)===designHash(project.design))return;setPast(values=>[...values.slice(-59),project.design!]);setFuture([]);update(projectId,current=>reconcileComponentDesign({...current,design:next},fabrics));};
-  const material=(fill:Fill,all=false)=>{const ids=all?targets.map(item=>item.id):target?[target.id]:[];if(!ids.length)return;setPast(values=>[...values.slice(-59),project.design!]);setFuture([]);update(projectId,current=>applyMaterial(current,ids,fill,fabrics));setPalette(false);setFabricTray(false);};
+  const restoreMaterialFocus=()=>requestAnimationFrame(()=>materialTrigger.current?.focus({preventScroll:true}));
+  const closeFabrics=()=>{setFabricTray(false);restoreMaterialFocus();};
+  const material=(fill:Fill,all=false)=>{const ids=all?targets.map(item=>item.id):target?[target.id]:[];if(!ids.length)return;setPast(values=>[...values.slice(-59),project.design!]);setFuture([]);update(projectId,current=>applyMaterial(current,ids,fill,fabrics));setPalette(false);setFabricTray(false);restoreMaterialFocus();};
   const undo=()=>{const previous=past[past.length-1];if(!previous)return;setFuture(values=>[project.design!,...values]);setPast(values=>values.slice(0,-1));update(projectId,current=>reconcileComponentDesign({...current,design:previous},fabrics));if(missingMaterials({...project,design:previous}).length)setMode('materiales');setSelected(undefined);};
   const redo=()=>{const next=future[0];if(!next)return;setPast(values=>[...values,project.design!]);setFuture(values=>values.slice(1));update(projectId,current=>reconcileComponentDesign({...current,design:next},fabrics));setSelected(undefined);};
   const fits=(element:DesignElement)=>{
@@ -116,7 +119,7 @@ export function FinishesPage({projectId}:{projectId:string}) {
         <div className="row-wrap" role="group" aria-label="Acabado"><button className="filter-chip" aria-pressed={mode==='materiales'} onClick={()=>setMode('materiales')}>Materiales</button><button className="filter-chip" aria-pressed={mode==='bordados'} disabled={missing.length>0} onClick={()=>setMode('bordados')}>Bordados</button></div>
         {mode==='materiales'?<>
           <div><h2 className="section-title">Viste cada parte</h2><p className="small muted">{missing.length?`Falta elegir color o tela en ${missing.length} partes.`:'Ya elegiste los materiales de todas las partes.'}</p></div>
-          <div className="finish-material-list">{targets.map(item=><button key={item.id} onClick={()=>{setTargetId(item.id);setViewId(item.viewId);setPalette(true);}} aria-label={`Elegir color o tela: ${item.label}`}><span className="finish-swatch" style={{background:item.fill?.type==='color'?item.fill.color:item.fill?.type==='tela'?fabrics[item.fill.fabricId]?.color:undefined}}/>
+          <div className="finish-material-list">{targets.map(item=><button key={item.id} onClick={event=>{materialTrigger.current=event.currentTarget;setTargetId(item.id);setViewId(item.viewId);setPalette(true);}} aria-label={`Elegir color o tela: ${item.label}`}><span className="finish-swatch" style={{background:item.fill?.type==='color'?item.fill.color:item.fill?.type==='tela'?fabrics[item.fill.fabricId]?.color:undefined}}/>
             <span><strong>{item.label}</strong><span className="tiny muted">{missing.some(target=>target.id===item.id)?'Por elegir':item.fill?.type==='tela'?fabrics[item.fill.fabricId]?.name:'Color elegido'}</span></span><Icon name={missing.some(target=>target.id===item.id)?'plus':'check'}/></button>)}</div>
           <Button variant="primary" disabled={!!missing.length} onClick={()=>setMode('bordados')}>Continuar a bordados</Button>
         </>:<>
@@ -130,7 +133,7 @@ export function FinishesPage({projectId}:{projectId:string}) {
     </div>
     <div className="finish-footer"><span className="tiny muted">{missing.length?`${missing.length} partes por elegir`:'Materiales completos'}</span><div className="row-wrap finish-final-actions"><Button disabled={!!missing.length} onClick={()=>setEditorial(true)}>Preparar lámina</Button><Button variant="primary" icon="pdf" disabled={!!missing.length} onClick={()=>navigate(`/confeccion/${projectId}`)}>Generar patrones</Button></div></div>
     {palette&&target&&<Sheet title={target.label} onClose={()=>setPalette(false)}><div className="stack-lg"><p className="small muted">Elige el color o la tela para esta parte.</p><div className="finish-colors">{COLORS.map(color=><button key={color} aria-label={`Color ${color}`} style={{background:color}} onClick={()=>material({type:'color',color})}/>)}</div><Field label="Otro color"><input type="color" aria-label="Otro color" value={target.fill?.type==='color'?target.fill.color:'#24584A'} onChange={event=>material({type:'color',color:event.target.value})}/></Field><Button icon="telas" onClick={()=>{setPalette(false);setFabricTray(true);}}>Elegir una tela o subir foto</Button><details><summary>Usar el mismo material en todo</summary><div className="stack" style={{marginTop:12}}><p className="small muted">Elige un color para todas las partes o aplica la tela/color actual.</p><div className="finish-colors">{COLORS.slice(0,6).map(color=><button key={color} aria-label={`Todas las partes ${color}`} style={{background:color}} onClick={()=>material({type:'color',color},true)}/>)}</div>{target.fill&&target.fill.type!=='ninguno'&&<Button onClick={()=>material(target.fill!,true)}>Usar en todas las partes</Button>}</div></details></div></Sheet>}
-    {fabricTray&&<FabricTray immediate modelId={project.modelId} activeId={target?.fill?.type==='tela'?target.fill.fabricId:null} onChoose={id=>material({type:'tela',fabricId:id,rotation:0,offsetX:0,offsetY:0,scale:1})} onDrop={()=>{}} onClose={()=>setFabricTray(false)}/>}
+    {fabricTray&&<FabricTray immediate dialogTitle={`Tela para ${target?.label??'esta parte'}`} modelId={project.modelId} activeId={target?.fill?.type==='tela'?target.fill.fabricId:null} onChoose={id=>material({type:'tela',fabricId:id,rotation:0,offsetX:0,offsetY:0,scale:1})} onDrop={()=>{}} onClose={closeFabrics}/>}
     {picker&&<EmbroideryPicker onClose={()=>setPicker(false)} onPick={insert}/>}
     {modelPreview&&<ProjectModelPreview project={project} onClose={()=>setModelPreview(false)} onPrepareEditorial={()=>{setModelPreview(false);setEditorial(true);}}/>}
     {editorial&&<Suspense fallback={<Sheet title="Lámina con ChatGPT" onClose={()=>setEditorial(false)}><p role="status">Abriendo las referencias…</p></Sheet>}><EditorialSheet projectId={projectId} onClose={()=>setEditorial(false)}/></Suspense>}

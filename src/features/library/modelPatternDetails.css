@@ -1,0 +1,14 @@
+.native-pattern-content { margin-top: 18px; }
+.native-pattern-list { margin: 12px 0 0; padding-left: 20px; }
+.native-pattern-list li + li { margin-top: 10px; }
+.native-pattern-list li > span { display: block; color: var(--ink-2); margin-top: 3px; }
+.native-pattern-verification { border-left: 3px solid var(--mat); padding-left: 12px; }
+.native-pattern-verification > p { color: var(--ink-2); margin-top: 5px; }
+.native-pattern-measures { margin: 14px 0; display: grid; gap: 10px; }
+.native-pattern-measures > div { display: grid; grid-template-columns: minmax(0,1fr) minmax(80px,.65fr); gap: 12px; }
+.native-pattern-measures dt { color: var(--ink-2); }
+.native-pattern-measures dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.native-pattern-steps { padding-left: 22px; margin: 12px 0 0; }
+.native-pattern-steps li + li { margin-top: 16px; }
+.native-pattern-steps p { color: var(--ink-2); margin-top: 5px; }
+.native-pattern-subsection { border-top: 1px solid var(--line); padding-top: 14px; }

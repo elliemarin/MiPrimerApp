@@ -8,6 +8,7 @@ import { prepareSimpleProject } from '../src/features/simple/workflow';
 import { modelMaterials } from '../src/features/simple/modelMaterials';
 import type { Fill } from '../src/features/studio/model';
 import type { Project } from '../src/store/types';
+import { COSTUME_CATALOG } from '../src/data/costumeCatalog';
 
 const blue: Fill = { type: 'color', color: '#3366AA' };
 const red: Fill = { type: 'color', color: '#B4273A' };
@@ -98,5 +99,28 @@ describe('materiales reales en la composición del figurín', () => {
     const result = modelMaterials(project, view);
     expect(result.omittedPanels).toBe(true);
     for (const zone of view.zones) expect(result.fills[zone.id]).toBeUndefined();
+  });
+
+  it('conserva las caras, fotos y ajustes de los disfraces sin vestirlos con el refuerzo o la diadema comprada', () => {
+    const mappings: Record<string, Record<string, string>> = {
+      'capa-semicircular': { delantero: 'exterior', espalda: 'exterior' },
+      'corona-textil': { base: 'exterior', reverso: 'reverso' },
+      'sombrero-mago': { copa: 'cono', ala: 'ala' },
+      'orejas-diadema': { 'oreja-izquierda': 'frente', 'oreja-derecha': 'frente' }
+    };
+    for(const [generator, expected] of Object.entries(mappings)) {
+      const model=COSTUME_CATALOG.find(model=>model.generatorId===generator)!;
+      let project=prepareSimpleProject(projectFromModel(model));
+      for(const view of project.design!.views) if(view.source.type==='pieza') project=paint(project,new RegExp(`^${view.source.pieceId}$`),red);
+      for(const piece of new Set(Object.values(expected))) project=paint(project,new RegExp(`^${piece}$`),piece==='reverso'||piece==='ala'?blue:photo);
+      const snapshot=JSON.stringify(project);
+      for(const flat of buildFlat(model.id,model.flat).views) {
+        const result=modelMaterials(project,flat);
+        for(const [zone,piece] of Object.entries(expected)) if(flat.zones.some(item=>item.id===zone)) expect(result.fills[zone],`${generator}/${zone}`).toEqual(piece==='reverso'||piece==='ala'?blue:photo);
+        expect(result.fills['diadema-referencia']).toBeUndefined();
+        expect(Object.values(result.fills)).not.toContainEqual(red);
+      }
+      expect(JSON.stringify(project)).toBe(snapshot);
+    }
   });
 });

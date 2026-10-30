@@ -1,6 +1,7 @@
 import type { CatalogModel, GarmentType, Recipient, Technique } from './catalog';
 import type { FlatSpec, TopOpts } from './flats';
 import type { Params } from '../lib/pattern/generator';
+import { withDesignGroup, sleeveDesignGroup, rectangleDesignGroup } from './catalogGrouping';
 
 /** Original construction variants, not colourways or duplicated clothing sizes.
  * Every entry changes physical cutting geometry or a construction finish.
@@ -9,9 +10,9 @@ const entries: CatalogModel[] = [];
 const adult: Recipient[] = ['mujer', 'hombre', 'unisex'];
 const fmt = (mm: number) => `${Number((mm / 10).toFixed(1)).toString().replace('.', ',')} cm`;
 const size = (w: number, h: number) => `${fmt(w)} × ${fmt(h)}`;
-type Base = { id: string; name: string; collection: string; generatorId: string; params: Params; flat: FlatSpec; variantLabel: string; type?: GarmentType; description?: string; searchTerms?: string[]; techniques?: Technique[]; fabrics?: CatalogModel['fabrics']; fits?: CatalogModel['fits']; recipients?: Recipient[]; materials?: string[] };
+type Base = { id: string; name: string; collection: string; generatorId: string; params: Params; flat: FlatSpec; variantLabel: string; type?: GarmentType; description?: string; searchTerms?: string[]; techniques?: Technique[]; fabrics?: CatalogModel['fabrics']; fits?: CatalogModel['fits']; recipients?: Recipient[]; materials?: string[]; designGroup?: CatalogModel['designGroup'] };
 function add(o: Base) {
-  entries.push({
+  entries.push(withDesignGroup({
     id: `coleccion-${o.id}`, name: o.name, collection: o.collection, sub: o.collection,
     variantLabel: o.variantLabel, generatorId: o.generatorId, params: o.params, flat: o.flat,
     type: o.type ?? 'accesorios', recipients: o.recipients ?? adult, difficulty: 1,
@@ -21,8 +22,8 @@ function add(o: Base) {
     variants: [{ name: 'Construcción y medidas', text: o.variantLabel }],
     techniques: o.techniques ?? ['costura-recta', 'aplicacion', 'bordado'],
     recommendedFabrics: o.fabrics?.[0] === 'punto' ? ['French terry estable', 'Punto interlock', 'Sudadera sin mucha elasticidad'] : ['Algodón', 'Lino', 'Popelina', 'Loneta ligera'],
-    materials: o.materials ?? ['Hilo de coser'], searchTerms: o.searchTerms
-  });
+    materials: o.materials ?? ['Hilo de coser'], searchTerms: o.searchTerms, designGroup: o.designGroup
+  }));
 }
 function top(type: TopOpts['type'], length: number, sleeve: number, ease: number, extra: Partial<TopOpts> = {}): FlatSpec {
   return { family: 'top', top: { type, style: 'bluson', sleeve: sleeve === 0 ? 'sin' : sleeve < 220 ? 'corta' : sleeve < 360 ? 'tres-cuartos' : 'larga', neck: 'cuadrado', closure: 'ninguno', length, fit: 1 + ease / 1000, pocket: 'ninguno', ...extra } };
@@ -81,7 +82,7 @@ const devices: [string, string, number, number, number][] = [
 ];
 for (const [id, name, w, h, thick] of devices) for (const ease of [6, 14, 24]) for (const flap of [0.28, 0.48]) {
   const f = Math.round(h * flap);
-  add({ id: `funda-${id}-${ease}-${Math.round(flap * 100)}`, name: `${name} · solapa ${flap < .4 ? 'corta' : 'larga'}, holgura ${fmt(ease)}`, collection: 'Fundas con solapa', generatorId: 'funda-solapa', params: { ancho: w, alto: h, grosor: thick, holgura: ease, solapa: f }, flat: object('funda-solapa', w + thick + ease, h + thick / 2 + ease / 2, name), variantLabel: `Objeto de ${size(w, h)} y grosor ${fmt(thick)}, holgura ${fmt(ease)}, solapa ${fmt(f)}`, techniques: ['costura-recta', 'forro'], materials: ['Broche o velcro', 'Forro', 'Hilo'], description: 'Funda plana forrada. Las medidas del objeto son un punto de partida, no una talla universal: comprueba el objeto con su carcasa antes de cortar. No incluye acolchado.', searchTerms: [id, 'funda', 'sleeve', 'libro', 'lectura'] });
+  add({ designGroup: sleeveDesignGroup(id), id: `funda-${id}-${ease}-${Math.round(flap * 100)}`, name: `${name} · solapa ${flap < .4 ? 'corta' : 'larga'}, holgura ${fmt(ease)}`, collection: 'Fundas con solapa', generatorId: 'funda-solapa', params: { ancho: w, alto: h, grosor: thick, holgura: ease, solapa: f }, flat: object('funda-solapa', w + thick + ease, h + thick / 2 + ease / 2, name), variantLabel: `Objeto de ${size(w, h)} y grosor ${fmt(thick)}, holgura ${fmt(ease)}, solapa ${fmt(f)}`, techniques: ['costura-recta', 'forro'], materials: ['Broche o velcro', 'Forro', 'Hilo'], description: 'Funda plana forrada. Las medidas del objeto son un punto de partida, no una talla universal: comprueba el objeto con su carcasa antes de cortar. No incluye acolchado.', searchTerms: [id, 'funda', 'sleeve', 'libro', 'lectura'] });
 }
 const pouches: [string, string, number, number][] = [
  ['monedas','Monedero',120,85],['lapices','Estuche para lápices',220,100],['marcadores','Estuche para marcadores',250,140],['pinceles','Estuche para pinceles',300,130],['costura','Estuche para costura',200,160],['ganchillos','Estuche para ganchillos',230,110],['cables','Estuche para cables',210,150],['cosmeticos','Estuche plano de cosméticos',270,180],['medicamentos','Estuche organizador de viaje',240,170],['documentos','Estuche para documentos',340,240],['recibos','Estuche para recibos',190,140],['cargadores','Estuche para cargadores',260,160],['tarjetas','Estuche para tarjetas',140,100],['bordado','Estuche para hilos de bordado',280,220],['herramientas','Estuche para herramientas ligeras',310,200],['accesorios','Estuche para accesorios',180,130],['juegos','Estuche para piezas de juego',290,240],['fotos','Estuche para fotos y recuerdos',230,190]
@@ -100,7 +101,7 @@ for (const [id, name, w, h] of sacks) for (const capacity of [0, 40, 80]) for (c
 const rectangles: [string, string, number, number][] = [
  ['mesa','Mantel individual',450,320],['mesa-amplio','Mantel individual amplio',500,380],['desayuno','Individual de desayuno',400,300],['bandeja','Tapete para bandeja',350,250],['posavasos','Posavasos cuadrado',110,110],['taza','Tapete para taza',150,150],['plato','Tapete para plato',300,300],['centro','Centro de mesa',600,400],['camino','Camino de mesa corto',900,300],['camino-largo','Camino de mesa largo',1300,350],['servilleta','Servilleta reversible',350,350],['servilleta-grande','Servilleta de mesa amplia',450,450],['maquina','Tapete de máquina',650,450],['raton','Tapete textil de escritorio',280,230],['escritorio','Protector textil de escritorio',800,400],['marcapaginas','Marcapáginas textil',55,220],['muestrario','Base para muestrario',250,350],['cuadro','Panel decorativo textil',450,600]
 ];
-for (const [id, name, w, h] of rectangles) add({ id: `reversible-${id}`, name: `${name} reversible · ${size(w,h)}`, collection: 'Mesa y escritorio', generatorId: 'textil-doble-cara', params: { ancho: w, alto: h }, flat: object('rectangulo', w, h, name), variantLabel: `Dos caras de ${size(w,h)} terminados`, materials: ['Tela principal', 'Tela de reverso', 'Hilo'], techniques: ['costura-recta', 'aplicacion', 'bordado'], description: 'Textil rectangular reversible, sin relleno. Las dos caras se cosen y voltean por una abertura; no es aislamiento térmico.', searchTerms: [id, 'mesa', 'hogar', 'escritorio'] });
+for (const [id, name, w, h] of rectangles) add({ designGroup: rectangleDesignGroup(id), id: `reversible-${id}`, name: `${name} reversible · ${size(w,h)}`, collection: 'Mesa y escritorio', generatorId: 'textil-doble-cara', params: { ancho: w, alto: h }, flat: object('rectangulo', w, h, name), variantLabel: `Dos caras de ${size(w,h)} terminados`, materials: ['Tela principal', 'Tela de reverso', 'Hilo'], techniques: ['costura-recta', 'aplicacion', 'bordado'], description: 'Textil rectangular reversible, sin relleno. Las dos caras se cosen y voltean por una abertura; no es aislamiento térmico.', searchTerms: [id, 'mesa', 'hogar', 'escritorio'] });
 for (const [w, h] of [[300,300],[350,350],[400,400],[450,450],[500,500],[550,550],[600,600],[650,650],[300,500],[350,550],[400,600],[450,650],[500,700],[500,750],[600,800],[700,900]]) for (const overlap of [100, 160]) {
   add({ id: `cojin-${w}-${h}-${overlap}`, name: `Funda de ${w === h ? 'cojín' : 'almohada'} · ${size(w,h)}, cruce ${fmt(overlap)}`, collection: 'Cojines y almohadas', generatorId: 'cojin-sobre', params: { ancho: w, alto: h, traslape: overlap }, flat: object('cojin', w, h, 'Funda de cojín'), variantLabel: `Funda de sobre ${size(w,h)}, cruce trasero ${fmt(overlap)}`, techniques: ['costura-recta', 'dobladillo'], description: 'Funda desmontable con un frente y dos piezas traseras cruzadas. No incluye relleno ni cierre; verifica las medidas del cojín real.', searchTerms: ['cojin', 'almohada', 'funda', 'hogar'] });
 }

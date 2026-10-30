@@ -1,0 +1,9 @@
+.model-variant-picker { border-bottom: 1px solid var(--line); padding-bottom: 20px; }
+.model-variant-preview { display: flex; align-items: center; gap: 14px; padding: 12px; background: var(--canvas); border-radius: var(--r-md); }
+.model-variant-preview > svg { width: 76px; height: 90px; flex: none; }
+.model-variant-preview > p { min-width: 0; line-height: 1.45; }
+.model-variant-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+.model-variant-fields .select { width: 100%; min-width: 0; }
+.model-variant-more > .model-variant-fields { margin-top: 14px; }
+.model-start-size-title { margin-bottom: 0; }
+@media(max-width:380px) { .model-variant-fields { grid-template-columns: minmax(0,1fr); } .model-variant-preview { gap: 10px; padding: 10px; } .model-variant-preview > svg { width: 64px; height: 82px; } }

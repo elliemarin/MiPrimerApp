@@ -302,3 +302,35 @@ preferencias opcionales en `Project.editorial`. `handoff.ts` limita las acciones
 a compartir explícitamente, copiar y abrir ChatGPT; la generación y envío final
 pertenecen a la cuenta del usuario. No modifica geometría, PDF ni exportaciones
 de costura. Contratos, pruebas y límites en `docs/LAMINAS_EDITORIALES.md`.
+
+## 16. Agrupación de diseños y materiales visibles
+
+`data/catalogGrouping.ts` añade metadatos `designGroup` a las recetas existentes,
+sin cambiar IDs ni parámetros. `features/library/groups.ts` agrupa después de
+filtrar y elige un representante compatible. `ModelVariantPicker` muestra ejes
+de medidas; cada elección resuelve una receta existente. `ModelStartSheet`
+separa talla corporal y medidas del diseño, limita las recetas al destinatario
+y conserva los valores de los enlaces anteriores. Los resultados cuentan
+diseños; las pruebas de patronaje siguen recorriendo todas las recetas.
+
+`FabricTray.dialogTitle` permite abrir la bandeja en `Sheet` desde Acabados,
+con toque simple, foco inicial y retorno al control de la parte. Sin esa opción
+continúa como bandeja con arrastre en Estudio. El catálogo recuerda colección al
+buscar o ajustar filtros compatibles. Relevo en `docs/DISENOS_Y_MEDIDAS.md`.
+
+## 17. Disfraces y evidencia de confección
+
+`generators/costumes.ts` añade capa semicircular, corona, sombrero cónico y
+orejas: cuatro motores experimentales con cantidades, curvas, márgenes y
+uniones explícitas. `costumeCatalog.ts` reúne quince recetas en cuatro diseños.
+`FlatSpec.object.detailCount` distingue cinco/siete puntas de corona;
+`modelMaterials.ts` mapea colores/fotos por los IDs de sus piezas y excluye
+refuerzos/soportes comprados de la composición exterior.
+
+`patternDetailPreview.ts` calcula una referencia de la receta sin guardar;
+`ModelPatternDetails` expone despiece, medidas, materiales y pasos del motor.
+La comprobación geométrica no promueve el estado de confección.
+`curatedPatterns.ts` contiene diez fuentes individuales con evidencia del autor,
+idioma, acceso y licencia. `CuratedPatternsPanel` las presenta aparte del
+inventario local: enlaces externos, sin copia de archivos ni importación
+paramétrica. Relevo en `docs/DISFRACES_Y_PATRONES_CON_MUESTRA.md`.

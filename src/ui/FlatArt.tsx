@@ -18,6 +18,7 @@ export interface FlatPalette { fabric: string; trim: string; pocket: string; met
 
 /** The colour belongs to the illustration, never to the pattern or fabric stock. */
 export function flatPalette(spec?: FlatSpec): FlatPalette {
+  if (spec?.top?.style === 'capa') return { fabric: '#73576f', trim: '#533b55', pocket: '#9c7a91', metal: '#cab176' };
   if (spec?.top?.style === 'denim') return { fabric: '#7894aa', trim: '#607e96', pocket: '#819bb0', metal: '#bfaa76' };
   if (spec?.top?.style === 'trench') return { fabric: '#c6b48e', trim: '#ae9972', pocket: '#c5b48f', metal: '#78684e' };
   if (spec?.top?.style === 'biker') return { fabric: '#65706e', trim: '#4c5754', pocket: '#6e7976', metal: '#cfccc0' };
@@ -26,6 +27,9 @@ export function flatPalette(spec?: FlatSpec): FlatPalette {
   if (spec?.family === 'bebe') return { fabric: '#bec4a5', trim: '#a2ad89', pocket: '#c8cdb4', metal: '#ede5d2' };
   if (spec?.family === 'bolso') return { fabric: '#bfab85', trim: '#917a55', pocket: '#c8b894', metal: '#a88b51' };
   if (spec?.family === 'accesorio') {
+    if (spec.accessory === 'corona') return { fabric: '#d6b45e', trim: '#ad873b', pocket: '#e5cc89', metal: '#b99a51' };
+    if (spec.accessory === 'sombrero-mago') return { fabric: '#65788d', trim: '#465b72', pocket: '#889bb0', metal: '#c3ad79' };
+    if (spec.accessory === 'orejas') return { fabric: '#bb9073', trim: '#695449', pocket: '#d0b29d', metal: '#a88c72' };
     if (['cojin', 'antifaz', 'dona'].includes(spec.accessory ?? '')) return { fabric: '#bcaaa5', trim: '#9d8984', pocket: '#cab9b3', metal: '#c2ae87' };
     if (['babero', 'gorro'].includes(spec.accessory ?? '')) return { fabric: '#b6c2ac', trim: '#8c9e80', pocket: '#c0ccb6', metal: '#ede7d6' };
     return { fabric: '#adbaa8', trim: '#899d82', pocket: '#bdc8b7', metal: '#bca578' };
@@ -35,7 +39,7 @@ export function flatPalette(spec?: FlatSpec): FlatPalette {
 
 function zoneColour(zone: Zone, palette: FlatPalette) {
   if (zone.type === 'bolsillo' || /bolsillo|solapa/i.test(zone.id)) return palette.pocket;
-  if (['cuello', 'puno', 'pretina'].includes(zone.type) || /asa|correa|tirante|bies|borde|nudo|cinta|jareta|cierre/.test(zone.id)) return palette.trim;
+  if (['cuello', 'puno', 'pretina'].includes(zone.type) || /asa|correa|tirante|bies|borde|nudo|cinta|jareta|cierre|reverso|diadema/.test(zone.id)) return palette.trim;
   return palette.fabric;
 }
 
@@ -47,7 +51,7 @@ export function FlatArtwork({ view, prefix, spec, fills }: { view: FlatView; pre
   const palette = flatPalette(spec);
   const hood = spec?.top?.neck === 'capucha' && view.key === 'frente';
   const hoodOpening = hood ? view.details.find(detail => detail.d.startsWith('M0 ') && detail.d.includes('C-70'))?.d : undefined;
-  const containedPleats = spec?.family === 'falda' || spec?.family === 'vestido' || !!spec?.pinafore;
+  const containedDetails = spec?.family === 'falda' || spec?.family === 'vestido' || !!spec?.pinafore || ['corona','orejas'].includes(spec?.accessory ?? '');
   return <>
     <defs>
       <linearGradient id={`${prefix}-volume`} x1="0" y1=".2" x2="1" y2=".7" gradientUnits="objectBoundingBox">
@@ -58,7 +62,7 @@ export function FlatArtwork({ view, prefix, spec, fills }: { view: FlatView; pre
       </linearGradient>
       <linearGradient id={`${prefix}-metal`} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#f0e4c9" /><stop offset=".5" stopColor={palette.metal} /><stop offset="1" stopColor="#907b54" /></linearGradient>
       <pattern id={`${prefix}-weave`} width="8" height="8" patternUnits="userSpaceOnUse"><path d="M0 1H8M1 0V8" stroke="#fff" strokeOpacity=".055" strokeWidth=".5" /></pattern>
-      {containedPleats && <clipPath id={`${prefix}-silhouette`}>{view.zones.map(zone => <path key={zone.id} d={zone.d} />)}</clipPath>}
+      {containedDetails && <clipPath id={`${prefix}-silhouette`}>{view.zones.map(zone => <path key={zone.id} d={zone.d} />)}</clipPath>}
       {hoodOpening && <mask id={`${prefix}-hood-opening`} maskUnits="userSpaceOnUse" x={view.minX} y={view.minY} width={view.width} height={view.height}><rect x={view.minX} y={view.minY} width={view.width} height={view.height} fill="#fff" /><path d={hoodOpening} fill="#000" /></mask>}
     </defs>
     {view.zones.map(zone => <g key={zone.id} className="flat-surface" data-flat-zone={zone.id} mask={hoodOpening && zone.type === 'capucha' ? `url(#${prefix}-hood-opening)` : undefined}>
@@ -67,7 +71,7 @@ export function FlatArtwork({ view, prefix, spec, fills }: { view: FlatView; pre
       <path d={zone.d} fill={`url(#${prefix}-weave)`} fillRule="evenodd" />
       <path className="flat-outline" d={zone.d} fill="none" stroke="#37473f" strokeWidth={1.05} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
     </g>)}
-    <g clipPath={containedPleats ? `url(#${prefix}-silhouette)` : undefined}>{view.details.map((detail, index) => <path key={index} d={detail.d} fill="none" className={`flat-detail flat-${detail.style}`} stroke="#3f5148" strokeWidth={detail.style === 'pespunte' ? .58 : detail.style === 'costura' ? .8 : .65} strokeOpacity={detail.style === 'pliegue' ? .45 : detail.style === 'doblez' ? .6 : .76} strokeDasharray={detail.style === 'pespunte' ? '2.1 1.9' : undefined} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />)}</g>
+    <g clipPath={containedDetails ? `url(#${prefix}-silhouette)` : undefined}>{view.details.map((detail, index) => <path key={index} d={detail.d} fill="none" className={`flat-detail flat-${detail.style}`} stroke="#3f5148" strokeWidth={detail.style === 'pespunte' ? .58 : detail.style === 'costura' ? .8 : .65} strokeOpacity={detail.style === 'pliegue' ? .45 : detail.style === 'doblez' ? .6 : .76} strokeDasharray={detail.style === 'pespunte' ? '2.1 1.9' : undefined} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />)}</g>
     {view.dots.map((dot, index) => <g key={index} className="flat-hardware"><circle cx={dot.x} cy={dot.y} r={dot.r} fill={`url(#${prefix}-metal)`} stroke="#6e6955" strokeWidth={.6} vectorEffect="non-scaling-stroke" />{dot.r >= 5 && <><circle cx={dot.x - dot.r * .22} cy={dot.y} r={dot.r * .13} fill="#6b624e" /><circle cx={dot.x + dot.r * .22} cy={dot.y} r={dot.r * .13} fill="#6b624e" /></>}</g>)}
   </>;
 }
