@@ -334,3 +334,51 @@ La comprobación geométrica no promueve el estado de confección.
 idioma, acceso y licencia. `CuratedPatternsPanel` las presenta aparte del
 inventario local: enlaces externos, sin copia de archivos ni importación
 paramétrica. Relevo en `docs/DISFRACES_Y_PATRONES_CON_MUESTRA.md`.
+
+## 18. Taxonomía, bibliotecas separadas y fuentes gratuitas
+
+`data/catalogTaxonomy.ts` clasifica explícitamente todos los diseños y normaliza
+etiquetas de construcción de cada receta. `library/filters.ts` busca identidades
+sin contaminar resultados con categorías paraguas, telas mencionadas como
+posibilidades o variantes futuras. La agrupación sigue ocurriendo después del
+filtrado; los IDs de receta no cambian. Bebé se expresa como destinatario con
+meses, separado de la categoría de prenda/accesorio. `scripts/audit-catalog.mjs`
+produce el inventario por ID en `docs/auditoria/catalogo.csv`.
+
+`LibraryPage` monta exclusivamente la biblioteca seleccionada. `FreePatternsPanel`
+y `freePatternFilters.ts` filtran el índice local de 269 fuentes gratuitas, con
+preferencias de sesión independientes. `data/freePatternLibrary.ts` importa
+`public/pattern-library/free-patterns.json`; cada entrada distingue URL y formato
+de patrón/instrucciones, acceso directo/correo/pedido, idioma real y verificación
+HTTP o mediante navegador. La evidencia de muestra se cruza con la curaduría
+previa, sin deducirla de un PDF legible.
+
+`assets` solo apunta a las nueve copias que permiten redistribución; sus rutas
+se resuelven con `BASE_URL` para Pages. Los enlaces de instrucciones admiten
+fragmentos `#page=N`. Los originales de terceros permanecen intactos con licencia,
+atribución y SHA-256; no se añaden al precache pesado de la PWA. Los proyectos de
+corte por medidas muestran guía de corte, sin prometer plantillas. Los externos
+no entran en el motor paramétrico ni se escalan para adaptar una talla.
+
+## 19. Ilustraciones de catálogo y decoraciones de confección
+
+`catalogArtwork.ts` y `CatalogObject.tsx` componen una representación independiente
+para `FlatArt catalog`, usada en catálogo/detalle/medidas. Los objetos de contexto
+no son zonas, bordados ni piezas almacenadas; `buildFlat`, el estudio y la
+proyección de materiales conservan sus coordenadas. Las pruebas comprueban que
+la capa visual no muta el modelo físico.
+
+`decorativeComponents.ts` añade 22 presets en **Decorar**. Los cuatro tipos nuevos
+en `pattern/decorations.ts` son mercería comprada, olán fruncido, olán plisado y
+banda aplicada. Largo montado y ancho visible se guardan en mm; el patrón de un
+frunce desarrolla el largo por su proporción y el plisado usa tres veces el
+largo, con marcas explícitas. Las tiras compradas generan materiales/pasos y
+colocación, sin piezas de corte falsas. La validación reserva el margen superior
+del olán sobre la base; márgenes y dobladillos se añaden una sola vez.
+
+`customize/decorationArt.ts` dibuja los motivos y calados originales;
+`componentDesign` conserva color/foto, posición e historial. Los cambios libres
+de `vectorPath` invalidan la correspondencia con el patrón. `projectPack` evalúa
+si una intervención está vacía después de incorporar guías de colocación, para
+permitir una intervención útil con solo mercería y cero plantillas. Contratos y
+pruebas: `docs/DECORACIONES_Y_MERCERIA.md`.

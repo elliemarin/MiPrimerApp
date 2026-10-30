@@ -4,8 +4,9 @@ import { formatLength } from '../units';
 import type { GeneratorResult } from './generator';
 import { edgeLength, seamPolygon } from './outline';
 import type { MaterialNeed, MeasureCheck, PEdge, Piece, SeamRelation } from './types';
+import { DECORATION_KINDS, decorationMeasureChecks, generateDecoration, isDecoration, type DecorationSettings } from './decorations';
 
-export const COMPONENT_KINDS = ['bolsillo-parche', 'bolsillo-punta', 'bolsillo-redondeado', 'bolsillo-solapa-boton', 'bolsillo-solapa-velcro', 'bolsillo-cierre', 'bolsillo-cargo', 'porta-herramientas', 'trabilla', 'porta-martillo', 'porta-telefono-camara'] as const;
+export const COMPONENT_KINDS = ['bolsillo-parche', 'bolsillo-punta', 'bolsillo-redondeado', 'bolsillo-solapa-boton', 'bolsillo-solapa-velcro', 'bolsillo-cierre', 'bolsillo-cargo', 'porta-herramientas', 'trabilla', 'porta-martillo', 'porta-telefono-camara', ...DECORATION_KINDS] as const;
 export type ComponentKind = typeof COMPONENT_KINDS[number];
 export interface ComponentMaterial { fabricId?: string; name: string; color?: string }
 export interface CameraWindow { left: number; top: number; width: number; height: number }
@@ -31,6 +32,8 @@ export interface PatternComponent {
   channels?: number;
   /** Finished clear camera aperture; measured on the real device, in mm. */
   camera?: CameraWindow;
+  /** Decoration construction and motif. Width is mounted length; height is visible band/drop. */
+  decoration?: DecorationSettings;
   material?: ComponentMaterial;
   /** Material by stable generated piece role: cuerpo, solapa, fuelle, respaldo, vista. */
   materials?: Record<string, ComponentMaterial>;
@@ -45,7 +48,8 @@ const names: Record<ComponentKind, string> = {
   'bolsillo-solapa-boton': 'Bolsillo con solapa y botón', 'bolsillo-solapa-velcro': 'Bolsillo con solapa y velcro',
   'bolsillo-cierre': 'Bolsillo con cierre', 'bolsillo-cargo': 'Bolsillo cargo de fuelle',
   'porta-herramientas': 'Bolsillo portaherramientas', 'trabilla': 'Trabilla textil', 'porta-martillo': 'Lazo portamartillo',
-  'porta-telefono-camara': 'Portacelular con ventana para cámara'
+  'porta-telefono-camara': 'Portacelular con ventana para cámara',
+  'cinta-comprada': 'Decoración de mercería', 'olan-fruncido': 'Olán fruncido', 'olan-plisado': 'Olán plisado', 'cinta-aplicada': 'Banda de tela aplicada'
 };
 
 export interface ComponentGeneration extends GeneratorResult { basePieces: Piece[] }
@@ -69,6 +73,7 @@ function hemMouth(piece: Piece) {
 /** Re-read the physical sewing line after manual node/control-point overrides. */
 export function componentMeasureChecks(components: PatternComponent[], pieces: Piece[]): MeasureCheck[] {
   return components.flatMap(component=>{
+    if(isDecoration(component.kind)) return decorationMeasureChecks(component,pieces);
     const prefix=`componente-${component.id}`;
     const body=pieces.find(piece=>piece.id===`${prefix}-cuerpo`);
     if(!body?.edges.length)return [];
@@ -113,8 +118,9 @@ export function generateComponents(components: PatternComponent[], sourcePieces:
     if (!COMPONENT_KINDS.includes(kind)) { error('El tipo de complemento no está disponible.', 'component-kind'); continue; }
     const sa = component.allowance ?? 10, d = component.depth ?? 30;
     const loop = kind === 'trabilla' || kind === 'porta-martillo';
-    const minWidth = loop ? 10 : 40, minHeight = loop ? 50 : 50;
-    if (![w, h, qty, sa, d].every(Number.isFinite) || w < minWidth || w > 600 || h < minHeight || h > 800 || !Number.isInteger(qty) || qty < 1 || qty > 8 || sa < 3 || sa > 20 || (kind === 'bolsillo-cargo' && (d < 15 || d > 100 || d > Math.min(w,h) / 2))) {
+    const decoration=isDecoration(kind);
+    const minWidth = decoration ? 50 : loop ? 10 : 40, minHeight = decoration ? 10 : 50;
+    if (![w, h, qty, sa, d].every(Number.isFinite) || w < minWidth || w > (decoration ? 2000 : 600) || h < minHeight || h > (decoration ? 400 : 800) || !Number.isInteger(qty) || qty < 1 || qty > 8 || sa < 3 || sa > 20 || (kind === 'bolsillo-cargo' && (d < 15 || d > 100 || d > Math.min(w,h) / 2))) {
       error(`${names[kind]}: revisa ancho, alto, cantidad y márgenes${kind === 'bolsillo-cargo' ? '; el fuelle debe medir entre 1,5 y 10 cm y no superar la mitad del lado menor' : ''}.`); continue;
     }
     if (component.placement && (![component.placement.x, component.placement.y].every(Number.isFinite))) { error(`${names[kind]}: la posición no es válida.`, 'component-placement'); continue; }
@@ -136,7 +142,12 @@ export function generateComponents(components: PatternComponent[], sourcePieces:
     let body: Piece;
     const mountNote = component.placement?.pieceId ? `Coloca el complemento sobre las marcas de la pieza «${component.placement.pieceId}».` : `Ubicación orientativa${label ? `: ${label}` : ''}. Hilvana y prueba sobre la prenda; marca su posición antes de cerrar las costuras de la base.`;
 
-    if (loop) {
+    if(decoration) {
+      const generated=generateDecoration(component,title,suffix,mountNote);
+      if(generated.notices.some(notice=>notice.level==='error')) { out.notices.push(...generated.notices); continue; }
+      pieces.push(...generated.pieces); seams.push(...generated.seams);
+      out.materials.push(...generated.materials); out.steps.push(...generated.steps); out.assumptions.push(...generated.assumptions); out.notices.push(...generated.notices);
+    } else if (loop) {
       body = add(rect(`${prefix}-cuerpo`, `${title}: tira${suffix}`, 2*w, h, sa, qty));
       body.lines.push({ id: 'doblez-largo', kind: 'doblez', a: { x: w, y: 0 }, b: { x: w, y: h }, label: 'Doblar a lo largo' });
       for (const y of [20,h-20]) body.lines.push({ id: `fijacion-${y === 20 ? 'inicio' : 'fin'}`, kind: 'colocacion', a: { x: 0, y }, b: { x: 2*w, y }, label: 'Reserva de fijación de 2 cm' });
@@ -256,19 +267,20 @@ export function generateComponents(components: PatternComponent[], sourcePieces:
         const contour=seamPolygon(base);
         const inside=(point:Pt)=>pointInPolygon(point,contour)||contour.some((a,i)=>distToSegment(point,a,contour[(i+1)%contour.length])<.01);
         // Check every interval split by contour intersections, including narrow concavities.
-        const fits=points.every((a,i)=>{
-          const b=points[(i+1)%4];
+        const footprint=(kind==='olan-fruncido'||kind==='olan-plisado') ? [{x,y:y-sa},{x:x+w,y:y-sa},points[2],points[3]] : points;
+        const fits=footprint.every((a,i)=>{
+          const b=footprint[(i+1)%4];
           const fractions=[0,1,...contour.flatMap((c,j)=>{const hit=segIntersect(a,b,c,contour[(j+1)%contour.length]);return hit?[Math.max(0,Math.min(1,hit.t))]:[];})].sort((left,right)=>left-right);
           return inside(a)&&fractions.slice(1).every((t,j)=>{const mid=(t+fractions[j])/2;return inside({x:a.x+(b.x-a.x)*mid,y:a.y+(b.y-a.y)*mid});});
         });
         if(!fits) error(`${title}: las marcas se salen de la línea terminada de «${base.name}». Mueve o reduce el complemento.`, 'component-placement-outside');
-        else for(let i=0;i<points.length;i++) base.lines.push({id:`${prefix}-colocacion-${i}`,kind:'colocacion',a:points[i],b:points[(i+1)%4],label:`${title}${suffix}${i===0?' · boca':''}`});
+        else for(let i=0;i<points.length;i++) base.lines.push({id:`${prefix}-colocacion-${i}`,kind:'colocacion',a:points[i],b:points[(i+1)%4],label:`${title}${suffix}${i===0?(decoration?' · fijación':' · boca'):''}`});
       }
     }
     out.assumptions.push(`${title}${suffix}: ${formatLength(w,'cm')} × ${formatLength(h,'cm')}, ${qty} unidad(es). ${component.placement?.pieceId?'Las marcas se expresan sobre la línea terminada de la pieza real.':'La colocación en la ilustración es orientativa; transfiere y prueba la ubicación sobre la prenda real.'}`);
   }
   if(components.length) {
-    if(out.pieces.length) out.materials.unshift({id:'hilo',label:'Hilo de coser adecuado a la tela',qty:'1 carrete',note:'Incluye la confección y fijación de los complementos; prueba el pespunte y la tensión en un retazo.'});
+    if(out.pieces.length || out.materials.length) out.materials.unshift({id:'hilo',label:'Hilo de coser adecuado a la tela',qty:'1 carrete',note:'Incluye la confección y fijación de los complementos; prueba el pespunte y la tensión en un retazo.'});
     out.notices.push({level:'aviso',code:'component-experimental',message:'Complementos experimentales: imprime y cose una muestra antes de cortar la tela definitiva.'});
     out.assumptions.push('Los complementos no cambian la talla ni la holgura de la base. Sus dimensiones son terminadas; márgenes y dobladillos se añaden una sola vez por fuera. No incluyen protección certificada para cargas ni herramientas.');
     out.assumptions.push('Estas construcciones están pensadas para tela estable. Si la base es elástica, estabiliza las zonas de fijación y prueba que los pespuntes no deformen la prenda.');

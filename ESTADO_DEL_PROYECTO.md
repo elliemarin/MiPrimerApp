@@ -12,16 +12,87 @@ Actualízalo al terminar cada tarea.
 
 ```bash
 npm install
-npm test            # 2349 pruebas: patrones, disfraces, materiales, PDF y láminas
+npm test            # 2435 pruebas: catálogo, fuentes, patrones, adornos, PDF y láminas
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Catálogo auditado, fuentes gratuitas y decoraciones (2026-10-30)
+
+**Este es el relevo más reciente.** Se revisaron los **1,882 registros** del
+catálogo, incluidas las variantes y referencias sin motor. Se conservan los
+**1,804 patrones paramétricos agrupados en 69 diseños**; la ampliación de fuentes
+externas no infla ese número ni convierte PDF descargados en geometría editable.
+
+- Taxonomía explícita por construcción, independiente de las colecciones y de
+  menciones de mejoras futuras. Hoodie, sudadera sin capucha, chaqueta, capa,
+  poncho y los tipos de fundas/bolsos se distinguen. La búsqueda acepta español,
+  inglés y «hoddie» sin mezclar cualquier objeto con capucha. El CSV de auditoría
+  registra cada ID, sus etiquetas, parámetros, disponibilidad y destinatarios.
+- **Bebé** visible junto al buscador, con seis diseños que generan patrón y
+  selector de meses. No se confunde edad con categoría de objeto; unisex sirve
+  para destinatarios adultos, sin habilitar recetas de adulto para bebé.
+- Filtros combinables de tipo exacto, destinatario, tejido, ajuste, dificultad,
+  elasticidad, técnica y colección. Etiquetas activas removibles, estado vacío
+  claro y recuperación segura de búsquedas guardadas. Se revisaron técnicas y
+  niveles contra la construcción real, no contra adornos potenciales.
+- Dos bibliotecas explícitas: **Patrones editables / Gratis de internet**.
+  Los resultados externos ya no aparecen debajo de búsquedas nativas filtradas.
+  Las fuentes gratuitas tienen búsqueda, categoría, idioma, autor, acceso y
+  filtro de fichas con muestra documentada, con persistencia independiente.
+- **269 diseños/proyectos gratuitos de siete autores**, 227 enlaces directos
+  a PDF verificados, 11 con instrucciones en español y 258 en inglés. Cada ficha
+  separa patrón e instrucciones, indica cuando comparten PDF, cuando se corta
+  por medidas y cuando el autor pide correo/pedido gratuito. No se hicieron
+  pedidos ni registros en nombre de la persona usuaria.
+- **Nueve PDF originales locales** de Bikes & Bloomers, con permiso CC BY-NC-SA,
+  atribución y manifiesto SHA-256. Los demás archivos se enlazan a sus autores;
+  no se republican PDF que prohíben redistribución. Los archivos grandes no se
+  precargan con la PWA. El índice local está en `public/pattern-library/`.
+- Los dos PDF de hada aportados se revisaron: seis hojas de patrón y cinco de
+  instrucciones. La ficha detalla piezas/materiales y enlaza el pedido gratuito
+  y el tutorial oficial. No se inventaron enlaces PDF públicos ni se publicaron
+  los adjuntos, cuyos enlaces de pedido son temporales.
+- Ilustraciones revisadas de los **69 diseños**: fundas con objetos de referencia,
+  textiles de hogar reconocibles, frunces, lazos y mangas caídas. Se omiten
+  bolsillos opcionales que la base no corta. La capa visual se usa en catálogo,
+  detalle y selector; conserva intactos el patrón y las zonas del estudio.
+- **Extras → Decorar:** 22 opciones nuevas, 433 extras totales en 15
+  construcciones. Encajes, blondas, flecos, pompones y cintas comprados generan
+  metraje/colocación; olanes fruncidos/plisados y bandas generan sus piezas de
+  corte reales. Incluye color, arrastre, persistencia y guías de montaje.
+  Una intervención con solo mercería exporta instrucciones y colocación sin
+  inventar una plantilla de encaje.
+
+**Verificado:** recorridos Chromium 320/390/1440, las 43 familias nativas por UI,
+bebé y meses, filtros combinados/persistentes, separación de bibliotecas y las
+269 fuentes. PDF local descargado desde la app; nueve copias con hash intacto.
+Decoraciones: PDF de 24 páginas, tres plantillas, marcas de 10 mm y controles
+de 50/100 mm; intervención de solo mercería con cero plantillas. Regresión de
+materiales/fotos/modelos y auditoría visual sin cambios en geometría guardada.
+Suite final: **2,435 pruebas en 55 archivos**, TypeScript y build para Pages
+correctos. Auditoría de las 269 fuentes sin incidencias de metadatos/integridad.
+
+**Pendiente real:** imprimir y coser muestras de las nuevas decoraciones;
+comprobar iPhone/Safari/cámara y los permisos de descarga en dispositivo físico.
+Las fuentes externas conservan tallas y márgenes propios y aún no se editan
+dentro del estudio. Las nueve prendas históricas tienen UK 12 aproximada e
+instrucciones mínimas, como informa su autor. Revisar enlaces y erratas con los
+scripts antes de actualizar hashes/fechas. Una revisión digital no equivale a
+una prueba de confección.
+
+Relevo: [auditoría del catálogo](docs/AUDITORIA_CATALOGO.md),
+[navegación](docs/NAVEGACION_BIBLIOTECA.md),
+[fuentes gratuitas](docs/FUENTES_GRATUITAS.md),
+[fuentes en español y copias autorizadas](docs/FUENTES_ESPANOL_Y_ABIERTAS.md),
+[ilustraciones](docs/AUDITORIA_ILUSTRACIONES.md) y
+[decoraciones](docs/DECORACIONES_Y_MERCERIA.md).
+
 ## Diseños agrupados, disfraces y muestras documentadas (2026-10-30)
 
-**Este es el relevo más reciente.** La biblioteca reúne **1,804 recetas en 69
+**Relevo anterior.** La biblioteca reúne **1,804 recetas en 69
 diseños con patrón**. Las medidas y versiones se eligen dentro de cada diseño.
 
 - Una tarjeta por construcción: largos, capacidades, asas y otras medidas

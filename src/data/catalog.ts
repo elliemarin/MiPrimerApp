@@ -4,6 +4,7 @@ import { COSTUME_CATALOG } from './costumeCatalog';
 import type { FlatSpec } from './flats';
 import type { Params } from '../lib/pattern/generator';
 import { withDesignGroup, type CatalogDesignGroup } from './catalogGrouping';
+import { withCatalogTaxonomy, type CatalogFamily } from './catalogTaxonomy';
 
 export type Recipient = 'bebe' | 'toddler' | 'infantil' | 'mujer' | 'hombre' | 'unisex';
 
@@ -20,7 +21,7 @@ export type GarmentType = 'superiores' | 'inferiores' | 'faldas-vestidos' | 'abr
 
 export const TYPE_LABEL: Record<GarmentType, string> = {
   superiores: 'Camisas, blusas y camisetas',
-  inferiores: 'Pantalones, shorts y overoles',
+  inferiores: 'Pantalones y shorts',
   'faldas-vestidos': 'Faldas y vestidos',
   abrigo: 'Sudaderas, chalecos, chaquetas y abrigos',
   pijamas: 'Pijamas',
@@ -89,6 +90,8 @@ export interface CatalogModel {
   searchTerms?: string[];
   /** One browsing card; member recipes retain their dimensions and stable IDs. */
   designGroup?: CatalogDesignGroup;
+  /** Item identity, independent of collections and optional decorations. */
+  family?: CatalogFamily;
 }
 
 const kidsToAdult: Recipient[] = ['bebe', 'toddler', 'infantil', 'mujer', 'hombre'];
@@ -746,7 +749,7 @@ const ACCESSORY_IDS=new Set(['cojin','funda-cheve','funda-vaso','dona-cabello','
 const UPGRADED_ACCESSORY:Record<string,string>={'delantal-estudio':'delantal-peto','antifaz-estudio':'antifaz-forrado','banderin-estudio':'banderin-jareta'};
 export const CATALOG:CatalogModel[]=BASE_CATALOG.map(m=>{
   const gen=UPGRADED_ACCESSORY[m.id];
-  return withDesignGroup({...m,type:ACCESSORY_IDS.has(m.id)?'accesorios':m.type,...(gen?{generatorId:gen,status:'experimental' as const,studioOnly:false,description:'Plantilla de diseño y patrón paramétrico con medidas editables del objeto, márgenes y pasos de confección. Nueva construcción experimental: prueba una muestra.'}:{})});
+  return withCatalogTaxonomy(withDesignGroup({...m,type:ACCESSORY_IDS.has(m.id)?'accesorios':m.type,...(gen?{generatorId:gen,status:'experimental' as const,studioOnly:false,description:'Plantilla de diseño y patrón paramétrico con medidas editables del objeto, márgenes y pasos de confección. Nueva construcción experimental: prueba una muestra.'}:{})}));
 });
 
 export function findModel(id: string) {

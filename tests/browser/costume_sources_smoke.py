@@ -57,36 +57,37 @@ def native_details(page, model_id):
 
 def check_sources(page, width):
     page.goto(BASE + '/#/biblioteca')
-    page.get_by_role('searchbox', name='Buscar prendas y accesorios', exact=True).wait_for()
+    page.get_by_role('button', name='Patrones editables', exact=True).click()
     before = storage_snapshot(page)
-    jump = page.get_by_role('button', name='Patrones con muestra confeccionada', exact=True)
-    jump.click()
-    title = page.get_by_role('heading', name='Patrones con muestra confeccionada', exact=True)
-    page.wait_for_function("document.activeElement?.id==='curated-patterns-title'")
-    page.wait_for_function("(()=>{const r=document.getElementById('curated-patterns-title')?.getBoundingClientRect();return r&&r.top>=0&&r.top<innerHeight;})()")
-    box = title.bounding_box()
-    assert box and 0 <= box['y'] < page.viewport_size['height'], box
-    panel = page.locator('#patrones-con-muestra')
-    group = panel.get_by_role('group', name='Categorías de patrones con muestra', exact=True)
+    page.get_by_role('button', name='Ver patrones de internet', exact=True).click()
+    page.wait_for_function("document.activeElement?.id==='free-patterns-title'")
+    page.wait_for_function("(()=>{const r=document.getElementById('free-patterns-title')?.getBoundingClientRect();return r&&r.top>=0&&r.top<innerHeight;})()")
+    panel = page.locator('.free-pattern-library')
+    assert page.locator('.simple-pattern-card').count() == 0, 'Las fuentes no se mezclan con resultados editables'
+    sample_filter = panel.get_by_role('checkbox', name='Solo con ficha de muestra confeccionada', exact=True)
+    if not sample_filter.is_visible():
+        panel.get_by_text(re.compile('^Más filtros')).click()
+    sample_filter.check()
+    group = panel.get_by_role('group', name='Categorías gratuitas', exact=True)
     group.get_by_role('button', name='Disfraces', exact=True).click()
-    cards = panel.locator('[data-curated-pattern]')
+    cards = panel.locator('[data-free-pattern]')
     assert cards.count() >= 2
-    assert all('Disfraces' in text for text in cards.locator('.curated-category').all_text_contents())
-    assert cards.locator('.curated-evidence-badge').count() == cards.count()
-    assert all(text == 'Muestra del autor' for text in cards.locator('.curated-evidence-badge').all_text_contents())
+    assert all('Disfraces' in text for text in cards.locator('.free-pattern-meta').all_text_contents())
+    assert cards.get_by_text('Muestra del autor', exact=True).count() == cards.count()
     first = cards.first
-    first.get_by_text('Ver ficha de confección', exact=True).click()
-    for heading in ('Medidas y tallas', 'Telas y materiales', 'Piezas que incluye', 'Proceso de confección', 'Muestra documentada'):
+    first.get_by_text('Ficha y fuente original', exact=True).click()
+    for heading in ('Medidas y tallas', 'Materiales', 'Piezas', 'Proceso'):
         assert first.get_by_role('heading', name=heading, exact=True).is_visible(), heading
-    assert 'Hilvana no ha confeccionado ni verificado físicamente este patrón' in first.inner_text()
+    assert 'Hilvana no ha cosido esta muestra' in first.inner_text()
     assert not re.search(r'100\s*%', panel.inner_text())
     assert first.locator('ol li').count() > 0
-    assert 'Resumen orientativo' in first.inner_text()
+    assert first.locator('.free-pattern-links a').count() == 2, 'Patrón y guía tienen accesos separados'
     links = panel.locator('a').evaluate_all('(links)=>links.map(a=>({href:a.href,target:a.target,rel:a.rel}))')
     assert links
     for link in links:
         parsed = urlparse(link['href'])
-        assert parsed.scheme == 'https' and parsed.hostname, link
+        local = link['href'].startswith(BASE + '/')
+        assert (parsed.scheme == 'https' or local) and parsed.hostname, link
         assert link['target'] == '_blank' and 'noopener' in link['rel'] and 'noreferrer' in link['rel'], link
     assert len(page.context.pages) == 1, 'Consultar fichas no abre destinos automáticamente'
     assert storage_snapshot(page) == before
@@ -94,11 +95,11 @@ def check_sources(page, width):
     page.screenshot(path=f'/tmp/hilvana-costume-sources-{width}.png')
 
     # Search combines with category without creating or importing source files.
-    query = panel.get_by_role('searchbox', name='Buscar patrones con muestra confeccionada', exact=True)
+    query = panel.get_by_role('searchbox', name='Buscar patrones gratuitos', exact=True)
     query.fill('zzzxsinresultados')
-    assert panel.get_by_text('No encontramos esa combinación', exact=True).is_visible()
-    panel.get_by_role('button', name='Ver todos los patrones', exact=True).click()
-    assert panel.locator('[data-curated-pattern]').count() > 0
+    assert panel.get_by_text('No hay patrones con esos filtros', exact=True).is_visible()
+    panel.get_by_role('button', name='Ver todos los gratuitos', exact=True).click()
+    assert panel.locator('[data-free-pattern]').count() > 0
     assert query.input_value() == ''
     assert storage_snapshot(page) == before
 

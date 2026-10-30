@@ -134,7 +134,7 @@ def run_filters(browser):
     page = context.new_page()
     page.goto(BASE)
     page.wait_for_load_state('networkidle')
-    page.get_by_role('button', name='Chaquetas y hoodies', exact=True).click()
+    page.get_by_role('button', name='Abrigo', exact=True).click()
     page.get_by_role('button', name=re.compile('^Filtros')).click()
     page.locator('#search-recipient').select_option('mujer')
     page.locator('#search-fabric').select_option('punto')

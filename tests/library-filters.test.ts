@@ -31,14 +31,14 @@ describe('Filtros de biblioteca combinables',()=>{
     expect(matches(baby,{...INITIAL_FILTERS,recipient:'bebe',size:'infantil'})).toBe(true);
   });
   it('busca sin acentos, con espacios y sinónimos, exigiendo todos los términos',()=>{
-    const jacket=model({name:'Chaqueta de mezclilla',description:'Holgada con bolsillos',sub:'Chaquetas'});
+    const jacket=CATALOG.find(m=>m.id==='cazadora-mezclilla')!;
     expect(matches(jacket,{...INITIAL_FILTERS,q:'  chamarra   denim '})).toBe(true);
     expect(matches(jacket,{...INITIAL_FILTERS,q:'chaqueta MÉZCLILLA'})).toBe(true);
     expect(matches(jacket,{...INITIAL_FILTERS,q:'chamarras denim'})).toBe(true);
     expect(matches(jacket,{...INITIAL_FILTERS,q:'chamarra seda'})).toBe(false);
   });
   it('encuentra petos cuando se busca jumper y no confunde disponibilidad',()=>{
-    const pinafore=model({name:'Peto con falda',generatorId:undefined,status:'pendiente'});
+    const pinafore={...CATALOG.find(m=>m.id==='jumper-peto-midi')!,generatorId:undefined,status:'pendiente' as const};
     expect(matches(pinafore,{...INITIAL_FILTERS,q:'jumper'})).toBe(true);
     expect(matches(pinafore,{...INITIAL_FILTERS,q:'jumper',availability:'patron'})).toBe(false);
   });

@@ -3,6 +3,8 @@ import { cameraWindowFor, type PatternComponent } from '../../lib/pattern/compon
 import { newDesign, newElement, type DesignDoc, type DesignElement, type DesignView } from '../studio/model';
 import { nowIso } from '../../lib/ids';
 import { COMPONENT_OPTIONS } from '../../data/components';
+import { decorationFoldPath, decorationPath } from './decorationArt';
+import { isBoughtTrim } from '../../lib/pattern/decorations';
 
 export const componentElementId = (id: string, part: string): string => `componente-${id}--${part}`;
 export const componentGroupId = (id: string): string => componentElementId(id, 'grupo');
@@ -74,7 +76,14 @@ function visualElements(component: PatternComponent, view: DesignView, old: Map<
   } else if (component.kind === 'bolsillo-redondeado') {
     body.shape = { type: 'rect', radius: Math.min(w,h) * .18 };
   }
+  const trimPath=decorationPath(component);
+  if(trimPath) { body.kind='trazo';body.shape=undefined;body.vectorPath=trimPath;body.edge='na';
+    if(!oldBody) body.fill={type:'color',color:isBoughtTrim(component.kind)?'#E6D4AF':'#C8D6CA'};
+    body.materialNote=isBoughtTrim(component.kind)?'Mercería comprada: el motivo es ilustrativo; el PDF incluye metraje y colocación.':body.materialNote;
+  }
   const result = [body];
+  const folds=decorationFoldPath(component);
+  if(folds) result.push(part('pliegues','pliegues de referencia',w,h,0,0,{kind:'trazo',shape:undefined,vectorPath:folds,fill:{type:'ninguno'},stroke:{color:'#74897A',width:.45,style:'solida'}}));
   const line = (id: string, label: string, dx: number, dy: number, width: number, height: number, horizontal = false) => part(id, label, width, height, dx, dy, {
     kind: 'trazo', shape: undefined, fill: { type: 'ninguno' },
     path: { pts: horizontal ? [[-.5,0],[.5,0]] : [[0,-.5],[0,.5]], closed: false, smooth: false },
@@ -175,7 +184,7 @@ export function readComponentsFromDesign(project: Project, doc: DesignDoc, fabri
     for (const role of componentPaintRoles(component)) {
       const part = doc.elements.find(element => element.id === componentElementId(component.id, role));
       if (!part || part.fill.type === 'ninguno') continue;
-      if (part.fill.type === 'color') materials[role] = { name: `Color ${part.fill.color} · tela por elegir`, color: part.fill.color };
+      if (part.fill.type === 'color') materials[role] = { name: `Color ${part.fill.color} · ${isBoughtTrim(component.kind)?'mercería':'tela'} por elegir`, color: part.fill.color };
       else {
         const fabric = fabrics[part.fill.fabricId];
         const previous = materials[role]?.fabricId === part.fill.fabricId ? materials[role] : undefined;
@@ -240,7 +249,7 @@ export function componentDesignIssues(project: Project): string[] {
     for (const part of expected.filter(element => element.kind !== 'grupo')) {
       const actual = old.get(part.id);
       if (!actual) { issues.push(`${componentName(component)}: falta una parte de la vista. Vuelve a Personalizar para actualizar el complemento.`); break; }
-      const geometry = (element: DesignElement) => JSON.stringify({ kind: element.kind, shape: element.shape ? { ...element.shape, radius: element.shape.type === 'rect' ? undefined : element.shape.radius } : undefined, path: element.path, clip: element.clip, maskZoneId: element.maskZoneId });
+      const geometry = (element: DesignElement) => JSON.stringify({ kind: element.kind, shape: element.shape ? { ...element.shape, radius: element.shape.type === 'rect' ? undefined : element.shape.radius } : undefined, path: element.path, vectorPath: element.vectorPath, clip: element.clip, maskZoneId: element.maskZoneId });
       if (geometry(actual) !== geometry(part)) {
         issues.push(`${componentName(component)}: la forma o el recorte de una pieza cambió en el estudio. Vuelve a Personalizar para revisar el patrón; el dibujo libre no sustituye su construcción.`); break;
       }
@@ -271,7 +280,7 @@ export function componentMaterials(project: Project, fabrics: Record<string, Fab
     if (!id || !active.has(id) || !componentPaintRoles(active.get(id)!).includes(element.id.slice(element.id.lastIndexOf('--') + 2))) return [];
     const fabric = element.fill.type === 'tela' ? fabrics[element.fill.fabricId] : undefined;
     return [{ componentId: id, name: element.name, fabricId: fabric?.id,
-      fabricName: fabric?.name ?? (element.fill.type === 'color' ? 'Tela por elegir' : 'Tela por definir'),
+      fabricName: fabric?.name ?? (isBoughtTrim(active.get(id)!.kind) ? 'Mercería por elegir' : element.fill.type === 'color' ? 'Tela por elegir' : 'Tela por definir'),
       color: element.fill.type === 'color' ? element.fill.color : fabric?.color
     }];
   });

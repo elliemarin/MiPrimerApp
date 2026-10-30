@@ -6,8 +6,9 @@ import type { DesignView } from '../features/studio/model';
 import type { MaterialNeed } from '../lib/pattern/types';
 import { uid } from '../lib/ids';
 import { EXTRA_COMPONENT_DEFINITIONS } from './componentCollections';
+import { DECORATIVE_COMPONENT_DEFINITIONS } from './decorativeComponents';
 
-export type ComponentGroup = 'bolsillos' | 'cierres' | 'herramientas' | 'trabillas';
+export type ComponentGroup = 'bolsillos' | 'cierres' | 'herramientas' | 'trabillas' | 'decoracion';
 
 export interface ComponentOption {
   id: string;
@@ -22,6 +23,7 @@ export interface ComponentOption {
   defaultQuantity?: number;
   defaultChannels?: number;
   defaultCamera?: PatternComponent['camera'];
+  defaultDecoration?: PatternComponent['decoration'];
   tags?: string[];
   collection?: string;
   hardware?: MaterialNeed[];
@@ -64,7 +66,7 @@ const definitions: Definition[] = [
 ];
 
 /** Original, parametric add-ons. These are not licensed third-party patterns. */
-export const COMPONENT_OPTIONS: readonly ComponentOption[] = [...definitions, ...EXTRA_COMPONENT_DEFINITIONS].map(option => ({ ...option, label: option.name }));
+export const COMPONENT_OPTIONS: readonly ComponentOption[] = [...definitions, ...EXTRA_COMPONENT_DEFINITIONS, ...DECORATIVE_COMPONENT_DEFINITIONS].map(option => ({ ...option, label: option.name }));
 export const COMPONENT_PRESETS = COMPONENT_OPTIONS;
 export type ComponentPreset = ComponentOption;
 
@@ -89,6 +91,7 @@ export function createComponent(option: ComponentOption, id: string, view?: Desi
     ...(option.defaultDepth === undefined ? {} : { depth: option.defaultDepth }),
     ...(option.defaultChannels === undefined ? {} : { channels: option.defaultChannels }),
     ...(option.defaultCamera === undefined ? {} : { camera: { ...option.defaultCamera } }),
+    ...(option.defaultDecoration === undefined ? {} : { decoration: { ...option.defaultDecoration } }),
     allowance: 10,
     ...(option.hardware ? { materialNeeds: option.hardware.map(need => ({ ...need })) } : {}),
     ...(view ? { placement: { viewId: view.id, x: view.minX + view.width * .62, y: view.minY + view.height * .56, label: view.label } } : {})

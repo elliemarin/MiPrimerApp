@@ -24,7 +24,8 @@ describe('Complementos de confección independientes',()=>{
     const result=generateComponents([selection(kind,{width:160*scale,height:190*scale,quantity:2,depth:30*scale})]);
     const issues=[...result.notices,...validatePattern(result)];
     expect(issues.filter(issue=>issue.level==='error'),JSON.stringify(issues)).toEqual([]);
-    expect(result.pieces.length).toBeGreaterThan(0);
+    if(kind==='cinta-comprada') { expect(result.pieces).toEqual([]);expect(result.materials.some(material=>material.id.endsWith('-merceria'))).toBe(true); }
+    else expect(result.pieces.length).toBeGreaterThan(0);
     for(const check of result.checks) expect(check.measured).toBeCloseTo(check.target,6);
     for(const seam of evaluateSeams(result.pieces,result.seams)) expect(seam.ok,seam.relation.label).toBe(true);
     for(const step of result.steps) for(const id of step.pieces) expect(result.pieces.some(piece=>piece.id===id),id).toBe(true);

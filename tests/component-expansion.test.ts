@@ -27,7 +27,8 @@ describe('Biblioteca extensa de complementos propios',()=>{
       const result=generateComponents([component]);
       const issues=[...result.notices,...validatePattern(result)];
       expect(issues.filter(issue=>issue.level==='error'),option.name).toEqual([]);
-      expect(result.pieces.length,option.name).toBeGreaterThan(0);
+      if(option.kind==='cinta-comprada') {expect(result.pieces,option.name).toEqual([]);expect(result.materials.some(material=>material.id.endsWith('-merceria')),option.name).toBe(true);}
+      else expect(result.pieces.length,option.name).toBeGreaterThan(0);
       for(const check of result.checks) expect(Math.abs(check.measured-check.target),`${option.name}: ${check.label}`).toBeLessThan(.01);
       for(const seam of evaluateSeams(result.pieces,result.seams)) expect(seam.ok,`${option.name}: ${seam.relation.label}`).toBe(true);
       for(const step of result.steps) for(const id of step.pieces) expect(result.pieces.some(piece=>piece.id===id),id).toBe(true);

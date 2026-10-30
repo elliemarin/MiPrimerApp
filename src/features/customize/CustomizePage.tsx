@@ -16,9 +16,12 @@ import { newDesign, type DesignView } from '../studio/model';
 import { basePanelPattern } from '../studio/panelWorkflow';
 import { componentIdForElement, syncComponentDesign } from './componentDesign';
 import { componentAtPoint, componentFits, componentPlacementProblem, firstFittingPosition, pointInPreview } from './placementDrag';
+import { isBoughtTrim, isDecoration } from '../../lib/pattern/decorations';
+import { decorationFoldPath, decorationPath } from './decorationArt';
+import type { ComponentOption } from '../../data/components';
 import './customize.css';
 
-type Filter = 'recomendados' | 'bolsillos' | 'herramientas' | 'todos';
+type Filter = 'recomendados' | 'bolsillos' | 'herramientas' | 'decoracion' | 'todos';
 type Drag = { pointerId: number; kind: 'add' | 'move'; presetId?: string; componentId?: string; start: Pt; client: Pt; point?: Pt; offset?: Pt };
 const nameOf = (component: PatternComponent) => component.name ?? COMPONENT_OPTIONS.find(option => option.kind === component.kind)?.name ?? 'Extra';
 const viewName = (view: DesignView) => view.label.replace(/^Patrón real · /, '').replace(/en par simétrico/i, '(par)').replace(/completa/i, '').trim();
@@ -65,7 +68,8 @@ export function CustomizePage({ projectId }: { projectId: string }) {
   const displayedSelected = liveComponents.find(component => component.id === selectedId);
   const options = searchComponents(query, (filter === 'recomendados' ? recommended : COMPONENT_OPTIONS)
     .filter(option => filter !== 'bolsillos' || option.group === 'bolsillos' || option.group === 'cierres')
-    .filter(option => filter !== 'herramientas' || option.group === 'herramientas' || option.group === 'trabillas'));
+    .filter(option => filter !== 'herramientas' || option.group === 'herramientas' || option.group === 'trabillas')
+    .filter(option => filter !== 'decoracion' || option.group === 'decoracion'));
   const selectedName = selected ? nameOf(selected) : '';
 
   const save = (change: (current: PatternComponent[]) => PatternComponent[], text?: string) => updateProject(projectId, current => {
@@ -81,7 +85,7 @@ export function CustomizePage({ projectId }: { projectId: string }) {
     setCanUndo(history.current.length > 0); setSelectedId(undefined); setMessage('Cambio deshecho.');
   };
   const accept = (component: PatternComponent) => {
-    save(current => [...current, component], 'Extra añadido con sus piezas de confección.');
+    save(current => [...current, component], isBoughtTrim(component.kind)?'Decoración añadida con metraje y guía de colocación.':'Extra añadido con sus piezas de confección.');
     setSelectedId(component.id); setMessage('Arrastra el extra sobre la pieza para cambiarlo de lugar.'); setPending(undefined);
   };
   const add = (presetId: string, point?: Pt, exact = false) => {
@@ -192,11 +196,11 @@ export function CustomizePage({ projectId }: { projectId: string }) {
 
       <section className="customize-gallery" aria-label="Catálogo de extras">
         <h2>¿Qué quieres agregar?</h2>
-        <TextInput aria-label="Buscar extras" placeholder="Bolsillo, celular, lápices…" value={query} onChange={setQuery} />
-        <div className="customize-filters" role="group" aria-label="Tipos de extra">{([['recomendados', 'Para esta prenda'], ['bolsillos', 'Bolsillos'], ['herramientas', 'Herramientas'], ['todos', 'Todos']] as const).map(([value, label]) => <button key={value} className="filter-chip" aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}</div>
-        <p className="customize-result-count">{options.length} opciones · Todas incluyen sus piezas de patrón</p>
+        <TextInput aria-label="Buscar extras" placeholder="Bolsillo, encaje, olán, celular…" value={query} onChange={setQuery} />
+        <div className="customize-filters" role="group" aria-label="Tipos de extra">{([['recomendados', 'Para esta prenda'], ['decoracion', 'Decorar'], ['bolsillos', 'Bolsillos'], ['herramientas', 'Herramientas'], ['todos', 'Todos']] as const).map(([value, label]) => <button key={value} className="filter-chip" aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}</div>
+        <p className="customize-result-count">{options.length} opciones · Patrones de tela o metraje de mercería</p>
         <div className="customize-options">{options.slice(0, limit).map(option => <div key={option.id} className="customize-option">
-          <button className="customize-option-add" aria-label={`Agregar ${option.name.toLowerCase()}`} onClick={() => add(option.id)} draggable onDragStart={event => { event.dataTransfer.setData(DRAG_TYPE, option.id); event.dataTransfer.effectAllowed = 'copy'; setNativeDragging(true); }} onDragEnd={() => setNativeDragging(false)}><ComponentIcon kind={option.kind} /><span><strong>{option.name}</strong><small>{formatLength(option.defaultWidth, unit)} × {formatLength(option.defaultHeight, unit)}</small></span><Icon name="plus" size={17} /></button>
+          <button className="customize-option-add" aria-label={`Agregar ${option.name.toLowerCase()}`} onClick={() => add(option.id)} draggable onDragStart={event => { event.dataTransfer.setData(DRAG_TYPE, option.id); event.dataTransfer.effectAllowed = 'copy'; setNativeDragging(true); }} onDragEnd={() => setNativeDragging(false)}><ComponentIcon option={option} /><span><strong>{option.name}</strong><small>{formatLength(option.defaultWidth, unit)} × {formatLength(option.defaultHeight, unit)}{isBoughtTrim(option.kind)?' · Comprado':''}</small></span><Icon name="plus" size={17} /></button>
           <button className="customize-drag-handle" aria-label={`Arrastrar ${option.name.toLowerCase()}`} title="Arrastrar sobre la pieza" onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); add(option.id); } }} onPointerDown={event => startAdd(event, option.id)} onPointerMove={movePointer} onPointerUp={event => finishPointer(event)} onPointerCancel={event => finishPointer(event, true)}><Icon name="move" size={17} /><span>Arrastrar</span></button>
         </div>)}</div>
         {!options.length && <p className="small muted">Prueba otro nombre o elige Todos.</p>}
@@ -210,7 +214,7 @@ export function CustomizePage({ projectId }: { projectId: string }) {
       </section>
     </div>
     <div className="customize-footer"><span>{components.length ? `${components.length} ${components.length === 1 ? 'extra' : 'extras'}` : 'Puedes conservar la base lisa'}</span><Button variant="primary" icon="palette" onClick={() => navigate(`/acabados/${projectId}`)}>Elegir telas y bordados</Button></div>
-    {drag?.kind === 'add' && <div className="customize-drag-ghost" style={{ left: drag.client.x, top: drag.client.y }}><ComponentIcon kind={COMPONENT_OPTIONS.find(option => option.id === drag.presetId)?.kind ?? 'bolsillo-parche'} />Suelta sobre la pieza</div>}
+    {drag?.kind === 'add' && <div className="customize-drag-ghost" style={{ left: drag.client.x, top: drag.client.y }}><ComponentIcon option={COMPONENT_OPTIONS.find(option => option.id === drag.presetId) ?? COMPONENT_OPTIONS[0]} />Suelta sobre la pieza</div>}
     {pending && <Sheet title="Ajustar este extra" onClose={() => setPending(undefined)}><div className="stack"><Notice>El extra no cabe todavía en esta pieza. Ajusta sus medidas o vuelve para elegir otra pieza; conservaremos el tamaño que elijas.</Notice><strong>{nameOf(pending)}</strong><ComponentDimensions prefix="pending-component" component={pending} onChange={patch => setPending({ ...pending, ...patch })} />{message && <p className="small" role="status">{message}</p>}<Button variant="primary" onClick={() => { if (!view) return; const placed = firstFittingPosition(pending, view, base?.pieces ?? [], pending.placement); if (placed) accept(placed); else setMessage(componentPlacementProblem(pending, view, base?.pieces ?? []) ?? 'Aún no cabe. Prueba un tamaño menor o elige otra pieza.'); }}>Añadir a esta pieza</Button><Button variant="ghost" onClick={() => setPending(undefined)}>Elegir otra pieza</Button>{pendingDepth > 0 && <p className="tiny muted">El ancho y alto deben admitir el fuelle de {formatLength(pendingDepth, unit)}.</p>}</div></Sheet>}
   </div>;
 }
@@ -219,13 +223,16 @@ function ComponentDimensions({ component, onChange, prefix = 'component' }: { co
   const depth = component.kind === 'bolsillo-cargo' ? component.depth ?? 30 : 0;
   const loop = component.kind === 'trabilla' || component.kind === 'porta-martillo';
   const camera = component.kind === 'porta-telefono-camara' ? cameraWindowFor(component) : undefined;
+  const decoration=isDecoration(component.kind);
   return <><div className="customize-dimensions">
-    <Field label="Ancho terminado" htmlFor={`${prefix}-width`}><LengthInput id={`${prefix}-width`} mm={component.width} min={loop ? 10 : Math.max(40, depth * 2)} max={600} onChange={width => width !== undefined && onChange({ width })} /></Field>
-    <Field label="Alto terminado" htmlFor={`${prefix}-height`}><LengthInput id={`${prefix}-height`} mm={component.height} min={Math.max(50, depth * 2)} max={800} onChange={height => height !== undefined && onChange({ height })} /></Field>
+    <Field label={decoration?"Largo al colocarlo":"Ancho terminado"} htmlFor={`${prefix}-width`}><LengthInput id={`${prefix}-width`} mm={component.width} min={decoration ? 50 : loop ? 10 : Math.max(40, depth * 2)} max={decoration?2000:600} onChange={width => width !== undefined && onChange({ width })} /></Field>
+    <Field label={decoration?"Ancho visible":"Alto terminado"} htmlFor={`${prefix}-height`}><LengthInput id={`${prefix}-height`} mm={component.height} min={decoration?10:Math.max(50, depth * 2)} max={decoration?400:800} onChange={height => height !== undefined && onChange({ height })} /></Field>
     <Field label="Cantidad" htmlFor={`${prefix}-quantity`}><Select id={`${prefix}-quantity`} value={String(component.quantity)} options={Array.from({ length: 8 }, (_, index) => ({ value: String(index + 1), label: `${index + 1} ${index ? 'unidades' : 'unidad'}` }))} onChange={quantity => onChange({ quantity: Number(quantity) })} /></Field>
+    {component.kind === 'olan-fruncido' && <Field label="Cantidad de frunce" htmlFor={`${prefix}-fullness`}><Select id={`${prefix}-fullness`} value={String(component.decoration?.fullness??2)} options={[1.25,1.5,2,2.5,3].map(value=>({value:String(value),label:`${value}× el largo montado`}))} onChange={value=>onChange({decoration:{style:'frunce',...component.decoration,fullness:Number(value)}})}/></Field>}
+    {component.kind === 'olan-plisado' && <Field label="Pliegues" htmlFor={`${prefix}-pleats`}><Select id={`${prefix}-pleats`} value={String(component.decoration?.pleats??6)} options={Array.from({length:Math.min(23,Math.floor(component.width/5)-1)},(_,i)=>({value:String(i+2),label:`${i+2} pliegues`}))} onChange={value=>onChange({decoration:{style:'pliegues',...component.decoration,pleats:Number(value)}})}/></Field>}
     {component.kind === 'bolsillo-cargo' && <Field label="Fondo del fuelle" htmlFor={`${prefix}-depth`}><LengthInput id={`${prefix}-depth`} mm={depth} min={15} max={Math.min(100, component.width / 2, component.height / 2)} onChange={value => value !== undefined && onChange({ depth: value })} /></Field>}
     {component.kind === 'porta-herramientas' && <Field label="Canales" htmlFor={`${prefix}-channels`}><Select id={`${prefix}-channels`} value={String(component.channels ?? 3)} options={Array.from({ length: 8 }, (_, index) => ({ value: String(index + 1), label: `${index + 1} ${index ? 'canales' : 'canal'}` }))} onChange={value => onChange({ channels: Number(value) })} /></Field>}
-  </div>{camera && <fieldset className="customize-camera"><legend>Ventana de cámara</legend><p className="tiny muted">Mide la cámara con el teléfono dentro de su funda. Las medidas parten de la esquina superior izquierda del portacelular.</p><div className="customize-dimensions">{([['left','Desde la izquierda'],['top','Desde arriba'],['width','Ancho de ventana'],['height','Alto de ventana']] as const).map(([key,label])=><Field key={key} label={label} htmlFor={`${prefix}-camera-${key}`}><LengthInput id={`${prefix}-camera-${key}`} mm={camera[key]} min={key==='left'||key==='top'?12:10} max={key==='left'?component.width-camera.width-12:key==='top'?component.height-camera.height-15:key==='width'?component.width-camera.left-12:component.height-camera.top-15} onChange={value=>value!==undefined&&onChange({camera:{...camera,[key]:value}})} /></Field>)}</div></fieldset>}</>;
+  </div>{decoration&&<p className="tiny muted">{isBoughtTrim(component.kind)?'Elige una puntilla o cinta ya fabricada. El PDF indica cuánto comprar y dónde coserla; su dibujo es ilustrativo.':'El patrón desarrolla la tira de tela con sus márgenes y marcas. El tamaño que ves aquí es el que ocupará ya montada.'}</p>}{camera && <fieldset className="customize-camera"><legend>Ventana de cámara</legend><p className="tiny muted">Mide la cámara con el teléfono dentro de su funda. Las medidas parten de la esquina superior izquierda del portacelular.</p><div className="customize-dimensions">{([['left','Desde la izquierda'],['top','Desde arriba'],['width','Ancho de ventana'],['height','Alto de ventana']] as const).map(([key,label])=><Field key={key} label={label} htmlFor={`${prefix}-camera-${key}`}><LengthInput id={`${prefix}-camera-${key}`} mm={camera[key]} min={key==='left'||key==='top'?12:10} max={key==='left'?component.width-camera.width-12:key==='top'?component.height-camera.height-15:key==='width'?component.width-camera.left-12:component.height-camera.top-15} onChange={value=>value!==undefined&&onChange({camera:{...camera,[key]:value}})} /></Field>)}</div></fieldset>}</>;
 }
 
 function PlacementGrid({ view }: { view: DesignView }) {
@@ -235,7 +242,12 @@ function PlacementGrid({ view }: { view: DesignView }) {
   return <g pointerEvents="none"><defs><pattern id="customize-grid-small" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M10 0H0V10" fill="none" stroke="#24584a" strokeOpacity=".16" strokeWidth=".5" /></pattern><pattern id="customize-grid-large" width="50" height="50" patternUnits="userSpaceOnUse"><rect width="50" height="50" fill="url(#customize-grid-small)" /><path d="M50 0H0V50" fill="none" stroke="#24584a" strokeOpacity=".25" strokeWidth=".8" /></pattern></defs><rect x={view.minX} y={view.minY} width={view.width} height={view.height} fill="url(#customize-grid-large)" />{xs.map(x => <text key={`x${x}`} x={x + 2} y={view.minY + 10} fill="#24584a" fontSize="7">{x / 10}</text>)}{ys.map(y => <text key={`y${y}`} x={view.minX + 2} y={y - 2} fill="#24584a" fontSize="7">{y / 10}</text>)}</g>;
 }
 
-function ComponentIcon({ kind }: { kind: string }) {
+function ComponentIcon({ option }: { option: ComponentOption }) {
+  const kind=option.kind;
+  if(isDecoration(kind)) {
+    const component={kind,width:option.defaultWidth,height:option.defaultHeight,decoration:option.defaultDecoration};
+    return <svg className="component-icon" viewBox="0 0 64 64" fill="none" aria-hidden="true"><g transform="translate(5 17) scale(.54 .3)"><path d={decorationPath(component)} fill="#E6D4AF" stroke="#756047" strokeWidth="1.3"/><path d={decorationFoldPath(component)} stroke="#756047" strokeWidth="1.1"/></g><path d="M7 15H57" stroke="#756047" strokeWidth=".7" strokeDasharray="2 2"/></svg>;
+  }
   const strap = kind === 'trabilla' || kind === 'porta-martillo';
   const flap = kind.includes('solapa') || kind === 'bolsillo-cargo';
   const camera = kind === 'porta-telefono-camara';

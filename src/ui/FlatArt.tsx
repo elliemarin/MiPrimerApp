@@ -1,6 +1,8 @@
 import { useId, useMemo } from 'react';
 import { buildFlat, FlatSpec, FlatView } from '../data/flats';
 import type { Zone } from '../features/studio/model';
+import { catalogArtwork, type CatalogReference } from '../data/catalogArtwork';
+import { CatalogObject } from './CatalogObject';
 import './flatArt.css';
 
 const cache = new Map<string, ReturnType<typeof buildFlat>>();
@@ -32,6 +34,9 @@ export function flatPalette(spec?: FlatSpec): FlatPalette {
     if (spec.accessory === 'orejas') return { fabric: '#bb9073', trim: '#695449', pocket: '#d0b29d', metal: '#a88c72' };
     if (['cojin', 'antifaz', 'dona'].includes(spec.accessory ?? '')) return { fabric: '#bcaaa5', trim: '#9d8984', pocket: '#cab9b3', metal: '#c2ae87' };
     if (['babero', 'gorro'].includes(spec.accessory ?? '')) return { fabric: '#b6c2ac', trim: '#8c9e80', pocket: '#c0ccb6', metal: '#ede7d6' };
+    if (spec.accessory === 'funda-solapa') return { fabric: '#8da2ab', trim: '#6d858e', pocket: '#9fb1b7', metal: '#c5b487' };
+    if (spec.accessory === 'estuche-plano') return { fabric: '#c1aa82', trim: '#937952', pocket: '#cbb895', metal: '#b8a06d' };
+    if (spec.accessory === 'banda-lazo') return { fabric: '#bba09b', trim: '#9e7e79', pocket: '#c8afaa', metal: '#c6ad83' };
     return { fabric: '#adbaa8', trim: '#899d82', pocket: '#bdc8b7', metal: '#bca578' };
   }
   return { fabric: '#8aa397', trim: '#6b897a', pocket: '#9db2a6', metal: '#c4b18a' };
@@ -76,19 +81,21 @@ export function FlatArtwork({ view, prefix, spec, fills }: { view: FlatView; pre
   </>;
 }
 
-export function FlatViewSvg({ view, className, title, highlight, spec }: { view: FlatView; className?: string; title?: string; highlight?: string; spec?: FlatSpec }) {
+export function FlatViewSvg({ view, className, title, highlight, spec, reference }: { view: FlatView; className?: string; title?: string; highlight?: string; spec?: FlatSpec; reference?: CatalogReference }) {
   const id = useId().replace(/:/g, '');
   // Keep room around the garment; the card frames the drawing, not its strokes.
   const pad = Math.max(view.width, view.height) * .055;
   return <svg className={`flat-art flat-editorial ${className ?? ''}`} viewBox={`${view.minX - pad} ${view.minY - pad} ${view.width + pad * 2} ${view.height + pad * 2}`} role="img" aria-label={title ?? 'Dibujo de la prenda'}>
     {title && <title>{title}</title>}
-    <desc>Ilustración de referencia. Los colores son orientativos; las medidas se eligen al crear el patrón.</desc>
+    <desc>Ilustración de referencia. Los colores son orientativos; las medidas se eligen al crear el patrón.{reference ? ' Los objetos mostrados junto al textil explican su uso y no están incluidos en el patrón.' : ''}</desc>
     <FlatArtwork view={view} prefix={`flat-${id}`} spec={spec} fills={highlight ? { [highlight]: '#dec786' } : undefined} />
+    {reference && <CatalogObject reference={reference} />}
   </svg>;
 }
 
-export function FlatArt({ id, spec, view = 'frente', title }: { id: string; spec: FlatSpec; view?: string; title?: string }) {
+export function FlatArt({ id, spec, view = 'frente', title, catalog = false }: { id: string; spec: FlatSpec; view?: string; title?: string; catalog?: boolean }) {
   const flat = useMemo(() => getFlat(id, spec), [id, spec]);
   const current = flat.views.find(item => item.key === view) ?? flat.views[0];
-  return <FlatViewSvg view={current} spec={spec} title={title} />;
+  const artwork = useMemo(() => catalog ? catalogArtwork(id, spec, current) : { view: current }, [catalog, id, spec, current]);
+  return <FlatViewSvg view={artwork.view} reference={artwork.reference} spec={spec} title={title} />;
 }

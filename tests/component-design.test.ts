@@ -23,7 +23,10 @@ describe('Complementos del catálogo vinculados al estudio', () => {
       const component = createComponent(option,option.id);
       const built = buildPattern({ ...base.pattern!, components: [component] });
       expect(built.issues.filter(issue => issue.level === 'error'),option.name).toEqual([]);
-      expect(built.pieces.some(piece => piece.name.includes(option.name)),option.name).toBe(true);
+      if(option.kind==='cinta-comprada') {
+        expect(built.pieces.some(piece=>piece.id.startsWith(`componente-${option.id}-`)),option.name).toBe(false);
+        expect(built.result?.materials.some(material=>material.label.includes(option.name)),option.name).toBe(true);
+      } else expect(built.pieces.some(piece => piece.name.includes(option.name)),option.name).toBe(true);
       if (option.hardware) for (const hardware of option.hardware) expect(built.result?.materials.some(material => material.label === hardware.label),option.name).toBe(true);
     }
   });

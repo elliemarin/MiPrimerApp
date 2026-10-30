@@ -138,11 +138,13 @@ export function prepareSewingPack(source: Project, ctx: SewingPackCtx): SewingPa
   const references = decorativeDoc?.elements.filter(element => !element.hidden && element.kind !== 'grupo' && element.technique === 'ninguna') ?? [];
   if (references.length) warnings.push(`${references.length} dibujos sin técnica quedan como referencias visuales. Si necesitas cortarlos o bordarlos, asígnales Aplicación o Bordado en Estudio.`);
   if (doc?.views.some(view => view.source.type === 'foto' && !view.photo?.mmPerPx)) warnings.push('Hay fotografías sin calibrar: sus ubicaciones son orientativas. Las piezas del patrón conservan sus medidas físicas.');
-  if (mode === 'intervention' && !drawings.length) blockers.push('Todavía no hay recortes o guías exportables. En Estudio asigna Aplicación a una figura cerrada o Bordado a una figura o trazo.');
   const tile = { ...(ctx.tile ?? DEFAULT_TILE), footer: 13 };
   blockers.push(...validateTileSettings(tile));
   const placement = preparePlacementGuide(project);
   drawings.push(...placement.drawings);
+  // Bought notions have no cutting templates; their placement guide and bill
+  // of materials are a complete, useful intervention export on their own.
+  if (mode === 'intervention' && !drawings.length) blockers.push('Todavía no hay recortes o guías exportables. En Estudio asigna Aplicación a una figura cerrada o Bordado a una figura o trazo.');
   return { project, built, mode, blockers: [...new Set(blockers)], warnings: [...new Set(warnings)], pieces, cutouts, embroideryCount, drawings, placements: placement.placements };
 }
 

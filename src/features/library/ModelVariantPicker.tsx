@@ -33,7 +33,7 @@ export function ModelVariantPicker({ group, model, unit, onChange }: {
   if (!axes.length) return null;
   return <section className="model-variant-picker stack" aria-label="Medidas del diseño">
     <div><h3 className="section-title">Medidas del diseño</h3><p className="tiny muted">Elige la versión que quieres trabajar.</p></div>
-    <div className="model-variant-preview"><FlatArt id={model.id} spec={model.flat} title={group.name}/><p className="small muted">{model.variantLabel ?? model.name}</p></div>
+    <div className="model-variant-preview"><FlatArt id={model.id} spec={model.flat} title={group.name} catalog/><p className="small muted">{model.variantLabel ?? model.name}</p></div>
     {fields(primary)}
     {extra.length > 0 && <details className="model-variant-more"><summary>Más medidas y acabados</summary>{fields(extra)}</details>}
     <p className="sr-only" role="status">{announcement}</p>
