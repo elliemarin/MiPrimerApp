@@ -6,8 +6,8 @@ export type JourneyStep = 'base' | 'personalizar' | 'estudio' | 'pdf';
 export function ProjectJourney({ projectId, step }: { projectId: string; step: JourneyStep }) {
   const steps: { key: JourneyStep; label: string; detail: string; path: string }[] = [
     { key: 'base', label: 'Base', detail: 'Revisar base y medidas', path: `/proyectos/${projectId}/medidas` },
-    { key: 'personalizar', label: 'Personalizar', detail: 'Añadir bolsillos y complementos', path: `/personalizar/${projectId}` },
-    { key: 'estudio', label: 'Estudio', detail: 'Elegir telas, colores y bordados', path: `/estudio/${projectId}` },
+    { key: 'personalizar', label: 'Extras', detail: 'Colocar bolsillos y complementos', path: `/personalizar/${projectId}` },
+    { key: 'estudio', label: 'Acabados', detail: 'Elegir telas, colores y bordados', path: `/acabados/${projectId}` },
     { key: 'pdf', label: 'PDF', detail: 'Revisar y generar el PDF de confección', path: `/confeccion/${projectId}` }
   ];
   return <nav className="project-journey" aria-label="Pasos del diseño">

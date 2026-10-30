@@ -139,7 +139,7 @@ p { margin: 0; }
 
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-  display: grid; grid-template-columns: repeat(5, 1fr);
+  display: grid; grid-template-columns: repeat(3, 1fr);
   height: calc(var(--tabbar-h) + var(--safe-bottom));
   padding-bottom: var(--safe-bottom);
   background: color-mix(in srgb, var(--surface) 86%, transparent);
@@ -273,6 +273,9 @@ button.list-row:hover, a.list-row:hover { background: var(--surface-2); }
   display: flex; flex-direction: column; animation: up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
   padding-bottom: var(--safe-bottom);
 }
+.sheet { overflow: hidden; }
+.sheet-body { min-height: 0; flex: 1 1 auto; }
+.sheet-footer { flex: none; position: relative; z-index: 1; background: var(--surface); }
 .sheet .grab { width: 38px; height: 5px; border-radius: 3px; background: var(--line-strong); margin: 8px auto 2px; flex: none; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px 6px 18px; flex: none; }
 .sheet-head h2 { font-size: 18px; }

@@ -54,9 +54,11 @@ export class FlowDoc {
     return lines;
   }
   title(text: string) {
-    this.ensure(14);
-    this.cv.text(text, this.m, this.y + 6, 6.4, { bold: true });
-    this.y += 12;
+    for (const line of this.wrap(text, 6.4, this.width, true)) {
+      this.ensure(14);
+      this.cv.text(line, this.m, this.y + 6, 6.4, { bold: true });
+      this.y += 12;
+    }
   }
   heading(text: string) {
     this.ensure(12);

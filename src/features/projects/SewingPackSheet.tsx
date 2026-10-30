@@ -75,7 +75,7 @@ export function SewingPackSheet({ projectId, onClose }: { projectId: string; onC
         <div className="row-wrap">
           <Button size="sm" onClick={()=>go(`/personalizar/${projectId}`)}>Revisar complementos</Button>
           {hasBase&&<Button size="sm" onClick={()=>go(`/patronaje/${projectId}`)}>Revisar patrón</Button>}
-          <Button size="sm" onClick={()=>go(`/estudio/${projectId}`)}>Revisar estudio</Button>
+          <Button size="sm" onClick={()=>go(`/${project.design?.simpleWorkflow?'acabados':'estudio'}/${projectId}`)}>{project.design?.simpleWorkflow?'Elegir materiales y bordados':'Revisar estudio'}</Button>
           {!hasBase&&<Button size="sm" onClick={()=>go('/biblioteca')}>Elegir una base con patrón</Button>}
         </div>
         {excluded&&<Button size="sm" onClick={()=>useApp.getState().updateProject(projectId,p=>p.pattern?{...p,pattern:{...p.pattern,hidden:[],noExport:[]}}:p,'Todas las piezas incluidas en el PDF completo.')}>Incluir todas las piezas del patrón</Button>}

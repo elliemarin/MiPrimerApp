@@ -339,7 +339,7 @@ export function estimateFabric(pieces: Piece[], cuts: Map<string, CutOutline>, f
 }
 
 export function newPatternState(generatorId: string, body: MeasureValues, context: PatternContextState): PatternState {
-  return { generatorId, params: {}, context, body, overrides: {}, allowances: {}, layout: {}, customPieces: [], hidden: [] };
+  return { generatorId, params: {}, context: { ...context }, body: { ...body }, overrides: {}, allowances: {}, layout: {}, customPieces: [], hidden: [] };
 }
 
 export function setOverride(state: PatternState, pieceId: string, key: string, delta: Pt, base: Pt): PatternState {

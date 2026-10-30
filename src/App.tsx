@@ -15,6 +15,7 @@ import { StudioHub } from './features/studio/StudioHub';
 const StudioEditor = lazy(() => import('./features/studio/StudioEditor').then((m) => ({ default: m.StudioEditor })));
 const CustomizePage = lazy(() => import('./features/customize/CustomizePage').then((m) => ({ default: m.CustomizePage })));
 const SewingPackPage = lazy(() => import('./features/projects/SewingPackPage').then((m) => ({ default: m.SewingPackPage })));
+const FinishesPage = lazy(() => import('./features/simple/FinishesPage').then((m) => ({ default: m.FinishesPage })));
 import { FabricsPage } from './features/fabrics/FabricsPage';
 const FabricDetail = lazy(() => import('./features/fabrics/FabricDetail').then((m) => ({ default: m.FabricDetail })));
 const HelpPage = lazy(() => import('./features/help/HelpPage').then((m) => ({ default: m.HelpPage })));
@@ -24,7 +25,7 @@ import { useSync } from './lib/sync/useSync';
 
 const NAV = [
   { key: 'proyectos', label: 'Proyectos', icon: 'proyectos' },
-  { key: 'biblioteca', label: 'Biblioteca', icon: 'biblioteca' },
+  { key: 'biblioteca', label: 'Elegir una base', icon: 'biblioteca' },
   { key: 'patronaje', label: 'Patronaje', icon: 'patronaje' },
   { key: 'estudio', label: 'Estudio', icon: 'estudio' },
   { key: 'telas', label: 'Telas y materiales', icon: 'telas' },
@@ -32,7 +33,7 @@ const NAV = [
   { key: 'ayuda', label: 'Ayuda', icon: 'ayuda' }
 ];
 
-const TABS = ['proyectos', 'biblioteca', 'patronaje', 'estudio'];
+const TABS = ['biblioteca', 'proyectos'];
 
 export function App() {
   const ready = useApp((s) => s.ready);
@@ -72,8 +73,8 @@ export function App() {
 
   if (!ready) return <div className="page" aria-busy="true" />;
 
-  const [section = 'proyectos', a, b] = route;
-  const active = ['ajustes', 'mas'].includes(section) ? 'mas' : ['personalizar', 'confeccion'].includes(section) ? 'proyectos' : section;
+  const [section = 'biblioteca', a, b] = route;
+  const active = ['ajustes', 'mas'].includes(section) ? 'mas' : ['personalizar', 'acabados', 'confeccion'].includes(section) ? 'proyectos' : section;
   let content: JSX.Element;
   switch (section) {
     case 'biblioteca':
@@ -90,6 +91,9 @@ export function App() {
       break;
     case 'confeccion':
       content = a ? <SewingPackPage projectId={a} /> : <ProjectsPage />;
+      break;
+    case 'acabados':
+      content = a ? <FinishesPage projectId={a} /> : <LibraryPage />;
       break;
     case 'telas':
       content = a ? <FabricDetail id={a} /> : <FabricsPage />;
@@ -118,11 +122,12 @@ export function App() {
           Hilvana
           <small>Diseña, patrona y confecciona</small>
         </div>
-        {NAV.map((n) => (
+        {NAV.filter(n => ['biblioteca','proyectos','telas'].includes(n.key)).sort((a,b) => (a.key==='biblioteca'?-1:b.key==='biblioteca'?1:0)).map((n) => (
           <a key={n.key} href={`#/${n.key}`} aria-current={section === n.key ? 'page' : undefined}>
             <Icon name={n.icon} /> {n.label}
           </a>
         ))}
+        <a href="#/mas"><Icon name="mas" /> Más opciones</a>
         <a href="#/ajustes" aria-current={section === 'ajustes' ? 'page' : undefined}>
           <Icon name="settings" /> Ajustes y cuenta
         </a>

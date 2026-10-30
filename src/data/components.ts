@@ -5,6 +5,7 @@ import type { PatternComponent, ComponentKind } from '../lib/pattern/components'
 import type { DesignView } from '../features/studio/model';
 import type { MaterialNeed } from '../lib/pattern/types';
 import { uid } from '../lib/ids';
+import { EXTRA_COMPONENT_DEFINITIONS } from './componentCollections';
 
 export type ComponentGroup = 'bolsillos' | 'cierres' | 'herramientas' | 'trabillas';
 
@@ -19,6 +20,10 @@ export interface ComponentOption {
   defaultHeight: number;
   defaultDepth?: number;
   defaultQuantity?: number;
+  defaultChannels?: number;
+  defaultCamera?: PatternComponent['camera'];
+  tags?: string[];
+  collection?: string;
   hardware?: MaterialNeed[];
   /** Families are recommendations, never a claim of fit or load capacity. */
   families: CatalogModel['flat']['family'][];
@@ -59,7 +64,7 @@ const definitions: Definition[] = [
 ];
 
 /** Original, parametric add-ons. These are not licensed third-party patterns. */
-export const COMPONENT_OPTIONS: readonly ComponentOption[] = definitions.map(option => ({ ...option, label: option.name }));
+export const COMPONENT_OPTIONS: readonly ComponentOption[] = [...definitions, ...EXTRA_COMPONENT_DEFINITIONS].map(option => ({ ...option, label: option.name }));
 export const COMPONENT_PRESETS = COMPONENT_OPTIONS;
 export type ComponentPreset = ComponentOption;
 
@@ -82,10 +87,18 @@ export function createComponent(option: ComponentOption, id: string, view?: Desi
     id, name: option.name, presetId: option.id, kind: option.kind, width: option.defaultWidth, height: option.defaultHeight,
     quantity: option.defaultQuantity ?? 1,
     ...(option.defaultDepth === undefined ? {} : { depth: option.defaultDepth }),
+    ...(option.defaultChannels === undefined ? {} : { channels: option.defaultChannels }),
+    ...(option.defaultCamera === undefined ? {} : { camera: { ...option.defaultCamera } }),
     allowance: 10,
     ...(option.hardware ? { materialNeeds: option.hardware.map(need => ({ ...need })) } : {}),
     ...(view ? { placement: { viewId: view.id, x: view.minX + view.width * .62, y: view.minY + view.height * .56, label: view.label } } : {})
   };
+}
+
+export function searchComponents(query: string, options: readonly ComponentOption[] = COMPONENT_OPTIONS): ComponentOption[] {
+  const fold = (value:string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const words=fold(query).trim().split(/\s+/).filter(Boolean);
+  return options.filter(option=>{const haystack=fold([option.name,option.description,option.collection,...option.tags??[]].join(' '));return words.every(word=>haystack.includes(word));});
 }
 
 export function makeComponent(project: Project, presetId: string, targetViewId?: string): PatternComponent {

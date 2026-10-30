@@ -12,6 +12,9 @@ export interface Alert {
 /** ¿Qué documentos de la exportación ya no corresponden al estado actual? */
 export function exportOutdated(e: ExportRecord, p: Project): string[] {
   const out: string[] = [];
+  // This release corrects the actual outside-leg geometry; an unchanged state
+  // hash alone cannot identify PDFs made by the previous generator.
+  if (e.deps.pattern && p.pattern?.generatorId === 'pantalon-cintura-elastica' && e.appVersion === '0.1.0') out.push('trazado del pantalón');
   if (e.deps.pattern && p.pattern && e.deps.pattern.hash !== patternHash(p.pattern)) out.push('patrón');
   if (e.deps.design && p.design && e.deps.design.hash !== designHash(p.design)) out.push('diseño');
   if (e.deps.measurement && p.profileRef && e.deps.measurement.versionId !== p.profileRef.versionId) out.push('medidas');

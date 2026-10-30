@@ -254,3 +254,27 @@ Contrato, comprobaciones y límites físicos detallados en
 `docs/RECORRIDO_CONFECCION.md`. Las posiciones sobre dibujos son ilustrativas;
 solo `placement.pieceId` define marcas físicas exactas. Los complementos son
 experimentales hasta imprimir y coser muestras.
+
+## 14. Interfaz simple, biblioteca paramétrica y colocación física (0.2)
+
+- Entrada por defecto Biblioteca. `LibraryPage/ModelDetail/ModelStartSheet`
+  ofrecen búsqueda paginada y Obtener patrón/Intervenir. `quickSizes.ts` conserva
+  referencias explícitas C/M/G; las medidas personalizadas no usan valores
+  corporales inventados. Los accesorios ajustan parámetros de objeto.
+- `catalogCollections.ts`: 1,707 variantes nuevas, 19 colecciones; 1,789 modelos
+  con motor en total. `componentCollections.ts`: 411 opciones/once construcciones.
+  `hoodie.ts` añade el motor 22; `pants.ts` corrige costados compartidos y rodilla.
+- `features/simple/workflow.ts` prepara piezas reales y define superficies/
+  elecciones de material. `FinishesPage` reduce edición a materiales y grupos
+  de bordado. Ambos pasos usan coordenadas físicas; no hay simulación 3D.
+- `vectorPath` conserva curvas y contraformas; `embroidery` identifica grupos
+  multicolor/letras. Catálogo de 337 motivos/composiciones y cinco fuentes OFL
+  precompiladas, sin llamadas de red en ejecución.
+- `pdf/placement.ts` exporta cuadrícula 10 mm, origen 0,0 y posiciones E/B con
+  `pieceId`. `projectPack` bloquea materiales pendientes e incluye posiciones
+  y guías en manifiesto/PDF. `DrawPath.color/fillColor` conserva paletas.
+- Versión 0.2.0 identifica PDF de pantalón 0.1.0 que necesitan revisar el trazado,
+  aunque sus parámetros tengan el mismo hash. `newPatternState` copia medidas
+  y contexto para no compartir referencias con el perfil.
+
+Relevo, pruebas, licencias y límites en `docs/INTERFAZ_SIMPLE_Y_BIBLIOTECA.md`.

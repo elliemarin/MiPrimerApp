@@ -31,7 +31,7 @@ export function piecesSvg(ds: Drawable[], title: string): string {
   const parts: string[] = [];
   for (const d of ds) {
     parts.push(`<g id="${esc(d.id)}"><title>${esc(d.name)}</title>`);
-    for (const p of d.paths) parts.push(`<path d="${cmdsToSvg(p.cmds)}" fill="none" stroke="#000" stroke-width="${WIDTH[p.style]}"${DASH[p.style] ? ` stroke-dasharray="${DASH[p.style]}"` : ''} data-linea="${p.style}"/>`);
+    for (const p of d.paths) parts.push(`<path d="${cmdsToSvg(p.cmds)}" fill="${p.fillColor&&/^#[a-f0-9]{6}$/i.test(p.fillColor)?p.fillColor:'none'}" stroke="${p.color&&/^#[a-f0-9]{6}$/i.test(p.color)?p.color:'#000'}" stroke-width="${WIDTH[p.style]}"${DASH[p.style] ? ` stroke-dasharray="${DASH[p.style]}"` : ''} data-linea="${p.style}"/>`);
     for (const g of d.grains) parts.push(`<line x1="${g.a.x}" y1="${g.a.y}" x2="${g.b.x}" y2="${g.b.y}" stroke="#000" stroke-width="0.2" data-linea="hilo"/>`);
     for (const l of d.labels) parts.push(`<text x="${l.at.x}" y="${l.at.y}" font-size="${l.size * 1.38}" font-family="Helvetica, Arial, sans-serif" text-anchor="middle"${l.bold ? ' font-weight="bold"' : ''}${l.angle ? ` transform="rotate(${l.angle} ${l.at.x} ${l.at.y})"` : ''}>${esc(l.text)}</text>`);
     parts.push('</g>');

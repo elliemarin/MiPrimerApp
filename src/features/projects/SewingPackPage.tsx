@@ -15,7 +15,7 @@ export function SewingPackPage({ projectId }: { projectId: string }) {
     <p className="muted" style={{ maxWidth: '58ch', marginBottom: 20 }}>Reúne los patrones de la base, los complementos y los recortes del estudio con sus medidas, materiales y pasos de montaje.</p>
     <div className="row-wrap">
       <Button variant="primary" icon="pdf" onClick={() => setOpen(true)}>Revisar y generar PDF</Button>
-      <Button onClick={() => navigate(`/estudio/${projectId}`)}>Volver al estudio</Button>
+      <Button onClick={() => navigate(`/${project.design?.simpleWorkflow?'acabados':'estudio'}/${projectId}`)}>Volver al diseño</Button>
       <Button variant="ghost" onClick={() => navigate(`/proyectos/${projectId}/exportaciones`)}>Ver mis exportaciones</Button>
     </div>
     {open && <SewingPackSheet projectId={projectId} onClose={() => setOpen(false)} />}

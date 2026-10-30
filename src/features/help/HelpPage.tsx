@@ -21,12 +21,13 @@ export function HelpPage({ topic }: { topic?: string }) {
       <div className="stack" style={{ maxWidth: 780 }}>
         <Topic id="inicio" title="Primeros pasos" open={!topic || topic === 'inicio'}>
           <ol style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6 }}>
-            <li><strong>Elige la base</strong> en Biblioteca y confirma su talla o tus medidas. «Patrón disponible» genera piezas de confección; «Solo inspiración» sirve como referencia de diseño.</li>
-            <li><strong>Personaliza</strong>: añade bolsillos, solapas, cierres o soportes para herramientas. Ajusta ancho, alto y cantidad. La colocación sobre la ilustración es orientativa: pruébala e hilvana sobre la prenda real.</li>
-            <li><strong>Termina en el estudio</strong>: coloca telas y colores en cada parte, elige figuras de bordado o dibuja. Asigna Aplicación a los recortes y Bordado a las guías que quieras imprimir. Los bocetos sin técnica quedan como referencias.</li>
-            <li><strong>Genera el PDF</strong> desde el paso PDF o el botón junto a Deshacer. Revisa la lista de piezas y descarga un archivo con medidas, materiales, instrucciones y plantillas 1:1. Si intervienes una prenda existente, el PDF incluye los complementos y no su patrón base.</li>
+            <li><strong>Busca una base</strong> al abrir la app. Filtra por persona, tipo de prenda o accesorio y colección. Elige Obtener patrón para descargarlo, o Intervenir para personalizar.</li>
+            <li><strong>Elige las medidas</strong>: Chica, Mediana, Grande o A medida. Las tallas de Hilvana muestran sus contornos; no son conversiones de marcas. En bebé elige meses y en accesorios puedes ajustar las medidas del objeto.</li>
+            <li><strong>Coloca extras</strong>: busca un bolsillo, organizador o portacelular y arrastra su asa a la pieza. Luego arrastra el propio extra para moverlo. Acercar zona ayuda en piezas largas; Ajustar medidas permite cambiar tamaño, canales o ventana de cámara.</li>
+            <li><strong>Elige telas y bordados</strong>: confirma color o tela en cada parte. Puedes aplicar explícitamente el mismo material a todas. Después añade figuras multicolor, letras o números, cambia su tamaño y arrástralos para colocarlos.</li>
+            <li><strong>Genera los patrones</strong>: el PDF reúne piezas, medidas, materiales, instrucciones, colores de bordado y una cuadrícula de colocación de 10 mm. Usa las plantillas de corte y la guía de colocación según su título; imprime al 100 %.</li>
           </ol>
-          <p>La barra Base → Personalizar → Estudio → PDF permite regresar a cualquier paso del mismo proyecto. En Patronaje puedes revisar o ajustar sus piezas. Los complementos siguen siendo experimentales hasta imprimir y coser una muestra.</p>
+          <p>La barra Base → Extras → Acabados → PDF conserva el mismo proyecto. Más opciones contiene el estudio y patronaje avanzados para trabajos anteriores. Los patrones experimentales necesitan una muestra impresa y cosida; el bordado del PDF es una guía vectorial, no un archivo de puntadas.</p>
         </Topic>
         <Topic id="medir" title="Cómo tomar medidas" open={topic === 'medir'}>
           <p>Usa una cinta flexible, sin apretar, sobre ropa ligera. En bebés y toddlers mide sobre el pañal; la edad solo sirve de referencia.</p>

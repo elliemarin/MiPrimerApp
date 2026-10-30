@@ -149,6 +149,10 @@ export type Fill =
   | { type: 'tela'; fabricId: string; rotation: number; offsetX: number; offsetY: number; scale: number };
 
 export interface DesignElement {
+  /** Original closed SVG contours, normalized to a 0..100 box; preserves glyph holes. */
+  vectorPath?: string;
+  /** A coloured motif or outlined lettering, grouped for moving as one object. */
+  embroidery?: { kind: 'motif' | 'lettering'; motifId?: string; fontId?: string; text?: string };
   id: string;
   viewId: string;
   kind: ElementKind;
@@ -194,6 +198,9 @@ export interface Guide {
 }
 
 export interface DesignDoc {
+  /** Explicit choices in the simple finish workflow, rather than implicit default fills. */
+  materialChoices?: Record<string, Fill>;
+  simpleWorkflow?: boolean;
   /** Complement definitions owned by this design/history, including recently deleted ones for Undo. */
   componentSelections?: PatternComponent[];
   /** Cortes de construcción sobre piezas reales del patrón, en milímetros. */
@@ -298,6 +305,7 @@ export function smoothCmds(pts: Pt[], closed: boolean): PathCmd[] {
 
 /** Contorno del elemento en coordenadas locales (mm, centrado). */
 export function elementLocalCmds(el: DesignElement): PathCmd[] {
+  if (el.vectorPath) return transformCmds(parseSvgPath(el.vectorPath), [el.w / 100, 0, 0, el.h / 100, -el.w / 2, -el.h / 2]);
   const S = (pts: [number, number][]) => pts.map(([x, y]) => ({ x: x * el.w, y: y * el.h }));
   const k = 0.5523;
   switch (el.kind) {
@@ -378,6 +386,7 @@ export function elementCorners(el: DesignElement): Pt[] {
 }
 
 export function isClosedShape(el: DesignElement): boolean {
+  if (el.vectorPath) return /[zZ]/.test(el.vectorPath);
   if (el.kind === 'trazo') return !!el.path?.closed;
   return el.kind === 'forma' || el.kind === 'organica' || el.kind === 'imagen' || el.kind === 'parche';
 }

@@ -118,7 +118,10 @@ export function arrangeForTiles(ds: Drawable[], s: TileSettings, gap = 15): Draw
 }
 
 function drawDrawable(cv: PdfCanvas, d: Drawable, tx: (p: Pt) => Pt) {
-  for (const p of d.paths) cv.strokePath(p.cmds, PDF_STYLES[p.style], tx);
+  for (const p of d.paths) {
+    if (p.fillColor && /^#[0-9a-f]{6}$/i.test(p.fillColor)) cv.fillPathRgb(p.cmds,[parseInt(p.fillColor.slice(1,3),16)/255,parseInt(p.fillColor.slice(3,5),16)/255,parseInt(p.fillColor.slice(5,7),16)/255],tx);
+    cv.strokePath(p.cmds, PDF_STYLES[p.style], tx, p.color);
+  }
   for (const g of d.grains) {
     const a = tx(g.a);
     const b = tx(g.b);

@@ -1,5 +1,5 @@
 import type { Fabric, Project } from '../../store/types';
-import type { PatternComponent } from '../../lib/pattern/components';
+import { cameraWindowFor, type PatternComponent } from '../../lib/pattern/components';
 import { newDesign, newElement, type DesignDoc, type DesignElement, type DesignView } from '../studio/model';
 import { nowIso } from '../../lib/ids';
 import { COMPONENT_OPTIONS } from '../../data/components';
@@ -14,6 +14,12 @@ export function componentIdForElement(elementId: string): string | undefined {
 }
 
 export const isComponentElementId = (id: string): boolean => componentIdForElement(id) !== undefined;
+
+/** Structural surfaces that require a material choice; line/hardware previews are excluded. */
+export function componentPaintRoles(component:Pick<PatternComponent,'kind'>):string[] {
+  if(component.kind==='porta-telefono-camara') return ['cuerpo','marco-superior','marco-izq','marco-der','frente-inferior'];
+  return ['bolsillo-solapa-boton','bolsillo-solapa-velcro','bolsillo-cargo'].includes(component.kind)?['cuerpo','solapa']:['cuerpo'];
+}
 
 function componentName(component: PatternComponent): string {
   return component.name ?? COMPONENT_OPTIONS.find(option => option.id === component.presetId)?.name ?? COMPONENT_OPTIONS.find(option => option.kind === component.kind)?.name ?? 'Complemento';
@@ -90,8 +96,24 @@ function visualElements(component: PatternComponent, view: DesignView, old: Map<
     result.push(line('fuelle-der','doblez del fuelle',w*.36,h*.08,1,h*.75));
   }
   if (component.kind === 'porta-herramientas') {
-    result.push(line('canal-1','división de canal',-w/6,0,1,h*.92));
-    result.push(line('canal-2','división de canal',w/6,0,1,h*.92));
+    const channels=component.channels??3;
+    for(let i=1;i<channels;i++) result.push(line(`canal-${i}`,`división ${i} de ${channels} canales`,-w/2+w*i/channels,0,1,h*.92));
+  }
+  if(component.kind==='porta-telefono-camara') {
+    const aperture=cameraWindowFor(component);
+    const l=aperture.left,t=aperture.top,cw=aperture.width,ch=aperture.height,r=w-l-cw,bottom=h-t-ch;
+    result.push(part('marco-superior','banda superior',w,t,0,-h/2+t/2),
+      part('marco-izq','banda izquierda',l,ch,-w/2+l/2,-h/2+t+ch/2),
+      part('marco-der','banda derecha',r,ch,w/2-r/2,-h/2+t+ch/2),
+      part('frente-inferior','frente inferior',w,bottom,0,h/2-bottom/2));
+    // The dashed aperture is an opening, never an extra cloth template.
+    result.push(part('ventana','abertura de cámara',cw,ch,-w/2+l+cw/2,-h/2+t+ch/2,{
+      fill:{type:'ninguno'},stroke:{color:'#53615b',width:.8,style:'pespunte'},
+      materialNote:'Abertura libre: las cámaras del teléfono se orientan hacia fuera.'
+    }));
+    result.push(part('objetivo','cámara de referencia',Math.min(14,cw*.3),Math.min(14,ch*.3),-w/2+l+cw*.3,-h/2+t+ch*.45,{
+      shape:{type:'ellipse'},fill:{type:'color',color:'#344b52'},stroke:{color:'#ffffff',width:1,style:'solida'}
+    }));
   }
   if (component.kind === 'trabilla' || component.kind === 'porta-martillo') {
     result.push(line('anclaje-superior','anclaje',0,-h*.38,w*.75,1,true));
@@ -150,7 +172,7 @@ export function readComponentsFromDesign(project: Project, doc: DesignDoc, fabri
     const body = doc.elements.find(element => element.id === componentElementId(component.id, 'cuerpo'));
     if (!body) return registered ? [] : [clone(component)];
     const materials = { ...component.materials };
-    for (const role of ['cuerpo', 'solapa']) {
+    for (const role of componentPaintRoles(component)) {
       const part = doc.elements.find(element => element.id === componentElementId(component.id, role));
       if (!part || part.fill.type === 'ninguno') continue;
       if (part.fill.type === 'color') materials[role] = { name: `Color ${part.fill.color} · tela por elegir`, color: part.fill.color };
@@ -246,7 +268,7 @@ export function componentMaterials(project: Project, fabrics: Record<string, Fab
   const active = new Map(readComponentsFromDesign(project, doc).map(component => [component.id, component]));
   return doc.elements.flatMap(element => {
     const id = componentIdForElement(element.id);
-    if (!id || !active.has(id) || !['cuerpo', 'solapa'].includes(element.id.slice(element.id.lastIndexOf('--') + 2))) return [];
+    if (!id || !active.has(id) || !componentPaintRoles(active.get(id)!).includes(element.id.slice(element.id.lastIndexOf('--') + 2))) return [];
     const fabric = element.fill.type === 'tela' ? fabrics[element.fill.fabricId] : undefined;
     return [{ componentId: id, name: element.name, fabricId: fabric?.id,
       fabricName: fabric?.name ?? (element.fill.type === 'color' ? 'Tela por elegir' : 'Tela por definir'),

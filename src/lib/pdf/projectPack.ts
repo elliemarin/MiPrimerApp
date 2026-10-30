@@ -17,6 +17,8 @@ import { buildSummaryPdf, type SummaryCtx } from './summary';
 import { FlowDoc } from './doc';
 import { arrangeForTiles, exportTiledPdf } from './export';
 import { DEFAULT_TILE, validateTileSettings, type TileSettings } from './tile';
+import { missingMaterials } from '../../features/simple/workflow';
+import { preparePlacementGuide, type Placement } from './placement';
 
 export type SewingPackMode = 'complete' | 'intervention';
 export interface SewingPackCtx extends SummaryCtx {
@@ -32,6 +34,7 @@ export interface SewingPackDrawing {
   note: string;
 }
 export interface SewingPackPreview {
+  placements: Placement[];
   /** Resolved current panel cuts, without mutating the stored project. */
   project: Project;
   built?: BuiltPattern;
@@ -63,6 +66,8 @@ export function prepareSewingPack(source: Project, ctx: SewingPackCtx): SewingPa
   const blockers: string[] = [];
   const warnings: string[] = [];
   blockers.push(...componentDesignIssues(project));
+  const unchosen = missingMaterials(project);
+  if (unchosen.length) blockers.push(`Elige color o tela en Acabados para ${unchosen.length} partes: ${unchosen.map(target=>target.label).join(', ')}.`);
   const doc = project.design;
   // Complement previews belong to the construction engine, not to applique templates.
   const decorativeDoc=doc?{...doc,elements:doc.elements.filter(element=>!isComponentElementId(element.id))}:undefined;
@@ -122,7 +127,7 @@ export function prepareSewingPack(source: Project, ctx: SewingPackCtx): SewingPa
     const unsupported = elements.filter(element => element.kind === 'texto' || element.kind === 'imagen' || element.kind === 'parche' || !!element.clip || !!element.maskZoneId);
     if (unsupported.length) blockers.push(`El bordado de «${view.label}» contiene elementos que necesitan digitalización: ${unsupported.map(element => element.name).join(', ')}. Usa figuras/trazos sin máscaras para obtener su guía vectorial.`);
     const ids = new Set(unsupported.map(element => element.id));
-    const isolated = { ...decorativeDoc, elements: elements.filter(element => !ids.has(element.id)) };
+    const isolated = { ...decorativeDoc, elements: [...elements.filter(element => !ids.has(element.id)), ...decorativeDoc.elements.filter(element=>element.viewId===view.id&&element.kind==='grupo'&&element.embroidery)] };
     const ds = embroideryForView(isolated, view.id);
     embroideryCount += ds.length;
     if (ds.length) drawings.push({ id: `bordado-${view.id}`, title: `Guía de bordado · ${view.label}`, count: ds.length, drawables: ds, note: 'Dibujo de transferencia a tamaño real. Conserva la posición relativa de los motivos de esta vista. No es un molde de tela ni un archivo de puntadas.' });
@@ -134,10 +139,13 @@ export function prepareSewingPack(source: Project, ctx: SewingPackCtx): SewingPa
   if (mode === 'intervention' && !drawings.length) blockers.push('Todavía no hay recortes o guías exportables. En Estudio asigna Aplicación a una figura cerrada o Bordado a una figura o trazo.');
   const tile = { ...(ctx.tile ?? DEFAULT_TILE), footer: 13 };
   blockers.push(...validateTileSettings(tile));
-  return { project, built, mode, blockers: [...new Set(blockers)], warnings: [...new Set(warnings)], pieces, cutouts, embroideryCount, drawings };
+  const placement = preparePlacementGuide(project);
+  drawings.push(...placement.drawings);
+  return { project, built, mode, blockers: [...new Set(blockers)], warnings: [...new Set(warnings)], pieces, cutouts, embroideryCount, drawings, placements: placement.placements };
 }
 
 export interface SewingPackManifest {
+  placements: Placement[];
   format: 'hilvana-confeccion-v1';
   projectId: string;
   mode: SewingPackMode;
@@ -170,6 +178,7 @@ export async function buildSewingPackPdf(project: Project, ctx: SewingPackCtx): 
     sections.push({ id: drawing.id, title: drawing.title, count: drawing.count, bytes: result.bytes, pages: result.pages.length+1 });
   }
   const manifest: SewingPackManifest = {
+    placements: preview.placements,
     format: 'hilvana-confeccion-v1', projectId: resolved.id, mode: preview.mode, scale: '1:1 mm', dependencies: deps,
     patternHash: preview.mode === 'complete' && resolved.pattern ? stableHash(resolved.pattern) : undefined,
     pieces: preview.pieces,

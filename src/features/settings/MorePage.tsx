@@ -2,6 +2,8 @@ import { PageHead, SaveIndicator } from '../../ui/components';
 import { Icon } from '../../ui/Icon';
 
 const ITEMS = [
+  { href: '#/patronaje', icon: 'patronaje', t: 'Patronaje avanzado', s: 'Ajustar nodos, costuras y márgenes de proyectos existentes' },
+  { href: '#/estudio', icon: 'estudio', t: 'Estudio avanzado', s: 'Herramientas de dibujo, fotografías, paneles y referencias' },
   { href: '#/telas', icon: 'telas', t: 'Telas y materiales', s: 'Muestras calibradas, hilos, botones, cierres y más' },
   { href: '#/medidas', icon: 'medidas', t: 'Perfiles de medidas', s: 'Personas, tallas y versiones de medidas' },
   { href: '#/ayuda', icon: 'ayuda', t: 'Ayuda', s: 'Cómo medir, imprimir a escala y usar el estudio' },

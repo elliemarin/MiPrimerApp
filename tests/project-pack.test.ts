@@ -142,7 +142,8 @@ describe('PDF completo de confección',()=>{
     expect(pdf.getPageCount()).toBe(result.pageCount);
     expect(pdf.catalog.getOrCreateViewerPreferences().getPrintScaling()).toBe(PrintScaling.None);
     expect(pdf.catalog.has(PDFName.of('Names'))).toBe(true);
-    expect(result.manifest.sections.map(section=>section.id)).toEqual(['guia','patron','aplicaciones',`bordado-${view.id}`]);
+    expect(result.manifest.sections.map(section=>section.id)).toEqual(['guia','patron','aplicaciones',`bordado-${view.id}`,`ubicacion-${view.id}`]);
+    expect(result.manifest.placements.some(placement=>placement.id==='bordado'&&placement.kind==='bordado'&&placement.code==='B1')).toBe(true);
     expect(result.manifest.pieces.map(piece=>piece.id)).toEqual(buildPattern(project.pattern!).pieces.map(piece=>piece.id));
     expect(result.manifest.cutouts).toHaveLength(1);
     for(const [index,section] of result.manifest.sections.entries()) {

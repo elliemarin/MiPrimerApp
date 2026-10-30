@@ -12,12 +12,75 @@ Actualízalo al terminar cada tarea.
 
 ```bash
 npm install
-npm test            # 450 pruebas: geometría, complementos, paneles, PDF, catálogo y estudio
+npm test            # 2259 pruebas: catálogo completo, patrones, extras, letras, PDF y estudio
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
+
+## Hilvana 0.2 · interfaz simple y biblioteca diez veces mayor (2026-10-30)
+
+**Este es el relevo más reciente.** Se conserva el historial de entregas debajo.
+
+- La app abre en un **buscador de prendas y accesorios**. Navegación principal:
+  Elegir una base, Proyectos y Más. La biblioteca muestra 24 tarjetas por página,
+  filtros combinables y conserva búsqueda, colección y talla de bebé al volver.
+- **1,867 entradas**, de las que **1,789 generan patrón**; 1,707 recetas nuevas
+  con geometría distinta en 19 colecciones. Son modelos y variantes paramétricas
+  de largo, corte, capacidad y acabados, no 1,789 motores independientes ni
+  copias por color/talla corporal. Las referencias previas sin motor se conservan
+  en los proyectos, pero no se anuncian como patrones en la búsqueda principal.
+- Al elegir: **Obtener patrón** o **Intervenir**. Tallas **Chica/Mediana/Grande**
+  con contornos explícitos de las tablas propias; opción **A medida** con medidas
+  necesarias reales. Bebé conserva meses; accesorios permiten ajustar medidas
+  del objeto sin inventar una talla corporal.
+- **22 motores**: nueva sudadera/hoodie holgada con delanteros/espalda completos,
+  mangas y capucha de dos laterales. Escote con paso de cabeza comprobado,
+  base de capucha y cuello coincidentes, sin rib ni cremallera ficticios.
+- **411 opciones de extras sobre once construcciones**: bolsillos por uso,
+  cierres/solapas, organizadores de 1–8 canales, tiras y portacelular con ventana
+  de cámara ajustable. Este último se monta con cinco piezas reales que dejan
+  la abertura; no es un agujero dibujado sobre un rectángulo sin despiece.
+- El estudio de extras se redujo a buscar, arrastrar, mover, ajustar medidas,
+  borrar y Deshacer. Asa táctil de 44 px; en móvil la pieza y la bandeja se ven
+  juntas. Un botón acerca la zona. Las nuevas bases usan **piezas físicas**
+  para ubicar; se valida que el complemento quepa en el contorno real.
+- **Acabados 2D:** obliga a elegir color/tela para cada pieza/zona y superficie
+  estructural del extra. La cámara tiene cinco superficies. Aplicar lo mismo a
+  todo es una acción explícita. Se conservan fotos como tela. El PDF también
+  bloquea el acceso directo si hay materiales pendientes.
+- **337 bordados y composiciones originales**, incluidos 151 motivos individuales
+  y 186 composiciones; abeja amarilla/negra con alas y otras capas reales. Cinco
+  tipografías OFL con letras, números y acentos españoles. Sus contornos conservan
+  huecos y curvas, funcionan sin conexión y no dependen del texto CSS del móvil.
+- El PDF reúne patrones, instrucciones, materiales, paletas de hilo, guías de
+  bordado y **ubicación con cuadrícula de 10 mm**. Códigos E1/B1, origen físico,
+  centros X/Y, tamaño, giro y `pieceId` quedan en la guía y manifiesto. Colores
+  vectoriales y nombres legibles; no se cambia la escala de la geometría.
+- **Corrección de pantalón:** costados delantero/trasero ahora comparten trazado
+  y altura de rodilla; la entrepierna sigue resuelta con tolerancia estricta.
+  Algunos largos/holguras anteriores daban 3–4 mm de diferencia. Se marca el
+  motor Experimental para revisar la nueva muestra; exportaciones de pantalón
+  hechas con 0.1.0 se identifican desactualizadas aunque no cambien parámetros.
+- `newPatternState` conserva copias de medidas/contexto: editar el patrón no
+  puede mutar lateralmente la versión de medidas del perfil.
+
+**Verificado:** 2,259 pruebas en 37 archivos, TypeScript y build. Catálogo completo,
+construcciones, parámetros, márgenes, costuras, fuentes, materiales y posiciones.
+Chromium 320/390/1440 px: filtros/bebé 0–6, C/M/G y medidas personalizadas,
+arrastre táctil/escritorio con zoom, once superficies, abeja+letras, guardado y
+recarga. Proyecto hoodie+cargo+cámara: **69 páginas, doce plantillas**, guías con
+cuadrícula de 10 mm y controles de 50/100 mm. Cojín personalizado de 450×350 mm:
+PDF de 18 páginas. Siguen pasando las regresiones de basurita y DST por vista.
+
+**Límites:** geometría verificada no sustituye imprimir/coser una muestra ni
+simula caída 3D. Las vistas antiguas de foto/dibujo se identifican ilustrativas.
+Las guías de bordado son vectores para transferir/digitalizar; no son rellenos
+de puntadas ni una integración nueva con la HD9120. Probar Safari/iPhone físico.
+
+Contrato y próximos pasos para Claude:
+[docs/INTERFAZ_SIMPLE_Y_BIBLIOTECA.md](docs/INTERFAZ_SIMPLE_Y_BIBLIOTECA.md).
 
 ## Recorrido guiado y complementos de confección (2026-10-30)
 

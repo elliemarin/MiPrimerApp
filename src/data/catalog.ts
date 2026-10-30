@@ -1,4 +1,5 @@
 import { EXPANDED_CATALOG } from './catalogExpansion';
+import { COLLECTION_CATALOG } from './catalogCollections';
 import type { FlatSpec } from './flats';
 import type { Params } from '../lib/pattern/generator';
 
@@ -80,6 +81,10 @@ export interface CatalogModel {
   variants: { name: string; text: string }[];
   recommendedFabrics: string[];
   materials: string[];
+  /** Physical pattern families and explicit construction/dimension variants. */
+  collection?: string;
+  variantLabel?: string;
+  searchTerms?: string[];
 }
 
 const kidsToAdult: Recipient[] = ['bebe', 'toddler', 'infantil', 'mujer', 'hombre'];
@@ -729,7 +734,8 @@ const BASE_CATALOG: CatalogModel[] = [
     recommendedFabrics: ['Retazos de algodón', 'Lino', 'Pana fina'],
     materials: ['Entretela termoadhesiva', 'Hilo']
   },
-  ...EXPANDED_CATALOG
+  ...EXPANDED_CATALOG,
+  ...COLLECTION_CATALOG
 ];
 const ACCESSORY_IDS=new Set(['cojin','funda-cheve','funda-vaso','dona-cabello','bandana-reversible','individual-reversible','posavasos-textil','servilleta-reversible','marcapaginas-textil','tapete-maquina','delantal-estudio','antifaz-estudio','banderin-estudio']);
 const UPGRADED_ACCESSORY:Record<string,string>={'delantal-estudio':'delantal-peto','antifaz-estudio':'antifaz-forrado','banderin-estudio':'banderin-jareta'};

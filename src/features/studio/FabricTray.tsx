@@ -29,7 +29,7 @@ export async function resolveFabricChoice(choice: FabricChoice): Promise<Fabric>
   return pending.get(choice.id)!;
 }
 
-export function FabricTray({modelId,activeId,onChoose,onDrop,onClose}:{modelId?:string;activeId:string|null;onChoose:(id:string)=>void;onDrop:(choice:FabricChoice,point:Pt)=>void;onClose:()=>void}) {
+export function FabricTray({modelId,activeId,onChoose,onDrop,onClose,immediate=false}:{modelId?:string;activeId:string|null;onChoose:(id:string)=>void;onDrop:(choice:FabricChoice,point:Pt)=>void;onClose:()=>void;immediate?:boolean}) {
   const fabrics=useApp(s=>s.fabrics);
   const [q,setQ]=useState('');
   const [own,setOwn]=useState(false);
@@ -52,7 +52,7 @@ export function FabricTray({modelId,activeId,onChoose,onDrop,onClose}:{modelId?:
     try {
       let first: Fabric | undefined;
       for (const file of files) { const fabric = await importFabricPhoto(file); first ??= fabric; }
-      if (first) { setOwn(true); setQ(''); onChoose(first.id); useApp.getState().toast('Foto lista. Toca una zona; ajusta escala y giro en Vistas o Propiedades.', 'ok'); }
+      if (first) { setOwn(true); setQ(''); onChoose(first.id); useApp.getState().toast(immediate?'Foto aplicada a esta parte.':'Foto lista. Toca una zona; ajusta escala y giro en Vistas o Propiedades.', 'ok'); }
     } catch (e) { useApp.getState().toast(e instanceof Error ? e.message : 'No se pudo importar la foto.', 'error'); }
     finally { setBusy(false); }
   };
@@ -99,7 +99,7 @@ export function FabricTray({modelId,activeId,onChoose,onDrop,onClose}:{modelId?:
       {!own&&!list.length&&<p className="small muted">No hay telas con ese nombre.</p>}
     </div>
     {!own&&recommendations.length>0&&<button className="tiny" onClick={()=>setAll(!all)} style={{background:'none',border:0,padding:'2px 0',color:'var(--mat)',textDecoration:'underline'}}>{all?'Ver sugeridas para el proyecto':`Ver las ${FABRIC_LIBRARY.length} telas`}</button>}
-    <p className="tiny muted" role="status" style={{margin:0}}>{busy?'Preparando muestra…':q?'Arrastra al lienzo o elige la tela y toca una zona.':active?.photo ? `${active.name}: elige una zona. Ajusta escala y giro en sus propiedades${active.calibration ? '.' : '; foto sin calibrar.'}` : 'Sugerencias para tu proyecto. Arrastra o elige y toca la zona; las muestras son ilustrativas.'}</p>
+    <p className="tiny muted" role="status" style={{margin:0}}>{immediate?'Toca una muestra para aplicarla a la parte elegida. Las fotos sin calibrar son referencias visuales.':busy?'Preparando muestra…':q?'Arrastra al lienzo o elige la tela y toca una zona.':active?.photo ? `${active.name}: elige una zona. Ajusta escala y giro en sus propiedades${active.calibration ? '.' : '; foto sin calibrar.'}` : 'Sugerencias para tu proyecto. Arrastra o elige y toca la zona; las muestras son ilustrativas.'}</p>
     {ghost&&<div aria-hidden="true" style={{position:'fixed',left:ghost.x-22,top:ghost.y-22,width:44,height:44,borderRadius:6,background:'var(--mat)',border:'3px solid var(--tape)',pointerEvents:'none',zIndex:999}}/>}
   </section>;
 }

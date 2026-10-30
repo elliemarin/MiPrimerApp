@@ -10,6 +10,8 @@ import { pdfSafe } from '../pdf/canvas';
 export type LineStyle = 'corte' | 'costura' | 'doblez' | 'final' | 'pespunte' | 'referencia' | 'colocacion' | 'hilo' | 'piquete' | 'bordado';
 
 export interface DrawPath {
+  color?: string;
+  fillColor?: string;
   cmds: PathCmd[];
   style: LineStyle;
 }

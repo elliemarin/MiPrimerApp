@@ -90,7 +90,7 @@ const P: Record<string, string> = {
 
 export type IconName = keyof typeof P;
 
-export function Icon({ name, size, className, title }: { name: string; size?: number; className?: string; title?: string }) {
+export function Icon({ name, size = 24, className, title }: { name: string; size?: number; className?: string; title?: string }) {
   const d = P[name] ?? P.info;
   return (
     <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden={title ? undefined : true} role={title ? 'img' : undefined}>

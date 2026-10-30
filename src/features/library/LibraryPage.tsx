@@ -1,164 +1,59 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CATALOG, CatalogModel, GarmentType, RECIPIENT_LABEL, STATUS_INFO, TYPE_LABEL, TECHNIQUE_LABEL } from '../../data/catalog';
-import { Chip, Empty, PageHead, Segmented, Sheet, Button, Field, Select } from '../../ui/components';
+import { CATALOG, RECIPIENT_LABEL, TYPE_LABEL, type GarmentType, type Recipient } from '../../data/catalog';
+import { Button, Empty, Field, Select, Sheet } from '../../ui/components';
 import { Icon } from '../../ui/Icon';
 import { FlatArt } from '../../ui/FlatArt';
 import { SIZE_TABLES } from '../../lib/sizes/tables';
-import { navigate } from '../../ui/router';
-
-import { Filters, INITIAL_FILTERS, matches, modelHasPattern, modelAvailability } from './filters';
-import { PatternSourcesPanel } from './PatternSourcesPanel';
-import { ModelIllustration } from './ModelIllustration';
+import { INITIAL_FILTERS, matches, modelHasPattern, type Filters } from './filters';
 import './library.css';
+import './simpleLibrary.css';
 export { matches } from './filters';
 
-const INITIAL = INITIAL_FILTERS;
-function restoreChoice<T extends string>(key:string,allowed:readonly T[],fallback:T):T {
-  try {const saved=sessionStorage.getItem(key);return allowed.includes(saved as T)?saved as T:fallback;} catch{return fallback;}
-}
-function restoreFilters(): Filters {
-  try { const saved=JSON.parse(sessionStorage.getItem('hilvana-library-filters')??'null'); return saved&&typeof saved==='object'?{...INITIAL,...saved,type:saved.type==='todos'||saved.type in TYPE_LABEL?saved.type:'todos'}:INITIAL; } catch {return INITIAL;}
-}
+const start: Filters = { ...INITIAL_FILTERS, availability: 'patron' };
+function initial(): Filters { try { return { ...start, ...JSON.parse(sessionStorage.getItem('hilvana-simple-search') ?? '{}') }; } catch { return start; } }
+function saved(key:string,fallback:string) { try{return sessionStorage.getItem(key)??fallback;}catch{return fallback;} }
 
 export function LibraryPage() {
-  const [f, setF] = useState<Filters>(restoreFilters);
-  const [babySize, setBabySize] = useState(()=>restoreChoice('hilvana-library-baby-size',SIZE_TABLES.find(t=>t.id==='ref-bebe-meses')!.rows.map(r=>r.code),'B0-3'));
-  const [art, setArt] = useState<'dibujo'|'ilustracion'>(()=>restoreChoice('hilvana-library-art',['dibujo','ilustracion'],'dibujo'));
-  useEffect(()=>{try{sessionStorage.setItem('hilvana-library-filters',JSON.stringify(f));sessionStorage.setItem('hilvana-library-baby-size',babySize);sessionStorage.setItem('hilvana-library-art',art);}catch{/* browsing can continue without session storage */}},[f,babySize,art]);
-  const [showFilters, setShowFilters] = useState(false);
-  const list = useMemo(() => CATALOG.filter((m) => matches(m, f)), [f]);
-  const extra = [f.difficulty, f.fabric !== 'todos', f.stretch !== 'todos', f.fit !== 'todos', f.technique !== 'todas', f.size !== 'todas', f.type !== 'todos',f.availability!=='todos',f.subcategory&&f.subcategory!=='todas'].filter(Boolean).length;
-  const groups = useMemo(() => {
-    const m = new Map<GarmentType, CatalogModel[]>();
-    for (const x of list) m.set(x.type, [...(m.get(x.type) ?? []), x]);
-    return [...m.entries()];
-  }, [list]);
-  const patterns = CATALOG.filter(modelHasPattern).length;
-  const designs = CATALOG.filter(m=>m.studioOnly).length;
-  const active = f.q || f.recipient!=='todos' || extra>0 || f.onlyAvailable;
-  const reset = ()=>setF(INITIAL);
-
-  return (
-    <div className="page page-wide">
-      <PageHead title="Biblioteca" sub={`Elige tu base, añade complementos, dale color en el estudio y prepara tu PDF. ${CATALOG.length} modelos: ${patterns} con patrón de costura y ${designs} para diseñar en el estudio.`} />
-      <div className="stack">
-        <div className="row">
-          <div className="grow" style={{ position: 'relative' }}>
-            <span className="faint" style={{ position: 'absolute', left: 12, top: 12, pointerEvents: 'none' }}>
-              <Icon name="search" size={20} />
-            </span>
-            <input
-              className="input"
-              type="search"
-              placeholder="Buscar: chamarra, jumper, bolso…"
-              value={f.q}
-              onChange={(e) => setF({ ...f, q: e.target.value })}
-              style={{ paddingLeft: 40 }}
-              aria-label="Buscar modelos"
-            />
-          </div>
-          <Button icon="filter" onClick={() => setShowFilters(true)}>
-            Filtros{extra ? ` · ${extra}` : ''}
-          </Button>
-        </div>
-        <div className="scroll-x" role="group" aria-label="Destinatario">
-          {(['todos', 'bebe', 'toddler', 'infantil', 'mujer', 'hombre', 'unisex'] as const).map((r) => (
-            <button key={r} className="filter-chip" aria-pressed={f.recipient === r} onClick={() => setF({ ...f, recipient: r })}>
-              {r === 'todos' ? 'Todos' : RECIPIENT_LABEL[r]}
-            </button>
-          ))}
-        </div>
-        {f.recipient === 'bebe' && <Field label="Talla de bebé" htmlFor="library-baby-size" hint="Se llevará al proyecto. La edad orienta; verifica las medidas antes de cortar.">
-          <Select id="library-baby-size" value={babySize} onChange={setBabySize} options={SIZE_TABLES.find(t => t.id === 'ref-bebe-meses')!.rows.map(r => ({ value: r.code, label: `${r.label} · hasta ${r.values.estatura! / 10} cm` }))} />
-        </Field>}
-        <div className="scroll-x library-quick" role="group" aria-label="Colección">
-          {(['todos','abrigo','monos','accesorios','bolsos','superiores','inferiores','faldas-vestidos','bebe'] as const).map(type=><button key={type} className="filter-chip" aria-pressed={f.type===type} onClick={()=>setF({...f,type,subcategory:'todas'})}>{({todos:'Todo',abrigo:'Chaquetas y abrigos',monos:'Jumpers y monos',accesorios:'Accesorios',bolsos:'Bolsos',superiores:'Superiores',inferiores:'Pantalones','faldas-vestidos':'Faldas y vestidos',bebe:'Prendas bebé'})[type]}</button>)}
-          <button className="filter-chip" aria-pressed={f.fit==='holgado'} onClick={()=>setF({...f,fit:f.fit==='holgado'?'todos':'holgado'})}>Holgados</button>
-          <button className="filter-chip" aria-pressed={f.fit==='oversize'} onClick={()=>setF({...f,fit:f.fit==='oversize'?'todos':'oversize'})}>Oversize</button>
-        </div>
-        {(f.type==='accesorios'||f.type==='bolsos')&&<Field label={f.type==='accesorios'?'Tipo de accesorio':'Tipo de bolso o funda'} htmlFor="library-subcategory">
-          <Select id="library-subcategory" value={f.subcategory??'todas'} onChange={subcategory=>setF({...f,subcategory})} options={[{value:'todas',label:'Todos los tipos'},...[...new Set(CATALOG.filter(m=>m.type===f.type).map(m=>m.sub))].sort((a,b)=>a.localeCompare(b,'es')).map(sub=>({value:sub,label:sub}))]} />
-        </Field>}
-        <Field label="Qué quieres hacer" htmlFor="library-availability">
-          <Select id="library-availability" value={f.availability??'todos'} onChange={availability=>setF({...f,availability,onlyAvailable:false})} options={[{value:'todos',label:'Explorar todo'}, {value:'patron',label:'Coser: modelos con patrón generado'}, {value:'estudio',label:'Diseñar: plantillas del estudio'}, {value:'inspiracion',label:'Inspiración: patrón aún pendiente'}]} />
-        </Field>
-        <div className="spread" style={{gap:12,flexWrap:'wrap'}}>
-          <span className="library-result-count" role="status">{list.length} {list.length===1?'modelo':'modelos'}{active?' con tus filtros':''}</span>
-          <div className="library-art-toggle"><Segmented label="Mostrar modelos" value={art} onChange={setArt} options={[{value:'dibujo',label:'Dibujo'},{value:'ilustracion',label:'Ilustración'}]}/></div>
-        </div>
-        {active&&<div className="library-active-filters">
-          {f.recipient!=='todos'&&<Chip>{RECIPIENT_LABEL[f.recipient]}</Chip>}
-          {f.type!=='todos'&&<Chip>{TYPE_LABEL[f.type]}</Chip>}
-          {f.subcategory&&f.subcategory!=='todas'&&<Chip>{f.subcategory}</Chip>}
-          {f.fit!=='todos'&&<Chip>{f.fit==='oversize'?'Oversize':f.fit==='holgado'?'Holgado':f.fit==='ajustado'?'Ajustado':'Regular'}</Chip>}
-          <Button size="sm" variant="ghost" onClick={reset}>Quitar todos los filtros</Button>
-        </div>}
-
-      </div>
-
-      {list.length === 0 ? (
-        <Empty icon="search" title="Sin resultados" body="Prueba con otra palabra o quita algún filtro." action={<Button onClick={() => setF(INITIAL)}>Quitar filtros</Button>} />
-      ) : (
-        groups.map(([type, models]) => (
-          <section key={type} style={{ marginTop: 26 }}>
-            <h2 className="section-title" style={{ fontSize: 15 }}>
-              {TYPE_LABEL[type]}
-            </h2>
-            <div className="cards">
-              {models.map((m) => (
-                <a key={m.id} className="card" href={`#/biblioteca/${m.id}?para=${f.recipient}${f.recipient === 'bebe' ? `&talla=${babySize}` : ''}`}>
-                  <div className="art">
-                    {art==='dibujo'?<FlatArt id={m.id} spec={m.flat} title={`Dibujo técnico de ${m.name}`} />:<ModelIllustration model={m} skin={['#bc8055','#80503b','#edc1a1','#603d2f'][models.indexOf(m)%4]} title={`Ilustración de ${m.name}`} />}
-                  </div>
-                  <div className="meta">
-                    <span className="name">{m.name}</span>
-                    <span className="sub">{m.recipients.map((r) => RECIPIENT_LABEL[r]).slice(0, 3).join(', ')}{m.recipients.length > 3 ? '…' : ''}</span>
-                    <span>
-                      <Chip tone={STATUS_INFO[m.status].tone}>{modelAvailability(m)==='estudio'?'Diseño en estudio':modelAvailability(m)==='inspiracion'?'Solo inspiración':m.status==='experimental'?'Patrón experimental':'Patrón de costura'}</Chip>
-                    </span>
-                  </div>
-                </a>
-              ))}
-            </div>
-          </section>
-        ))
-      )}
-
-      <PatternSourcesPanel />
-
-      {showFilters && (
-        <Sheet title="Filtros" onClose={() => setShowFilters(false)} footer={<div className="spread"><Button variant="ghost" onClick={() => setF({ ...INITIAL, q: f.q, recipient: f.recipient })}>Restablecer</Button><Button variant="primary" onClick={() => setShowFilters(false)}>Ver {list.length} modelos</Button></div>}>
-          <div className="stack-lg">
-            <FilterGroup label="Tipo de prenda" value={f.type} onChange={(v) => setF({ ...f, type: v as Filters['type'], subcategory:'todas' })} options={[['todos', 'Todos'], ...Object.entries(TYPE_LABEL)]} />
-            <FilterGroup label="Disponibilidad" value={f.availability??'todos'} onChange={availability=>setF({...f,availability:availability as Filters['availability'],onlyAvailable:false})} options={[["todos","Todo"],["patron","Patrón de costura"],["estudio","Diseño en estudio"],["inspiracion","Solo inspiración"]]} />
-            <FilterGroup label="Dificultad" value={String(f.difficulty)} onChange={(v) => setF({ ...f, difficulty: Number(v) })} options={[['0', 'Cualquiera'], ['1', 'Fácil'], ['2', 'Intermedia'], ['3', 'Avanzada']]} />
-            <FilterGroup label="Talla" value={f.size} onChange={(v) => setF({ ...f, size: v as Filters['size'] })} options={[['todas', 'Todas'], ['infantil', 'Bebé e infantil (por estatura)'], ['adulto', 'Adulto (por busto o pecho)']]} />
-            <FilterGroup label="Tejido" value={f.fabric} onChange={(v) => setF({ ...f, fabric: v as Filters['fabric'] })} options={[['todos', 'Cualquiera'], ['plano', 'Tejido plano'], ['punto', 'Tejido de punto']]} />
-            <FilterGroup label="Elasticidad" value={f.stretch} onChange={(v) => setF({ ...f, stretch: v as Filters['stretch'] })} options={[['todos', 'Cualquiera'], ['ninguna', 'Sin elasticidad'], ['baja', 'Baja'], ['media', 'Media'], ['alta', 'Alta']]} />
-            <FilterGroup label="Ajuste" value={f.fit} onChange={(v) => setF({ ...f, fit: v as Filters['fit'] })} options={[['todos', 'Cualquiera'], ['ajustado', 'Ajustado'], ['regular', 'Regular'], ['holgado', 'Holgado'], ['oversize', 'Oversize']]} />
-            <FilterGroup label="Técnica" value={f.technique} onChange={(v) => setF({ ...f, technique: v as Filters['technique'] })} options={[['todas', 'Todas'], ...Object.entries(TECHNIQUE_LABEL)]} />
-          </div>
-        </Sheet>
-      )}
-    </div>
-  );
-}
-
-function FilterGroup({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: [string, string][] }) {
-  return (
-    <div className="stack" style={{ gap: 8 }}>
-      <div className="field-label">{label}</div>
-      <div className="row-wrap">
-        {options.map(([v, l]) => (
-          <button key={v} className="filter-chip" aria-pressed={value === v} onClick={() => onChange(v)}>
-            {l}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export function openModel(id: string) {
-  navigate(`/biblioteca/${id}`);
+  const [filters,setFilters] = useState<Filters>(initial);
+  const [collection,setCollection] = useState(()=>saved('hilvana-simple-collection','todas'));
+  const [open,setOpen] = useState(false);
+  const [limit,setLimit] = useState(24);
+  const [babySize,setBabySize] = useState(()=>saved('hilvana-simple-baby','B0-3'));
+  const all = useMemo(()=>CATALOG.filter(modelHasPattern),[]);
+  const collections = useMemo(()=>[...new Set(all.filter(model=>matches(model,{...filters,q:''})).map(model=>model.collection??model.sub))].sort((a,b)=>a.localeCompare(b,'es')),[all,filters]);
+  const list = useMemo(()=>{
+    const found=CATALOG.filter(model=>matches(model,filters)&&(collection==='todas'||(model.collection??model.sub)===collection));
+    if(filters.q||filters.type!=='todos'||collection!=='todas')return found;
+    const seen=new Set<string>();
+    const featured=found.filter(model=>{const key=model.collection??model.sub;if(seen.has(key))return false;seen.add(key);return true;});
+    const hoodie=found.find(model=>model.generatorId==='sudadera-capucha-holgada'&&model.params?.capucha==='si');
+    const ordered=hoodie?[hoodie,...featured.filter(model=>model.id!==hoodie.id)]:featured;
+    const ids=new Set(ordered.map(model=>model.id));
+    return [...ordered,...found.filter(model=>!ids.has(model.id))];
+  },[filters,collection]);
+  useEffect(()=>{setLimit(24);try{sessionStorage.setItem('hilvana-simple-search',JSON.stringify(filters));}catch{/* optional browsing memory */}},[filters,collection]);
+  useEffect(()=>{try{sessionStorage.setItem('hilvana-simple-collection',collection);sessionStorage.setItem('hilvana-simple-baby',babySize);}catch{/* optional browsing memory */}},[collection,babySize]);
+  const set = (patch:Partial<Filters>)=>{setFilters(current=>({...current,...patch}));setCollection('todas');};
+  const filtered = filters.recipient!=='todos'||filters.type!=='todos'||collection!=='todas'||filters.fabric!=='todos'||filters.fit!=='todos';
+  const reset=()=>{setFilters(start);setCollection('todas');};
+  return <div className="page page-wide simple-library">
+    <header className="simple-library-head"><span className="simple-wordmark">Hilvana</span><h1>¿Qué vas a crear?</h1><p>Elige una base. Obtén su patrón o hazla tuya.</p></header>
+    <div className="simple-search-row"><div className="simple-search"><Icon name="search"/><input type="search" aria-label="Buscar prendas y accesorios" placeholder="Hoodie, pantalón, funda, bolso…" value={filters.q} onChange={event=>set({q:event.target.value})}/></div><Button icon="filter" onClick={()=>setOpen(true)}>Filtros{filtered?' •':''}</Button></div>
+    <div className="simple-collections" role="group" aria-label="Tipo de proyecto">{([['todos','Todo'],['superiores','Tops'],['abrigo','Chaquetas y hoodies'],['inferiores','Pantalones'],['faldas-vestidos','Faldas y vestidos'],['monos','Petos'],['bolsos','Bolsos'],['accesorios','Accesorios']] as [GarmentType|'todos',string][]).map(([type,label])=><button key={type} className="filter-chip" aria-pressed={filters.type===type} onClick={()=>set({type})}>{label}</button>)}</div>
+    <div className="simple-results"><span role="status">{list.length.toLocaleString('es-MX')} patrones y variantes{filters.recipient!=='todos'?` para ${RECIPIENT_LABEL[filters.recipient].toLowerCase()}`:''}</span>{filtered?<Button variant="ghost" size="sm" onClick={reset}>Quitar filtros</Button>:<span className="tiny muted">Prendas y objetos con piezas de corte</span>}</div>
+    {filters.recipient==='bebe'&&<Field label="Talla por meses" htmlFor="baby-simple"><Select id="baby-simple" value={babySize} onChange={setBabySize} options={SIZE_TABLES.find(table=>table.id==='ref-bebe-meses')!.rows.map(row=>({value:row.code,label:row.label}))}/></Field>}
+    {!list.length?<Empty icon="search" title="Probemos con otra idea" body="Busca una prenda o un objeto, o quita algún filtro." action={<Button onClick={reset}>Mostrar todos</Button>}/>:<div className="simple-pattern-grid">{list.slice(0,limit).map(model=><a key={model.id} className="simple-pattern-card" href={`#/biblioteca/${model.id}?para=${filters.recipient}${filters.recipient==='bebe'?`&talla=${babySize}`:''}`}>
+      <div className="simple-pattern-art"><FlatArt id={model.id} spec={model.flat} title={model.name}/></div><div className="simple-pattern-caption"><strong>{model.name}</strong><span>{model.variantLabel??model.sub}</span></div>
+    </a>)}</div>}
+    {limit<list.length&&<div className="simple-more"><Button onClick={()=>setLimit(value=>value+24)}>Ver más patrones</Button><p className="tiny muted">Mostrando {Math.min(limit,list.length)} de {list.length.toLocaleString('es-MX')}</p></div>}
+    <p className="simple-catalog-note">Las variantes cambian cortes, largos, capacidades o acabados; la talla se elige después. Los patrones experimentales requieren una muestra antes de cortar tu tela definitiva.</p>
+    {open&&<Sheet title="Encuentra tu base" onClose={()=>setOpen(false)} footer={<Button block variant="primary" onClick={()=>setOpen(false)}>Ver {list.length.toLocaleString('es-MX')} resultados</Button>}><div className="stack-lg">
+      <Field label="Para quién" htmlFor="search-recipient"><Select id="search-recipient" value={filters.recipient} onChange={recipient=>set({recipient})} options={[{value:'todos' as const,label:'Todas las personas'},...Object.entries(RECIPIENT_LABEL).map(([value,label])=>({value:value as Recipient,label}))]}/></Field>
+      <Field label="Prenda o accesorio" htmlFor="search-type"><Select id="search-type" value={filters.type} onChange={type=>set({type})} options={[{value:'todos' as const,label:'Todos'},...Object.entries(TYPE_LABEL).map(([value,label])=>({value:value as GarmentType,label}))]}/></Field>
+      <Field label="Colección" htmlFor="search-collection"><Select id="search-collection" value={collection} onChange={setCollection} options={[{value:'todas',label:'Todas'},...collections.map(value=>({value,label:value}))]}/></Field>
+      <Field label="Tela" htmlFor="search-fabric"><Select id="search-fabric" value={filters.fabric} onChange={fabric=>set({fabric})} options={[{value:'todos',label:'Cualquier tela'},{value:'plano',label:'Tejido plano'},{value:'punto',label:'Tejido de punto'}]}/></Field>
+      <Field label="Ajuste" htmlFor="search-fit"><Select id="search-fit" value={filters.fit} onChange={fit=>set({fit})} options={[{value:'todos',label:'Cualquiera'},{value:'regular',label:'Regular'},{value:'holgado',label:'Holgado'},{value:'oversize',label:'Oversize'},{value:'ajustado',label:'Ajustado'}]}/></Field>
+      <Button variant="ghost" onClick={reset}>Restablecer filtros</Button>
+    </div></Sheet>}
+  </div>;
 }

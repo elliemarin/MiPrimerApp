@@ -83,7 +83,7 @@ export function CutoutsTab({ project }: { project: Project }) {
     }
   };
 
-  const runs = embroidery.flatMap((d) => d.paths.flatMap((p) => cmdsToPolylines(p.cmds, 0.2).map((pl) => ({ color: project.design!.elements.find((e) => `bord-${e.id}` === d.id)?.stroke?.color ?? '#000', pts: pl.closed ? [...pl.pts, pl.pts[0]] : pl.pts }))));
+  const runs = embroidery.flatMap((d) => d.paths.flatMap((p) => cmdsToPolylines(p.cmds, 0.2).map((pl) => ({ color: p.fillColor ?? p.color ?? project.design!.elements.find((e) => `bord-${e.id}` === d.id)?.stroke?.color ?? '#000', pts: pl.closed ? [...pl.pts, pl.pts[0]] : pl.pts }))));
   const plan = runs.length && stitchLen ? planStitches(runs, stitchLen) : null;
   const hoopDef = EMBROIDERY_HOOPS.find((h) => h.id === hoop)!;
   const sizeW = plan ? (plan.extents.maxX - plan.extents.minX) / 10 : 0;

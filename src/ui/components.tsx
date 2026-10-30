@@ -72,7 +72,7 @@ export function Sheet({ title, onClose, children, wide, footer }: { title: strin
           <IconButton icon="close" label="Cerrar" onClick={onClose} />
         </div>
         <div className="sheet-body">{children}</div>
-        {footer && <div style={{ padding: '10px 18px 14px', borderTop: '1px solid var(--line)' }}>{footer}</div>}
+        {footer && <div className="sheet-footer" style={{ padding: '10px 18px 14px', borderTop: '1px solid var(--line)' }}>{footer}</div>}
       </div>
     </>
   );

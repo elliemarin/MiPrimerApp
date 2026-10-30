@@ -5,9 +5,15 @@ import type { GeneratorResult } from './generator';
 import { edgeLength, seamPolygon } from './outline';
 import type { MaterialNeed, MeasureCheck, PEdge, Piece, SeamRelation } from './types';
 
-export const COMPONENT_KINDS = ['bolsillo-parche', 'bolsillo-punta', 'bolsillo-redondeado', 'bolsillo-solapa-boton', 'bolsillo-solapa-velcro', 'bolsillo-cierre', 'bolsillo-cargo', 'porta-herramientas', 'trabilla', 'porta-martillo'] as const;
+export const COMPONENT_KINDS = ['bolsillo-parche', 'bolsillo-punta', 'bolsillo-redondeado', 'bolsillo-solapa-boton', 'bolsillo-solapa-velcro', 'bolsillo-cierre', 'bolsillo-cargo', 'porta-herramientas', 'trabilla', 'porta-martillo', 'porta-telefono-camara'] as const;
 export type ComponentKind = typeof COMPONENT_KINDS[number];
 export interface ComponentMaterial { fabricId?: string; name: string; color?: string }
+export interface CameraWindow { left: number; top: number; width: number; height: number }
+
+/** Apertura terminada, medida sobre la cara exterior. No infiere cámaras desde una fotografía. */
+export function cameraWindowFor(component: Pick<PatternComponent, 'width' | 'height' | 'camera'>): CameraWindow {
+  return component.camera ?? { left: component.width * .175, top: component.height * .1, width: component.width * .65, height: component.height * .27 };
+}
 
 /** Finished dimensions in mm. For loops, height is the strip length before mounting. */
 export interface PatternComponent {
@@ -21,6 +27,10 @@ export interface PatternComponent {
   quantity: number;
   depth?: number;
   allowance?: number;
+  /** Organizers have 1–8 equal channels. The width is the full panel width. */
+  channels?: number;
+  /** Finished clear camera aperture; measured on the real device, in mm. */
+  camera?: CameraWindow;
   material?: ComponentMaterial;
   /** Material by stable generated piece role: cuerpo, solapa, fuelle, respaldo, vista. */
   materials?: Record<string, ComponentMaterial>;
@@ -34,7 +44,8 @@ const names: Record<ComponentKind, string> = {
   'bolsillo-parche': 'Bolsillo de parche', 'bolsillo-punta': 'Bolsillo con punta', 'bolsillo-redondeado': 'Bolsillo redondeado',
   'bolsillo-solapa-boton': 'Bolsillo con solapa y botón', 'bolsillo-solapa-velcro': 'Bolsillo con solapa y velcro',
   'bolsillo-cierre': 'Bolsillo con cierre', 'bolsillo-cargo': 'Bolsillo cargo de fuelle',
-  'porta-herramientas': 'Bolsillo portaherramientas', 'trabilla': 'Trabilla textil', 'porta-martillo': 'Lazo portamartillo'
+  'porta-herramientas': 'Bolsillo portaherramientas', 'trabilla': 'Trabilla textil', 'porta-martillo': 'Lazo portamartillo',
+  'porta-telefono-camara': 'Portacelular con ventana para cámara'
 };
 
 export interface ComponentGeneration extends GeneratorResult { basePieces: Piece[] }
@@ -72,11 +83,18 @@ export function componentMeasureChecks(components: PatternComponent[], pieces: P
       {role:'respaldo',label:'respaldo',width:component.width,height:component.height},
       {role:'vista',label:'vista del cierre',width:component.width,height:25}
     ];
+    if(component.kind==='porta-telefono-camara') {
+      const aperture=cameraWindowFor(component);
+      parts.push({role:'marco-superior',label:'banda superior de cámara',width:component.width,height:aperture.top},
+        {role:'marco-izq',label:'banda izquierda de cámara',width:aperture.left,height:aperture.height},
+        {role:'marco-der',label:'banda derecha de cámara',width:component.width-aperture.left-aperture.width,height:aperture.height},
+        {role:'frente-inferior',label:'frente inferior de cámara',width:component.width,height:component.height-aperture.top-aperture.height});
+    }
     for(const part of parts) {
       const piece=pieces.find(piece=>piece.id===`${prefix}-${part.role}`);
       if(!piece?.edges.length)continue;
-      const partYs=seamPolygon(piece,.01).map(point=>point.y);
-      checks.push({key:`${prefix}-${part.role}-ancho`,label:`${title}: ancho de ${part.label}`,target:part.width,measured:edgeLength(piece,piece.edges[0]),tolerance:.1},
+      const partContour=seamPolygon(piece,.01),partYs=partContour.map(point=>point.y),partXs=partContour.map(point=>point.x);
+      checks.push({key:`${prefix}-${part.role}-ancho`,label:`${title}: ancho de ${part.label}`,target:part.width,measured:Math.max(...partXs)-Math.min(...partXs),tolerance:.1},
         {key:`${prefix}-${part.role}-alto`,label:`${title}: alto de ${part.label}`,target:part.height,measured:Math.max(...partYs)-Math.min(...partYs),tolerance:.1});
     }
     return checks;
@@ -100,6 +118,14 @@ export function generateComponents(components: PatternComponent[], sourcePieces:
       error(`${names[kind]}: revisa ancho, alto, cantidad y márgenes${kind === 'bolsillo-cargo' ? '; el fuelle debe medir entre 1,5 y 10 cm y no superar la mitad del lado menor' : ''}.`); continue;
     }
     if (component.placement && (![component.placement.x, component.placement.y].every(Number.isFinite))) { error(`${names[kind]}: la posición no es válida.`, 'component-placement'); continue; }
+    const channels=component.channels??3;
+    if(kind==='porta-herramientas' && (!Number.isInteger(channels)||channels<1||channels>8||w/channels<8)) {
+      error('El organizador necesita entre 1 y 8 canales, con al menos 8 mm terminados por canal.', 'component-channels'); continue;
+    }
+    const aperture=cameraWindowFor(component);
+    if(kind==='porta-telefono-camara' && (![aperture.left,aperture.top,aperture.width,aperture.height].every(Number.isFinite)||aperture.left<12||aperture.top<12||aperture.width<10||aperture.height<10||aperture.left+aperture.width>w-12||aperture.top+aperture.height>h-15)) {
+      error('La ventana de cámara debe dejar bandas laterales y superior de al menos 12 mm, base de 15 mm y una abertura de al menos 10 × 10 mm. Mide las cámaras del teléfono real.', 'component-camera'); continue;
+    }
     const prefix = `componente-${id}`, title = component.name?.trim().slice(0,80) || names[kind];
     for(const need of component.materialNeeds ?? []) out.materials.push({...need,id:`${prefix}-material-${need.id}`});
     const label = component.placement?.label?.trim();
@@ -118,6 +144,38 @@ export function generateComponents(components: PatternComponent[], sourcePieces:
       step('cortar', 'corta la tira', `Corta ${qty} tira(s). El ancho del patrón es el doble del ancho plano terminado; los márgenes están añadidos fuera.`);
       step('formar', 'cose y voltea', 'Dobla la tira a lo largo, derecho con derecho. Cose por las líneas de costura de los lados largos. Voltea, plancha y mete los márgenes cortos hacia dentro siguiendo sus líneas.', undefined, [seams[0].id]);
       step('montar', 'prueba el aro y fija sus extremos', `${mountNote} El largo de ${formatLength(h,'cm')} incluye dos reservas de 2 cm: la parte libre antes de arquear mide ${formatLength(h-40,'cm')}. Prueba con la herramienta o cinturón, hilvana ambos extremos y fija cada reserva con pespunte en caja y cruz. El espacio interior depende de la herramienta y del arco; no se supone una carga certificada.`);
+    } else if(kind==='porta-telefono-camara') {
+      body=add(rect(`${prefix}-cuerpo`,`${title}: respaldo${suffix}`,w,h,sa,qty));
+      hemMouth(body);
+      const {left:l,top:t,width:cw,height:ch}=aperture, r=w-l-cw, bottom=h-t-ch;
+      // Four separately cut frame pieces form a true opening; no filled rectangle
+      // is exported as if it were a cutting template with an unsupported hole.
+      const upper=add(polygon(`${prefix}-marco-superior`,`${title}: banda superior${suffix}`,[{x:0,y:0},{x:w,y:0},{x:w,y:t},{x:l+cw,y:t},{x:l,y:t},{x:0,y:t}],sa,qty));
+      hemMouth(upper);
+      upper.edges[0]={...upper.edges[0],allowance:12,label:'Entrada del marco: dobladillo doble de 6 mm'};
+      const lower=add(polygon(`${prefix}-frente-inferior`,`${title}: frente inferior${suffix}`,[{x:0,y:0},{x:l,y:0},{x:l+cw,y:0},{x:w,y:0},{x:w,y:bottom},{x:0,y:bottom}],sa,qty));
+      const left=add(rect(`${prefix}-marco-izq`,`${title}: banda izquierda${suffix}`,l,ch,sa,qty));
+      const right=add(rect(`${prefix}-marco-der`,`${title}: banda derecha${suffix}`,r,ch,sa,qty));
+      // The four window edges are bound, not folded into the clear opening.
+      for(const [piece,index]of [[upper,3],[lower,1],[left,1],[right,3]] as const) piece.edges[index]={...piece.edges[index],allowance:0,finish:'orillo',label:'Ventana: rematar con bies sin reducir la abertura'};
+      seams.push(equal(`${prefix}-arriba-izq`,`${title}: banda superior con lateral izquierdo`,upper,['e4'],left,['e0']),
+        equal(`${prefix}-arriba-der`,`${title}: banda superior con lateral derecho`,upper,['e2'],right,['e0']),
+        equal(`${prefix}-abajo-izq`,`${title}: lateral izquierdo con frente inferior`,left,['e2'],lower,['e0']),
+        equal(`${prefix}-abajo-der`,`${title}: lateral derecho con frente inferior`,right,['e2'],lower,['e2']));
+      for(const [index,seam]of seams.entries()) for(const side of [...seam.a,...seam.b]) {
+        const piece=pieces.find(candidate=>candidate.id===side.pieceId)!;
+        const edge=piece.edges.find(candidate=>candidate.id===side.edgeIds[0])!;
+        piece.notches.push({id:`marco-${index+1}`,edgeId:edge.id,s:edgeLength(piece,edge)/2,count:index<2?1:2,label:`Unión de marco ${index+1}`});
+      }
+      const around=2*(cw+ch)+80;
+      out.materials.push({id:`${prefix}-bies`,label:`${title}: bies flexible de 20 mm abierto`,qty:`${formatLength(around*qty,'cm')}`,note:'Incluye 8 cm por ventana para esquinas y uniones. El bies abraza el canto; no debe tapar las cámaras.'},
+        {id:`${prefix}-refuerzo`,label:`${title}: entretela para las bandas de la cámara`,qty:`${qty} juego(s) de bandas`,note:'Refuerza por el revés sin cubrir el hueco y prueba con el teléfono real antes de fijar.'});
+      body.notes=[`${formatLength(w,'cm')} × ${formatLength(h,'cm')} terminados. Cámara orientada hacia el exterior.`,`Abertura: ${formatLength(cw,'cm')} × ${formatLength(ch,'cm')}, a ${formatLength(l,'cm')} del lado izquierdo y ${formatLength(t,'cm')} de arriba.`, 'No cubras ópticas, flash ni micrófono. La ventana no se deduce automáticamente del modelo de teléfono.'];
+      step('cortar','mide el teléfono y corta sus cinco piezas',`Corta ${qty} respaldo(s), banda(s) superior(es), lateral(es) izquierdo(s), lateral(es) derecho(s) y frente(s) inferior(es). Las medidas terminadas son ${formatLength(w,'cm')} × ${formatLength(h,'cm')}. La cámara queda hacia fuera. Antes de cortar, confirma con el teléfono y su funda la abertura de ${formatLength(cw,'cm')} × ${formatLength(ch,'cm')} situada a ${formatLength(l,'cm')} de la izquierda y ${formatLength(t,'cm')} del borde superior.`,pieces.map(piece=>piece.id));
+      step('reforzar','refuerza y termina las entradas','Aplica entretela al revés de las bandas sin encogerlas. Termina la entrada superior del respaldo y de la banda superior siguiendo sus líneas de dobladillo.',[body.id,upper.id]);
+      step('marco','arma el frente alrededor de la cámara','Une la banda superior a ambos laterales por los tramos marcados, derecho con derecho; une abajo los laterales con los extremos del frente inferior. No unas los bordes de la abertura. Plancha los márgenes abiertos y termina sus cantos.',[upper.id,left.id,right.id,lower.id],seams.map(seam=>seam.id));
+      step('bies','remata la abertura con bies','Rodea con el bies los cuatro cantos marcados Ventana. Ingleta las esquinas y sujeta el bies abrazando el borde; no lo extiendas hacia dentro de la abertura. Verifica de nuevo las medidas libres con el teléfono y prueba que no tapa cámaras, flash ni micrófono.',[upper.id,left.id,right.id,lower.id]);
+      step('montar','fija el respaldo y el frente a la prenda',`${mountNote} Sujeta primero el respaldo a la base por sus márgenes. En bandas estrechas, rebaja únicamente los márgenes exteriores a 4 mm después de transferir sus líneas terminadas; no recortes el cuerpo de la banda. Plancha esos márgenes hacia dentro; hilvana y pespuntea laterales y fondo sobre el respaldo, dejando abierta la entrada superior. No atravieses ambas caras con costuras adicionales que atrapen el teléfono. Refuerza las bocas y prueba el acceso antes de cerrar las costuras de la prenda.`,pieces.map(piece=>piece.id));
     } else {
       if (kind === 'bolsillo-punta') body = add(polygon(`${prefix}-cuerpo`, `${title}: cuerpo${suffix}`, [{x:0,y:0},{x:w,y:0},{x:w,y:h*.75},{x:w/2,y:h},{x:0,y:h*.75}],sa,qty));
       else body = add(rect(`${prefix}-cuerpo`, `${title}: cuerpo${suffix}`, w,h,sa,qty));
@@ -163,8 +221,8 @@ export function generateComponents(components: PatternComponent[], sourcePieces:
           step('montar','cose el bolsillo a la base',`${mountNote} Pespuntea costados y fondo dejando la boca abierta. Refuerza las dos esquinas de la boca.${qty>1?' Repite la colocación en cada copia; si la base es un par simétrico, transfiere las marcas en espejo.':''}`,[body.id]);
         }
         if (kind === 'porta-herramientas') {
-          for(const [i,x]of [w/3,2*w/3].entries()) body.lines.push({id:`canal-${i}`,kind:'pespunte',a:{x,y:0},b:{x,y:h},label:`Canal de ${formatLength(w/3,'cm')}`});
-          step('canales','divide los tres canales',`Con el bolsillo ya fijado, cose las dos líneas verticales del patrón a través del bolsillo y la base. Se forman tres canales de ${formatLength(w/3,'cm')} antes del grosor de la herramienta. Refuerza la entrada de cada división. Prueba primero con la herramienta y ajusta el ancho antes de cortar.`,[body.id]);
+          for(let i=1;i<channels;i++) {const x=w*i/channels;body.lines.push({id:`canal-${i-1}`,kind:'pespunte',a:{x,y:0},b:{x,y:h},label:`Canal de ${formatLength(w/channels,'cm')}`});}
+          step('canales',`forma ${channels} ${channels===1?'canal':'canales'}`,`Con el bolsillo ya fijado, cose las ${Math.max(0,channels-1)} divisiones marcadas a través del bolsillo y la base. Se forman ${channels} ${channels===1?'canal':'canales'} de ${formatLength(w/channels,'cm')} antes del grosor de la herramienta. Refuerza la entrada de cada división. Prueba primero con la herramienta y ajusta el ancho antes de cortar.`,[body.id]);
         }
         if (['bolsillo-solapa-boton','bolsillo-solapa-velcro','bolsillo-cargo'].includes(kind)) {
           const flapHeight=Math.min(75,Math.max(35,h*.28));

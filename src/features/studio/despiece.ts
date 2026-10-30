@@ -178,9 +178,9 @@ export function cutoutDrawables(cs: Cutout[], unit: Unit, version: string): Draw
 export function embroideryDrawables(doc: DesignDoc): Drawable[] {
   const out: Drawable[] = [];
   for (const el of doc.elements) {
-    if (el.technique !== 'bordado' || el.hidden) continue;
+    if (el.technique !== 'bordado' || el.hidden || el.kind === 'grupo') continue;
     const cmds = transformCmds(elementLocalCmds(el), elementMatrix({ ...el, x: 0, y: 0 }));
-    const paths: DrawPath[] = [{ cmds, style: 'bordado' }];
+    const paths: DrawPath[] = [{ cmds, style: 'bordado', fillColor: el.fill.type === 'color' ? el.fill.color : undefined }];
     const labels: DrawLabel[] = [{ text: `${el.name} · ${el.stroke ? el.stroke.style : 'relleno'}`, at: { x: 0, y: el.h / 2 + 8 }, size: 2.6 }];
     out.push({ id: `bord-${el.id}`, name: el.name, paths, labels, grains: [], bbox: drawableBBox(paths, labels) });
   }

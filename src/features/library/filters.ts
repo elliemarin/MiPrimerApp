@@ -27,15 +27,20 @@ const synonyms: Record<string, string[]> = {
   jumper: ['jumper', 'peto', 'enterizo', 'mono', 'sueter'], jumpers: ['jumper', 'peto', 'enterizo', 'mono', 'sueter'], jumpsuit: ['enterizo', 'mono'],
   mezclilla: ['mezclilla', 'denim'], denim: ['mezclilla', 'denim'],
   holgado: ['holgado', 'oversize', 'amplio'], holgados: ['holgado', 'oversize', 'amplio'],
-  hoodie: ['hoodie', 'capucha'], bolso: ['bolso', 'bolsa'],
+  hoodie: ['hoodie', 'capucha'], hoddie: ['hoodie', 'capucha'], hoodies: ['hoodie', 'capucha'], hoddies: ['hoodie', 'capucha'], sudaderas: ['sudadera', 'hoodie'], pantalones: ['pantalon', 'pants'], bolso: ['bolso', 'bolsa'],
   bebe: ['bebe', 'baby'], scrunchie: ['scrunchie', 'dona'], laptop: ['laptop', 'portatil'],
 };
 export function modelHasPattern(m: CatalogModel): boolean { return !!m.generatorId && !m.studioOnly && m.status !== 'pendiente'; }
 export function modelAvailability(m: CatalogModel): Availability { return modelHasPattern(m) ? 'patron' : m.studioOnly ? 'estudio' : 'inspiracion'; }
 export function matches(m: CatalogModel, f: Filters): boolean {
   if (f.q.trim()) {
-    const hay = normalizeSearch(`${m.name} ${m.sub} ${m.description} ${TYPE_LABEL[m.type]} ${m.recommendedFabrics.join(' ')} ${m.recipients.join(' ')} ${m.fits.join(' ')} ${m.variants.map(v=>`${v.name} ${v.text}`).join(' ')}`);
-    if (!normalizeSearch(f.q).split(/\s+/).every(w => (synonyms[w] ?? [w]).some(term=>hay.includes(term)))) return false;
+    const query = normalizeSearch(f.q);
+    const hood = m.params?.capucha === 'si' || m.flat.top?.neck === 'capucha';
+    const withoutHood = query.includes('sin capucha');
+    if (withoutHood && hood) return false;
+    if (!withoutHood && query.split(/\s+/).some(word => ['hoodie','hoodies','hoddie','hoddies','capucha'].includes(word)) && !hood) return false;
+    const hay = normalizeSearch(`${m.name} ${m.sub} ${m.collection ?? ''} ${m.variantLabel ?? ''} ${(m.searchTerms ?? []).join(' ')} ${m.description} ${TYPE_LABEL[m.type]} ${m.recommendedFabrics.join(' ')} ${m.recipients.join(' ')} ${m.fits.join(' ')} ${m.variants.map(v=>`${v.name} ${v.text}`).join(' ')}`);
+    if (!query.split(/\s+/).every(w => (synonyms[w] ?? [w]).some(term=>hay.includes(term)))) return false;
   }
   if (f.recipient !== 'todos' && !m.recipients.includes(f.recipient)) return false;
   if (f.type !== 'todos' && m.type !== f.type) return false;

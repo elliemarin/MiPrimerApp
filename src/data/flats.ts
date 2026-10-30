@@ -209,6 +209,8 @@ function pantsSide(key: 'costado-der' | 'costado-izq', o: PantsOpts): FlatView {
 export type TopType = 'camiseta' | 'camisa' | 'blusa' | 'sudadera' | 'hoodie' | 'chaleco' | 'chaqueta' | 'abrigo' | 'pijama';
 export type JacketStyle = 'bomber' | 'denim' | 'trench' | 'acolchada' | 'biker' | 'safari' | 'varsity' | 'anoraq' | 'haori' | 'cardigan' | 'poncho' | 'capa' | 'bolero' | 'shacket' | 'parka' | 'bluson';
 export interface TopOpts {
+  /** Modelo sin bandas de rib: bajos y puños con dobladillo simple. */
+  plainHem?: boolean;
   style?: JacketStyle;
   /** Líneas de composición: el patrón real se corta con el preset del modelo. */
   panelPreset?: string;
@@ -282,7 +284,7 @@ function topView(key: FlatViewKey, o: TopOpts): FlatView {
     const hl = Math.hypot(hemDir[0], hemDir[1]) || 1;
     // Dirección a lo largo de la manga, hacia el hombro, para el puño o el dobladillo.
     const up: P = [-dir[0], -dir[1]];
-    if (o.cuffs || o.type === 'sudadera' || o.type === 'hoodie' || (o.type === 'camisa' && o.sleeve === 'larga')) {
+    if (!o.plainHem && (o.cuffs || o.type === 'sudadera' || o.type === 'hoodie' || (o.type === 'camisa' && o.sleeve === 'larga'))) {
       const cuffH = o.type === 'camisa' ? 60 : 65;
       const a1: P = [outerEnd[0] + up[0] * cuffH, outerEnd[1] + up[1] * cuffH];
       const a2: P = [innerEnd[0] + up[0] * cuffH, innerEnd[1] + up[1] * cuffH];
@@ -334,7 +336,7 @@ function topView(key: FlatViewKey, o: TopOpts): FlatView {
   if (!back && o.pocket === 'pecho') zones.push(zone('bolsillo', 'Bolsillo de pecho', 'bolsillo', poly([[-170, 300], [-80, 300], [-80, 400], [-125, 415], [-170, 400]])));
   if (!back && o.pocket === 'canguro') zones.push(zone('bolsillo', 'Bolsillo canguro', 'bolsillo', `${M([-150, hemY - 270])} ${Lp([150, hemY - 270])} ${Lp([195, hemY - 70])} ${Lp([-195, hemY - 70])} Z`));
   if (!back && o.pocket === 'parche') for (const s of [-1, 1]) zones.push(zone(`bolsillo-${s < 0 ? 'a' : 'b'}`, s < 0 ? 'Bolsillo derecho' : 'Bolsillo izquierdo', 'bolsillo', rect(s * 150 - 70, hemY - 250, 140, 150)));
-  if (o.hemBand || o.type === 'sudadera' || o.type === 'hoodie') zones.push(zone('pretina', 'Pretina inferior', 'pretina', rect(-hemHalf + 6, hemY - 70, (hemHalf - 6) * 2, 70)));
+  if (!o.plainHem && (o.hemBand || o.type === 'sudadera' || o.type === 'hoodie')) zones.push(zone('pretina', 'Pretina inferior', 'pretina', rect(-hemHalf + 6, hemY - 70, (hemHalf - 6) * 2, 70)));
   else details.push({ d: line([-hemHalf + 2, hemY - 24], [hemHalf - 2, hemY - 24]), style: 'pespunte' });
   if (o.type === 'camisa' && back) zones.push(zone('canesu', 'Canesú', 'canesu', `${M([-shoulderX, shoulderY])} ${Lp([shoulderX, shoulderY])} ${Lp([chestHalf - 25, 130])} ${Lp([-chestHalf + 25, 130])} Z`));
   jacketDetails(o,back,zones,details,dots,chestHalf);
@@ -443,17 +445,19 @@ function babyBodyView(key: FlatViewKey, o: { legs: 'body' | 'mameluco'; sleeve: 
 }
 
 // ---------------------------------------------------------------- Bolsos y accesorios
-function bagView(key: FlatViewKey, kind: 'tote' | 'neceser' | 'bandolera'): FlatView {
+function bagView(key: FlatViewKey, kind: 'tote' | 'neceser' | 'bandolera', object?: { width: number; height: number; label: string }): FlatView {
   const back = key === 'espalda';
   const zones: Zone[] = [];
   const details: FlatView['details'] = [];
   if (kind === 'tote') {
-    zones.push(zone(back ? 'espalda' : 'delantero', back ? 'Cara trasera' : 'Cara delantera', back ? 'espalda' : 'delantero', rect(-190, 0, 380, 400)));
-    zones.push(zone('asa', 'Asa', 'otra', `${M([-120, 0])} ${C([-120, -250], [120, -250], [120, 0])} ${Lp([88, 0])} ${C([88, -205], [-88, -205], [-88, 0])} Z`));
-    zones.push(zone('asa-costado-a', 'Unión del asa', 'otra', rect(-122, 0, 34, 70)));
-    zones.push(zone('asa-costado-b', 'Unión del asa', 'otra', rect(88, 0, 34, 70)));
-    details.push({ d: line([-190, 30], [190, 30]), style: 'pespunte' });
-    if (!back) zones.push(zone('bolsillo', 'Bolsillo exterior', 'bolsillo', rect(-110, 170, 220, 170)));
+    const w=object?.width??380,h=object?.height??400;
+    const handle=w*120/380, inner=w*88/380, handleHeight=Math.min(300,h*.625);
+    zones.push(zone(back ? 'espalda' : 'delantero', back ? 'Cara trasera' : 'Cara delantera', back ? 'espalda' : 'delantero', rect(-w/2, 0, w, h)));
+    zones.push(zone('asa', 'Asa', 'otra', `${M([-handle, 0])} ${C([-handle, -handleHeight], [handle, -handleHeight], [handle, 0])} ${Lp([inner, 0])} ${C([inner, -handleHeight*.82], [-inner, -handleHeight*.82], [-inner, 0])} Z`));
+    zones.push(zone('asa-costado-a', 'Unión del asa', 'otra', rect(-handle-2, 0, handle-inner+2, Math.min(70,h*.175))));
+    zones.push(zone('asa-costado-b', 'Unión del asa', 'otra', rect(inner, 0, handle-inner+2, Math.min(70,h*.175))));
+    details.push({ d: line([-w/2, Math.min(30,h*.075)], [w/2, Math.min(30,h*.075)]), style: 'pespunte' });
+    if (!back && !object) zones.push(zone('bolsillo', 'Bolsillo exterior', 'bolsillo', rect(-110, 170, 220, 170)));
   } else if (kind === 'neceser') {
     zones.push(zone(back ? 'espalda' : 'delantero', back ? 'Cara trasera' : 'Cara delantera', back ? 'espalda' : 'delantero', `${M([-130, 20])} ${Lp([130, 20])} ${Q([140, 20], [140, 30])} ${Lp([140, 170])} ${Q([140, 180], [130, 180])} ${Lp([-130, 180])} ${Q([-140, 180], [-140, 170])} ${Lp([-140, 30])} ${Q([-140, 20], [-130, 20])} Z`));
     details.push({ d: line([-128, 20], [128, 20]), style: 'costura' }, { d: line([-128, 28], [128, 28]), style: 'pespunte' });
@@ -730,7 +734,7 @@ export function buildFlat(id: string, spec: FlatSpec): FlatDef {
       for (const k of keys) views.push(babyBodyView(k, spec.baby!));
       break;
     case 'bolso':
-      for (const k of keys) views.push(bagView(k, spec.bag!));
+      for (const k of keys) views.push(bagView(k, spec.bag!, spec.object));
       break;
     case 'accesorio':
       views.push(accessoryView('frente', spec.accessory!, spec.object));

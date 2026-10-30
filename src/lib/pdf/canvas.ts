@@ -18,6 +18,7 @@ import {
   setLineJoin,
   setLineWidth,
   setStrokingGrayscaleColor,
+  setStrokingRgbColor,
   setFillingGrayscaleColor,
   stroke,
   LineCapStyle,
@@ -103,7 +104,7 @@ export class PdfCanvas {
     }
     return ops;
   }
-  strokePath(cmds: PathCmd[], spec: StrokeSpec, tx: (p: Pt) => Pt = (p) => p) {
+  strokePath(cmds: PathCmd[], spec: StrokeSpec, tx: (p: Pt) => Pt = (p) => p, color?: string) {
     if (!cmds.length) return;
     this.page.pushOperators(
       pushGraphicsState(),
@@ -111,7 +112,7 @@ export class PdfCanvas {
       setDashPattern(spec.dash, 0),
       setLineCap(spec.cap === 'round' ? LineCapStyle.Round : LineCapStyle.Butt),
       setLineJoin(LineJoinStyle.Miter),
-      setStrokingGrayscaleColor(spec.gray),
+      color && /^#[0-9a-f]{6}$/i.test(color) ? setStrokingRgbColor(parseInt(color.slice(1,3),16)/255,parseInt(color.slice(3,5),16)/255,parseInt(color.slice(5,7),16)/255) : setStrokingGrayscaleColor(spec.gray),
       ...this.pathOps(cmds, tx),
       stroke(),
       popGraphicsState()

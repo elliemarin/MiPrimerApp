@@ -259,4 +259,4 @@ export function referencedFileIds(s: Pick<AppState, 'projects' | 'fabrics'>): st
   return out;
 }
 
-export const APP_VERSION = '0.1.0';
+export const APP_VERSION = '0.2.0';

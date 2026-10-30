@@ -30,7 +30,7 @@ export function ProjectsPage() {
         title="Proyectos"
         sub={total ? 'Todo tu trabajo guardado en este dispositivo: referencias, medidas, patrones, diseños y exportaciones.' : 'Diseña, patrona y confecciona. Empieza un proyecto desde un modelo, un patrón base, fotos o una prenda que quieras intervenir.'}
         actions={
-          <Button variant="primary" icon="plus" onClick={() => setCreating(true)}>
+          <Button variant="primary" icon="plus" onClick={() => navigate('/biblioteca')}>
             Nuevo
           </Button>
         }
@@ -45,7 +45,7 @@ export function ProjectsPage() {
         filter === 'archivados' ? (
           <Empty icon="archive" title="Sin proyectos archivados" body="Los proyectos que archives aparecerán aquí y podrás recuperarlos." />
         ) : (
-          <FirstRun onNew={() => setCreating(true)} />
+          <FirstRun onNew={() => navigate('/biblioteca')} />
         )
       ) : (
         <div className="group">
@@ -54,6 +54,7 @@ export function ProjectsPage() {
           ))}
         </div>
       )}
+      <details style={{marginTop:24}}><summary className="small muted">Otras formas de empezar</summary><Button variant="ghost" onClick={()=>setCreating(true)}>Importar fotos, bocetos o un patrón propio</Button></details>
       {creating && <NewProjectSheet onClose={() => setCreating(false)} />}
     </div>
   );
@@ -63,7 +64,7 @@ function ProjectRow({ p, alerts }: { p: Project; alerts: number }) {
   const model = p.modelId ? findModel(p.modelId) : undefined;
   const date = new Date(p.updatedAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
   return (
-    <a className="list-row" href={`#/proyectos/${p.id}`}>
+    <a className="list-row" href={p.design?.simpleWorkflow?`#/${Object.keys(p.design.materialChoices??{}).length?'acabados':'personalizar'}/${p.id}`:`#/proyectos/${p.id}`}>
       <span className="lead" style={{ background: 'var(--canvas)', width: 52, height: 52 }}>
         {model ? <FlatArt id={model.id} spec={model.flat} /> : <Icon name="proyectos" />}
       </span>

@@ -1,177 +1,241 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../store/app';
-import { findModel } from '../../data/catalog';
-import { COMPONENT_OPTIONS, makeComponent, optionsForProject } from '../../data/components';
+import type { Project } from '../../store/types';
+import { COMPONENT_OPTIONS, makeComponent, optionsForProject, searchComponents } from '../../data/components';
 import { newPatternState } from '../../lib/pattern/engine';
-import type { PatternComponent } from '../../lib/pattern/components';
-import { Button, Chip, Empty, Field, IconButton, LengthInput, Notice, PageHead, Select, TextInput } from '../../ui/components';
+import { cameraWindowFor, type PatternComponent } from '../../lib/pattern/components';
+import type { Pt } from '../../lib/geom/vec';
+import { Button, Empty, Field, IconButton, LengthInput, Notice, Select, Sheet, TextInput } from '../../ui/components';
 import { ProjectJourney } from '../../ui/ProjectJourney';
 import { Icon } from '../../ui/Icon';
 import { navigate } from '../../ui/router';
 import { formatLength } from '../../lib/units';
 import { StudioDefs, ViewBase, ElementSvg } from '../studio/render';
-import { newDesign } from '../studio/model';
+import { newDesign, type DesignView } from '../studio/model';
+import { basePanelPattern } from '../studio/panelWorkflow';
 import { componentIdForElement, syncComponentDesign } from './componentDesign';
+import { componentAtPoint, componentFits, componentPlacementProblem, firstFittingPosition, pointInPreview } from './placementDrag';
 import './customize.css';
 
 type Filter = 'recomendados' | 'bolsillos' | 'herramientas' | 'todos';
-
-const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+type Drag = { pointerId: number; kind: 'add' | 'move'; presetId?: string; componentId?: string; start: Pt; client: Pt; point?: Pt; offset?: Pt };
+const nameOf = (component: PatternComponent) => component.name ?? COMPONENT_OPTIONS.find(option => option.kind === component.kind)?.name ?? 'Extra';
+const viewName = (view: DesignView) => view.label.replace(/^Patrón real · /, '').replace(/en par simétrico/i, '(par)').replace(/completa/i, '').trim();
+const DRAG_TYPE = 'application/x-hilvana-extra';
 
 export function CustomizePage({ projectId }: { projectId: string }) {
-  const project = useApp(s => s.projects[projectId]);
-  const fabrics = useApp(s => s.fabrics);
-  const updateProject = useApp(s => s.updateProject);
-  const unit = useApp(s => s.settings.unit);
+  const project = useApp(state => state.projects[projectId]);
+  const fabrics = useApp(state => state.fabrics);
+  const updateProject = useApp(state => state.updateProject);
+  const unit = useApp(state => state.settings.unit);
   const [selectedId, setSelectedId] = useState<string>();
   const [viewId, setViewId] = useState<string>();
   const [filter, setFilter] = useState<Filter>('recomendados');
   const [query, setQuery] = useState('');
-  const [placing, setPlacing] = useState(false);
+  const [limit, setLimit] = useState(24);
+  const [grid, setGrid] = useState(true);
+  const [zoomBox, setZoomBox] = useState<{ x: number; y: number; width: number; height: number }>();
+  const [drag, setDrag] = useState<Drag>();
+  const dragRef = useRef<Drag>();
   const svgRef = useRef<SVGSVGElement>(null);
-  const recommended = useMemo(() => project ? optionsForProject(project) : [], [project]);
+  const [nativeDragging, setNativeDragging] = useState(false);
+  const [message, setMessage] = useState('');
+  const [pending, setPending] = useState<PatternComponent>();
+  const history = useRef<Pick<Project, 'pattern' | 'design' | 'status'>[]>([]);
+  const [canUndo, setCanUndo] = useState(false);
+  const base = useMemo(() => project ? basePanelPattern(project) : undefined, [project?.pattern]);
+  const recommended = useMemo(() => project ? optionsForProject(project) : [], [project?.modelId, project?.pattern?.generatorId]);
+  useEffect(() => { setLimit(24); }, [filter, query]);
+  useEffect(() => { setZoomBox(undefined); }, [viewId, projectId]);
+  useEffect(() => { setSelectedId(undefined); setViewId(undefined); setMessage(''); setPending(undefined); history.current = []; setCanUndo(false); }, [projectId]);
 
-  if (!project) return <div className="page"><Empty icon="proyectos" title="Proyecto no encontrado" action={<Button onClick={() => navigate('/biblioteca')}>Elegir un diseño</Button>} /></div>;
-
+  if (!project) return <div className="page"><Empty icon="proyectos" title="Proyecto no encontrado" action={<Button onClick={() => navigate('/biblioteca')}>Elegir una base</Button>} /></div>;
   const components = project.pattern?.components ?? [];
-  const selected = components.find(c => c.id === selectedId);
-  const doc = project.design ?? newDesign([]);
-  const views = doc.views.filter(v => v.source.type !== 'pieza');
-  const view = views.find(v => v.id === viewId) ?? views.find(v => v.kind === 'frente') ?? views[0];
-  const model = project.modelId ? findModel(project.modelId) : undefined;
-  const options = (filter === 'recomendados' ? recommended : COMPONENT_OPTIONS)
-    .filter(o => filter !== 'bolsillos' || o.group === 'bolsillos' || o.group === 'cierres')
-    .filter(o => filter !== 'herramientas' || o.group === 'herramientas' || o.group === 'trabillas')
-    .filter(o => !query || normalize(`${o.name} ${o.description}`).includes(normalize(query)));
+  const sourceDoc = project.design ?? newDesign([]);
+  const physicalViews = sourceDoc.views.filter(view => view.source.type === 'pieza' && !view.source.pieceId.startsWith('componente-'));
+  const views = physicalViews.length ? physicalViews : sourceDoc.views.filter(view => view.source.type !== 'pieza');
+  const view = views.find(item => item.id === viewId) ?? views[0];
+  const selected = components.find(component => component.id === selectedId);
+  const moving = drag?.kind === 'move' && drag.point && view ? components.find(component => component.id === drag.componentId) : undefined;
+  const liveComponents = moving && view && drag?.point ? components.map(component => component.id === moving.id ? componentAtPoint(component, view, drag.point!) : component) : components;
+  const liveProject = moving && project.pattern ? syncComponentDesign({ ...project, pattern: { ...project.pattern, components: liveComponents } }) : project;
+  const doc = liveProject.design ?? sourceDoc;
+  const displayedSelected = liveComponents.find(component => component.id === selectedId);
+  const options = searchComponents(query, (filter === 'recomendados' ? recommended : COMPONENT_OPTIONS)
+    .filter(option => filter !== 'bolsillos' || option.group === 'bolsillos' || option.group === 'cierres')
+    .filter(option => filter !== 'herramientas' || option.group === 'herramientas' || option.group === 'trabillas'));
+  const selectedName = selected ? nameOf(selected) : '';
 
-  const saveComponents = (change: (current: PatternComponent[]) => PatternComponent[], message: string) => {
-    updateProject(projectId, p => {
-      const pattern = p.pattern ?? newPatternState('manual', {}, { kind: 'otro', fabric: p.fabricType, stretch: p.stretch, fit: p.fit });
-      return syncComponentDesign({ ...p, status: 'diseno', pattern: { ...pattern, components: change(pattern.components ?? []) } });
-    }, message);
+  const save = (change: (current: PatternComponent[]) => PatternComponent[], text?: string) => updateProject(projectId, current => {
+    history.current.push({ pattern: current.pattern, design: current.design, status: current.status });
+    if (history.current.length > 30) history.current.shift();
+    setCanUndo(true);
+    const pattern = current.pattern ?? newPatternState('manual', {}, { kind: 'otro', fabric: current.fabricType, stretch: current.stretch, fit: current.fit });
+    return syncComponentDesign({ ...current, status: 'diseno', pattern: { ...pattern, components: change(pattern.components ?? []) } });
+  }, text);
+  const undo = () => {
+    const previous = history.current.pop(); if (!previous) return;
+    updateProject(projectId, current => ({ ...current, ...previous }), 'Cambio de extras deshecho.');
+    setCanUndo(history.current.length > 0); setSelectedId(undefined); setMessage('Cambio deshecho.');
+  };
+  const accept = (component: PatternComponent) => {
+    save(current => [...current, component], 'Extra añadido con sus piezas de confección.');
+    setSelectedId(component.id); setMessage('Arrastra el extra sobre la pieza para cambiarlo de lugar.'); setPending(undefined);
+  };
+  const add = (presetId: string, point?: Pt, exact = false) => {
+    if (!view) return;
+    const component = makeComponent(project, presetId, view.id);
+    const placed = point && exact ? componentAtPoint(component, view, point) : firstFittingPosition(component, view, base?.pieces ?? [], point);
+    if (placed && componentFits(placed, view, base?.pieces ?? [])) accept(placed);
+    else { setPending(componentAtPoint(component, view, point ?? { x: view.minX + view.width / 2, y: view.minY + view.height / 2 })); setMessage('Este tamaño no cabe en la pieza elegida. Puedes ajustarlo o elegir otra pieza.'); }
   };
   const edit = (patch: Partial<PatternComponent>) => {
+    if (!selected || !view) return;
+    const candidate = { ...selected, ...patch };
+    const candidateView = views.find(item => item.id === candidate.placement?.viewId) ?? view;
+    const problem = componentPlacementProblem(candidate, candidateView, base?.pieces ?? []);
+    if (problem) { setMessage(problem); return; }
+    save(current => current.map(component => component.id === selected.id ? candidate : component)); setMessage('');
+  };
+  const deleteSelected = () => {
     if (!selected) return;
-    saveComponents(current => current.map(c => c.id === selected.id ? { ...c, ...patch } : c), 'Complemento actualizado.');
+    save(current => current.filter(component => component.id !== selected.id), 'Extra eliminado.'); setSelectedId(undefined); setMessage('');
   };
-  const add = (presetId: string) => {
-    const component = makeComponent(project, presetId, view?.id);
-    saveComponents(current => [...current, component], 'Complemento añadido con sus piezas de confección.');
-    setSelectedId(component.id);
-    setPlacing(false);
-    requestAnimationFrame(() => document.querySelector('.customize-editor')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+  const toggleZoom = () => {
+    if (zoomBox) { setZoomBox(undefined); return; }
+    if (!selected?.placement || !view || !svgRef.current) return;
+    const box = svgRef.current.getBoundingClientRect();
+    const ratio = box.width / Math.max(1, box.height);
+    let width = Math.max(120, selected.width * 2.5), height = Math.max(120, selected.height * 2.5);
+    if (width / height > ratio) height = width / ratio; else width = height * ratio;
+    // The frame is captured once; dragging never chases the selected object.
+    const x = Math.max(view.minX, Math.min(view.minX + view.width - width, selected.placement.x - width / 2));
+    const y = Math.max(view.minY, Math.min(view.minY + view.height - height, selected.placement.y - height / 2));
+    setZoomBox({ x, y, width, height });
   };
-  const place = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (!placing || !selected || !view || !svgRef.current || e.button !== 0) return;
-    const matrix = svgRef.current.getScreenCTM();
-    if (!matrix) return;
-    const point = new DOMPoint(e.clientX, e.clientY).matrixTransform(matrix.inverse());
-    edit({ placement: { ...selected.placement, viewId: view.id, pieceId: undefined, x: point.x, y: point.y, label: selected.placement?.label ?? view.label } });
-    setPlacing(false);
+  const updateDrag = (next?: Drag) => { dragRef.current = next; setDrag(next); };
+  const startAdd = (event: React.PointerEvent<HTMLButtonElement>, presetId: string) => {
+    if (event.button !== 0) return;
+    event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId);
+    updateDrag({ pointerId: event.pointerId, kind: 'add', presetId, start: { x: event.clientX, y: event.clientY }, client: { x: event.clientX, y: event.clientY } });
   };
-  const componentName = (component: PatternComponent) => component.name ?? COMPONENT_OPTIONS.find(o => o.kind === component.kind)?.name ?? 'Complemento';
-  const selectedName = selected ? componentName(selected) : '';
-  const cargoDepth = selected?.kind === 'bolsillo-cargo' ? selected.depth ?? 30 : 0;
-  const minWidth = selected?.kind === 'trabilla' || selected?.kind === 'porta-martillo' ? 10 : Math.max(40, cargoDepth * 2);
-  const minHeight = Math.max(50, cargoDepth * 2);
+  const startMove = (event: React.PointerEvent<SVGGElement>, id: string) => {
+    if (event.button !== 0 || !view) return;
+    const component = components.find(item => item.id === id); if (!component) return;
+    const body = sourceDoc.elements.find(element => componentIdForElement(element.id) === id && element.id.endsWith('--cuerpo'));
+    setSelectedId(id);
+    if (body?.locked) { setMessage('Este extra está bloqueado en el diseño guardado.'); return; }
+    const point = pointInPreview(svgRef.current, event.clientX, event.clientY); if (!point) return;
+    event.preventDefault(); event.stopPropagation(); svgRef.current?.setPointerCapture(event.pointerId);
+    updateDrag({ pointerId: event.pointerId, kind: 'move', componentId: id, start: { x: event.clientX, y: event.clientY }, client: { x: event.clientX, y: event.clientY }, point: { x: component.placement?.x ?? point.x, y: component.placement?.y ?? point.y }, offset: { x: point.x - (component.placement?.x ?? point.x), y: point.y - (component.placement?.y ?? point.y) } });
+  };
+  const movePointer = (event: React.PointerEvent<SVGSVGElement | HTMLButtonElement>) => {
+    const current = dragRef.current; if (!current || current.pointerId !== event.pointerId) return;
+    const point = pointInPreview(svgRef.current, event.clientX, event.clientY);
+    updateDrag({ ...current, client: { x: event.clientX, y: event.clientY }, point: point ? { x: point.x - (current.offset?.x ?? 0), y: point.y - (current.offset?.y ?? 0) } : undefined });
+  };
+  const finishPointer = (event: React.PointerEvent<SVGSVGElement | HTMLButtonElement>, cancel = false) => {
+    const current = dragRef.current; if (!current || current.pointerId !== event.pointerId) return;
+    updateDrag(undefined);
+    if (cancel || !view) return;
+    const point = pointInPreview(svgRef.current, event.clientX, event.clientY);
+    if (current.kind === 'add' && current.presetId) {
+      if (Math.hypot(event.clientX - current.start.x, event.clientY - current.start.y) < 6) add(current.presetId);
+      else if (point) add(current.presetId, point, true);
+      else setMessage('Suelta el extra sobre la pieza para añadirlo.');
+    } else if (current.kind === 'move' && current.componentId && point) {
+      const component = components.find(item => item.id === current.componentId); if (!component) return;
+      const moved = componentAtPoint(component, view, { x: point.x - (current.offset?.x ?? 0), y: point.y - (current.offset?.y ?? 0) });
+      if (componentFits(moved, view, base?.pieces ?? [])) { save(items => items.map(item => item.id === moved.id ? moved : item)); setMessage(''); }
+      else setMessage('El extra debe quedar dentro de la pieza. Conservamos su posición anterior.');
+    }
+  };
+  const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault(); setNativeDragging(false);
+    const presetId = event.dataTransfer.getData(DRAG_TYPE); if (!presetId) return;
+    const point = pointInPreview(svgRef.current, event.clientX, event.clientY); if (point) add(presetId, point, true);
+  };
+  const title = physicalViews.length ? 'Coloca tus extras' : 'Personaliza tu base';
+  const displayParts = doc.elements.filter(element => element.viewId === view?.id && !element.hidden);
+  const pendingDepth = pending?.kind === 'bolsillo-cargo' ? pending.depth ?? 30 : 0;
 
-  return (
-    <div className="page page-wide customize-page">
-      <PageHead title="Hazlo tuyo" back={{ label: project.name, onClick: () => navigate(`/proyectos/${projectId}`) }} sub={model ? `Parte de ${model.name.toLowerCase()} y elige lo que necesitas agregar.` : 'Elige los complementos que necesitas antes de dar color a tu diseño.'} />
-      <ProjectJourney projectId={projectId} step="personalizar" />
-      <div className="customize-layout">
-        <section className="customize-preview" aria-label="Vista previa de la personalización">
-          {view ? <>
-            <div className="customize-view-tabs" role="group" aria-label="Vista de la prenda">
-              {views.map(v => <button className="filter-chip" key={v.id} aria-pressed={v.id === view.id} onClick={() => { setViewId(v.id); setPlacing(false); }}>{v.label}</button>)}
-            </div>
-            <div className={`customize-art${placing ? ' is-placing' : ''}`}>
-              <svg ref={svgRef} viewBox={`${view.minX - 20} ${view.minY - 20} ${view.width + 40} ${view.height + 40}`} role="img" aria-label={`${project.name}, ${view.label}${placing ? '. Toca para colocar el complemento' : ''}`} onPointerDown={place}>
-                <StudioDefs doc={doc} view={view} fabrics={fabrics} prefix="customize-" />
-                <ViewBase view={view} mode="apariencia" prefix="customize-" fabrics={fabrics} />
-                {doc.elements.filter(el => el.viewId === view.id).map(el => <g key={el.id} onPointerDown={e => {
-                  if (placing) return;
-                  const id = componentIdForElement(el.id);
-                  if (id && components.some(c => c.id === id)) { e.stopPropagation(); setSelectedId(id); }
-                }}><ElementSvg el={el} mode="apariencia" prefix="customize-" doc={doc} fabrics={fabrics} /></g>)}
-                {selected?.placement?.viewId === view.id && <rect x={selected.placement.x - selected.width / 2 - 6} y={selected.placement.y - selected.height / 2 - 6} width={selected.width + 12} height={selected.height + 12} fill="none" stroke="#a26e00" strokeWidth={2} strokeDasharray="6 4" vectorEffect="non-scaling-stroke" pointerEvents="none" />}
-              </svg>
-              {placing && <div className="customize-place-hint" role="status">Toca dónde colocar {selectedName.toLowerCase()}<button onClick={() => setPlacing(false)}>Cancelar</button></div>}
-            </div>
-            <p className="tiny muted">La colocación sobre la prenda es ilustrativa. En el PDF tendrás las medidas reales del complemento y deberás probar su posición antes de coser.</p>
-          </> : <div className="customize-no-view"><Icon name="patronaje" size={48} /><p>Los complementos se añadirán a tu patrón con sus medidas reales.</p></div>}
-          <Button icon="pencil" onClick={() => navigate(`/estudio/${projectId}?herramienta=lapiz`)}>Dibujar en estudio</Button>
-        </section>
-
-        <div className="customize-controls stack-lg">
-          <section aria-labelledby="customize-choose">
-            <div className="spread"><h2 className="section-title" id="customize-choose">¿Qué quieres agregar?</h2><Chip tone="warn">Experimental</Chip></div>
-            <p className="small muted">Cada opción incluye su patrón, materiales y pasos para confeccionarla.</p>
-            <div className="customize-filters" role="group" aria-label="Tipos de complemento">
-              {([['recomendados', 'Para este diseño'], ['bolsillos', 'Bolsillos'], ['herramientas', 'Herramientas y tiras'], ['todos', 'Todos']] as const).map(([value, label]) => <button key={value} className="filter-chip" aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
-            </div>
-            <TextInput aria-label="Buscar complementos" placeholder="Busca bolsillos, cierre, herramientas…" value={query} onChange={setQuery} />
-            <div className="customize-options">
-              {options.map(option => <button key={option.id} className="customize-option" onClick={() => add(option.id)} aria-label={`Agregar ${option.name.toLowerCase()}`}>
-                <ComponentIcon kind={option.kind} />
-                <span><strong>{option.name}</strong><span className="small muted">{option.description}</span></span>
-                <Icon name="plus" size={20} />
-              </button>)}
-              {!options.length && <p className="small muted">No hay complementos con ese nombre. Prueba con «bolsillo» o elige Todos.</p>}
-            </div>
-          </section>
-
-          {components.length > 0 && <section className="customize-added" aria-labelledby="customize-added-title">
-            <h2 className="section-title" id="customize-added-title">En tu diseño ({components.length})</h2>
-            <div className="customize-added-list">
-              {components.map((component, index) => {
-                const name = componentName(component);
-                return <button key={component.id} aria-pressed={selectedId === component.id} onClick={() => { setSelectedId(component.id); setPlacing(false); if (component.placement?.viewId) setViewId(component.placement.viewId); }}>
-                  <ComponentIcon kind={component.kind} />
-                  <span><strong>{index + 1}. {name}</strong><span className="small muted">{formatLength(component.width, unit)} × {formatLength(component.height, unit)} · {component.quantity} {component.quantity === 1 ? 'unidad' : 'unidades'}</span></span>
-                  <Icon name="chev" size={18} />
-                </button>;
-              })}
-            </div>
-            {selected && <div className="customize-editor" key={selected.id}>
-              <div className="spread"><h3>{selectedName}</h3><IconButton icon="trash" label="Eliminar complemento" onClick={() => { saveComponents(current => current.filter(c => c.id !== selected.id), 'Complemento eliminado con sus piezas.'); setSelectedId(undefined); setPlacing(false); }} /></div>
-              <div className="customize-dimensions">
-                <Field label="Ancho terminado" htmlFor="component-width"><LengthInput id="component-width" mm={selected.width} min={minWidth} max={600} onChange={v => v !== undefined && edit({ width: v })} /></Field>
-                <Field label="Alto terminado" htmlFor="component-height"><LengthInput id="component-height" mm={selected.height} min={minHeight} max={800} onChange={v => v !== undefined && edit({ height: v })} /></Field>
-                <Field label="Cantidad" htmlFor="component-quantity"><Select id="component-quantity" value={String(selected.quantity)} options={Array.from({ length: 8 }, (_, i) => ({ value: String(i + 1), label: `${i + 1} ${i ? 'unidades' : 'unidad'}` }))} onChange={v => edit({ quantity: Number(v) })} /></Field>
-                {selected.kind === 'bolsillo-cargo' && <Field label="Fondo del fuelle" htmlFor="component-depth"><LengthInput id="component-depth" mm={selected.depth ?? 30} min={15} max={Math.min(100, selected.width / 2, selected.height / 2)} onChange={v => v !== undefined && edit({ depth: v })} /></Field>}
-              </div>
-              <Field label="Dónde lo vas a coser" htmlFor="component-location"><TextInput id="component-location" value={selected.placement?.label ?? ''} placeholder="Por ejemplo, muslo derecho o pecho izquierdo" onChange={label => edit({ placement: { x: selected.placement?.x ?? 0, y: selected.placement?.y ?? 0, ...selected.placement, label } })} /></Field>
-              {view && <Button icon="move" onClick={() => { setPlacing(true); document.querySelector('.customize-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>Colocar en {view.label.toLowerCase()}</Button>}
-              {view && <details className="customize-position"><summary>Posición en la vista</summary><div className="customize-dimensions">
-                <Field label="Centro horizontal" htmlFor="component-x"><LengthInput id="component-x" mm={selected.placement?.x ?? 0} onChange={x => x !== undefined && edit({ placement: { ...selected.placement, x, y: selected.placement?.y ?? 0, viewId: view.id, pieceId: undefined } })} /></Field>
-                <Field label="Centro vertical" htmlFor="component-y"><LengthInput id="component-y" mm={selected.placement?.y ?? 0} onChange={y => y !== undefined && edit({ placement: { ...selected.placement, x: selected.placement?.x ?? 0, y, viewId: view.id, pieceId: undefined } })} /></Field>
-              </div></details>}
-              <p className="tiny muted">Medidas sin márgenes. El patrón los agrega una sola vez. Prueba primero con retazos y confirma que cabe el objeto que vas a guardar.</p>
-            </div>}
-          </section>}
-          {!project.pattern?.generatorId || project.pattern.generatorId === 'manual' ? <Notice>Tu proyecto no tiene el patrón completo de la prenda. Se generarán los patrones de los complementos añadidos; la base debes aportarla tú.</Notice> : null}
+  return <div className="page page-wide customize-page">
+    <header className="customize-head"><button className="back-link" onClick={() => navigate('/biblioteca')}><Icon name="back" size={18} />Cambiar base</button><h1>{title}</h1><p>{project.name}</p></header>
+    <ProjectJourney projectId={projectId} step="personalizar" />
+    <div className="customize-layout">
+      <section className="customize-preview" aria-label="Colocar extras en la prenda">
+        <div className="customize-preview-top">
+          <div className="customize-view-tabs" role="group" aria-label="Pieza de la prenda">{views.map(item => <button className="filter-chip" key={item.id} aria-pressed={item.id === view?.id} onClick={() => { setViewId(item.id); setMessage(''); }}>{viewName(item)}</button>)}</div>
+          <IconButton icon="undo" label="Deshacer cambio de extras" disabled={!canUndo} onClick={undo} />
+          <button className="icon-btn" aria-label="Mostrar cuadrícula" aria-pressed={grid} onClick={() => setGrid(!grid)} title="Cuadrícula de 1 cm"><Icon name="grid" /></button>
         </div>
-      </div>
-      <div className="customize-footer">
-        <span className="small muted">{components.length ? `${components.length} complementos con patrón` : 'También puedes continuar con la base lisa.'}</span>
-        <Button variant="primary" icon="palette" onClick={() => navigate(`/estudio/${projectId}`)}>Continuar al estudio</Button>
-      </div>
+        {view ? <div className={`customize-art${nativeDragging || drag?.kind === 'add' ? ' is-drop-target' : ''}`} onDragOver={event => { if (event.dataTransfer.types.includes(DRAG_TYPE)) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }} onDrop={onDrop}>
+          <svg ref={svgRef} viewBox={zoomBox ? `${zoomBox.x} ${zoomBox.y} ${zoomBox.width} ${zoomBox.height}` : `${view.minX - 12} ${view.minY - 12} ${view.width + 24} ${view.height + 24}`} role="img" aria-label={`${project.name}, ${viewName(view)}`} onPointerMove={movePointer} onPointerUp={event => finishPointer(event)} onPointerCancel={event => finishPointer(event, true)}>
+            <StudioDefs doc={doc} view={view} fabrics={fabrics} prefix="customize-" />
+            <ViewBase view={view} mode="apariencia" prefix="customize-" fabrics={fabrics} />
+            {grid && <PlacementGrid view={view} />}
+            {displayParts.map(element => { const id = componentIdForElement(element.id); return <g key={element.id} data-component-id={id} onPointerDown={id ? event => startMove(event, id) : undefined}><ElementSvg el={element} mode="apariencia" prefix="customize-" doc={doc} fabrics={fabrics} /></g>; })}
+            {displayedSelected?.placement?.viewId === view.id && <rect x={displayedSelected.placement.x - displayedSelected.width / 2 - 4} y={displayedSelected.placement.y - displayedSelected.height / 2 - 4} width={displayedSelected.width + 8} height={displayedSelected.height + 8} fill="none" stroke="#a26e00" strokeWidth={1.8} strokeDasharray="5 3" vectorEffect="non-scaling-stroke" pointerEvents="none" />}
+          </svg>
+          {grid && <span className="customize-grid-note">Cada cuadro: 1 cm</span>}
+          {(selected || zoomBox) && <button className="customize-zoom-btn" onClick={toggleZoom}>{zoomBox ? 'Ver pieza completa' : 'Acercar zona'}</button>}
+        </div> : <div className="customize-no-view"><Icon name="patronaje" size={40} /><p>Elige una base para colocar sus extras.</p></div>}
+        <div className="customize-selection" aria-live="polite">
+          {selected ? <><span><strong>{selectedName}</strong><small>Arrastra para mover · {formatLength(selected.width, unit)} × {formatLength(selected.height, unit)}</small></span><IconButton icon="trash" label="Eliminar extra seleccionado" onClick={deleteSelected} /></> : <p>Toca un extra para añadirlo o arrástralo desde su asa.</p>}
+        </div>
+        {components.length > 0 && <div className="customize-added-list" role="group" aria-label="Extras añadidos">{components.map(component => <button key={component.id} aria-pressed={selectedId === component.id} onClick={() => { setSelectedId(component.id); if (component.placement?.viewId) setViewId(component.placement.viewId); }}>{nameOf(component)}{component.quantity > 1 ? ` ×${component.quantity}` : ''}</button>)}</div>}
+        {message && <p className="customize-feedback" role="status">{message}</p>}
+        {!physicalViews.length && <p className="customize-reference-note">Vista ilustrativa: prueba la posición sobre la prenda real antes de coser.</p>}
+      </section>
+
+      <section className="customize-gallery" aria-label="Catálogo de extras">
+        <h2>¿Qué quieres agregar?</h2>
+        <TextInput aria-label="Buscar extras" placeholder="Bolsillo, celular, lápices…" value={query} onChange={setQuery} />
+        <div className="customize-filters" role="group" aria-label="Tipos de extra">{([['recomendados', 'Para esta prenda'], ['bolsillos', 'Bolsillos'], ['herramientas', 'Herramientas'], ['todos', 'Todos']] as const).map(([value, label]) => <button key={value} className="filter-chip" aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}</div>
+        <p className="customize-result-count">{options.length} opciones · Todas incluyen sus piezas de patrón</p>
+        <div className="customize-options">{options.slice(0, limit).map(option => <div key={option.id} className="customize-option">
+          <button className="customize-option-add" aria-label={`Agregar ${option.name.toLowerCase()}`} onClick={() => add(option.id)} draggable onDragStart={event => { event.dataTransfer.setData(DRAG_TYPE, option.id); event.dataTransfer.effectAllowed = 'copy'; setNativeDragging(true); }} onDragEnd={() => setNativeDragging(false)}><ComponentIcon kind={option.kind} /><span><strong>{option.name}</strong><small>{formatLength(option.defaultWidth, unit)} × {formatLength(option.defaultHeight, unit)}</small></span><Icon name="plus" size={17} /></button>
+          <button className="customize-drag-handle" aria-label={`Arrastrar ${option.name.toLowerCase()}`} title="Arrastrar sobre la pieza" onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); add(option.id); } }} onPointerDown={event => startAdd(event, option.id)} onPointerMove={movePointer} onPointerUp={event => finishPointer(event)} onPointerCancel={event => finishPointer(event, true)}><Icon name="move" size={17} /><span>Arrastrar</span></button>
+        </div>)}</div>
+        {!options.length && <p className="small muted">Prueba otro nombre o elige Todos.</p>}
+        {options.length > limit && <Button block onClick={() => setLimit(limit + 24)}>Mostrar más extras</Button>}
+        {selected && <details className="customize-editor" key={selected.id}><summary>Medidas y posición</summary><div className="customize-editor-body">
+          <ComponentDimensions component={selected} onChange={edit} />
+          <Field label="Dónde lo vas a coser" htmlFor="component-location"><TextInput id="component-location" value={selected.placement?.label ?? ''} onChange={label => edit({ placement: { x: selected.placement?.x ?? 0, y: selected.placement?.y ?? 0, ...selected.placement, label } })} /></Field>
+          <div className="customize-dimensions"><Field label="Centro horizontal" htmlFor="component-x"><LengthInput id="component-x" mm={selected.placement?.x ?? 0} onChange={x => x !== undefined && view && edit({ placement: { ...selected.placement, x, y: selected.placement?.y ?? 0, viewId: view.id, pieceId: view.source.type === 'pieza' ? view.source.pieceId : undefined } })} /></Field><Field label="Centro vertical" htmlFor="component-y"><LengthInput id="component-y" mm={selected.placement?.y ?? 0} onChange={y => y !== undefined && view && edit({ placement: { ...selected.placement, x: selected.placement?.x ?? 0, y, viewId: view.id, pieceId: view.source.type === 'pieza' ? view.source.pieceId : undefined } })} /></Field></div>
+          <p className="tiny muted">Medidas terminadas. Los márgenes se agregan una sola vez en el patrón.</p>
+        </div></details>}
+      </section>
     </div>
-  );
+    <div className="customize-footer"><span>{components.length ? `${components.length} ${components.length === 1 ? 'extra' : 'extras'}` : 'Puedes conservar la base lisa'}</span><Button variant="primary" icon="palette" onClick={() => navigate(`/acabados/${projectId}`)}>Elegir telas y bordados</Button></div>
+    {drag?.kind === 'add' && <div className="customize-drag-ghost" style={{ left: drag.client.x, top: drag.client.y }}><ComponentIcon kind={COMPONENT_OPTIONS.find(option => option.id === drag.presetId)?.kind ?? 'bolsillo-parche'} />Suelta sobre la pieza</div>}
+    {pending && <Sheet title="Ajustar este extra" onClose={() => setPending(undefined)}><div className="stack"><Notice>El extra no cabe todavía en esta pieza. Ajusta sus medidas o vuelve para elegir otra pieza; conservaremos el tamaño que elijas.</Notice><strong>{nameOf(pending)}</strong><ComponentDimensions prefix="pending-component" component={pending} onChange={patch => setPending({ ...pending, ...patch })} />{message && <p className="small" role="status">{message}</p>}<Button variant="primary" onClick={() => { if (!view) return; const placed = firstFittingPosition(pending, view, base?.pieces ?? [], pending.placement); if (placed) accept(placed); else setMessage(componentPlacementProblem(pending, view, base?.pieces ?? []) ?? 'Aún no cabe. Prueba un tamaño menor o elige otra pieza.'); }}>Añadir a esta pieza</Button><Button variant="ghost" onClick={() => setPending(undefined)}>Elegir otra pieza</Button>{pendingDepth > 0 && <p className="tiny muted">El ancho y alto deben admitir el fuelle de {formatLength(pendingDepth, unit)}.</p>}</div></Sheet>}
+  </div>;
+}
+
+function ComponentDimensions({ component, onChange, prefix = 'component' }: { component: PatternComponent; onChange: (patch: Partial<PatternComponent>) => void; prefix?: string }) {
+  const depth = component.kind === 'bolsillo-cargo' ? component.depth ?? 30 : 0;
+  const loop = component.kind === 'trabilla' || component.kind === 'porta-martillo';
+  const camera = component.kind === 'porta-telefono-camara' ? cameraWindowFor(component) : undefined;
+  return <><div className="customize-dimensions">
+    <Field label="Ancho terminado" htmlFor={`${prefix}-width`}><LengthInput id={`${prefix}-width`} mm={component.width} min={loop ? 10 : Math.max(40, depth * 2)} max={600} onChange={width => width !== undefined && onChange({ width })} /></Field>
+    <Field label="Alto terminado" htmlFor={`${prefix}-height`}><LengthInput id={`${prefix}-height`} mm={component.height} min={Math.max(50, depth * 2)} max={800} onChange={height => height !== undefined && onChange({ height })} /></Field>
+    <Field label="Cantidad" htmlFor={`${prefix}-quantity`}><Select id={`${prefix}-quantity`} value={String(component.quantity)} options={Array.from({ length: 8 }, (_, index) => ({ value: String(index + 1), label: `${index + 1} ${index ? 'unidades' : 'unidad'}` }))} onChange={quantity => onChange({ quantity: Number(quantity) })} /></Field>
+    {component.kind === 'bolsillo-cargo' && <Field label="Fondo del fuelle" htmlFor={`${prefix}-depth`}><LengthInput id={`${prefix}-depth`} mm={depth} min={15} max={Math.min(100, component.width / 2, component.height / 2)} onChange={value => value !== undefined && onChange({ depth: value })} /></Field>}
+    {component.kind === 'porta-herramientas' && <Field label="Canales" htmlFor={`${prefix}-channels`}><Select id={`${prefix}-channels`} value={String(component.channels ?? 3)} options={Array.from({ length: 8 }, (_, index) => ({ value: String(index + 1), label: `${index + 1} ${index ? 'canales' : 'canal'}` }))} onChange={value => onChange({ channels: Number(value) })} /></Field>}
+  </div>{camera && <fieldset className="customize-camera"><legend>Ventana de cámara</legend><p className="tiny muted">Mide la cámara con el teléfono dentro de su funda. Las medidas parten de la esquina superior izquierda del portacelular.</p><div className="customize-dimensions">{([['left','Desde la izquierda'],['top','Desde arriba'],['width','Ancho de ventana'],['height','Alto de ventana']] as const).map(([key,label])=><Field key={key} label={label} htmlFor={`${prefix}-camera-${key}`}><LengthInput id={`${prefix}-camera-${key}`} mm={camera[key]} min={key==='left'||key==='top'?12:10} max={key==='left'?component.width-camera.width-12:key==='top'?component.height-camera.height-15:key==='width'?component.width-camera.left-12:component.height-camera.top-15} onChange={value=>value!==undefined&&onChange({camera:{...camera,[key]:value}})} /></Field>)}</div></fieldset>}</>;
+}
+
+function PlacementGrid({ view }: { view: DesignView }) {
+  const startX = Math.ceil(view.minX / 50) * 50, startY = Math.ceil(view.minY / 50) * 50;
+  const xs = Array.from({ length: Math.min(70, Math.ceil(view.width / 50) + 1) }, (_, index) => startX + index * 50);
+  const ys = Array.from({ length: Math.min(70, Math.ceil(view.height / 50) + 1) }, (_, index) => startY + index * 50);
+  return <g pointerEvents="none"><defs><pattern id="customize-grid-small" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M10 0H0V10" fill="none" stroke="#24584a" strokeOpacity=".16" strokeWidth=".5" /></pattern><pattern id="customize-grid-large" width="50" height="50" patternUnits="userSpaceOnUse"><rect width="50" height="50" fill="url(#customize-grid-small)" /><path d="M50 0H0V50" fill="none" stroke="#24584a" strokeOpacity=".25" strokeWidth=".8" /></pattern></defs><rect x={view.minX} y={view.minY} width={view.width} height={view.height} fill="url(#customize-grid-large)" />{xs.map(x => <text key={`x${x}`} x={x + 2} y={view.minY + 10} fill="#24584a" fontSize="7">{x / 10}</text>)}{ys.map(y => <text key={`y${y}`} x={view.minX + 2} y={y - 2} fill="#24584a" fontSize="7">{y / 10}</text>)}</g>;
 }
 
 function ComponentIcon({ kind }: { kind: string }) {
   const strap = kind === 'trabilla' || kind === 'porta-martillo';
   const flap = kind.includes('solapa') || kind === 'bolsillo-cargo';
-  const rounded = kind === 'bolsillo-redondeado';
-  const tip = kind === 'bolsillo-punta';
-  return <svg className="component-icon" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-    {strap ? <><path d="M22 10h20v44H22z" fill="var(--mat-soft)" /><path d="M22 10h20v44H22zM22 18h20M22 46h20" stroke="currentColor" strokeWidth="1.6" /><path d="M27 23v18M37 23v18" stroke="currentColor" strokeDasharray="2 2" /></> : <>
-      <path d={tip ? 'M12 12h40v34L32 56 12 46Z' : rounded ? 'M12 12h40v26c0 12-9 18-20 18S12 50 12 38Z' : 'M12 12h40v42H12Z'} fill="var(--mat-soft)" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-      {flap ? <><path d="M9 10h46v15l-23 6-23-6Z" fill="var(--tape-soft)" stroke="currentColor" strokeWidth="1.6" />{kind.includes('boton') || kind === 'bolsillo-cargo' ? <circle cx="32" cy="23" r="2.3" fill="currentColor" /> : <path d="M24 22h16" stroke="currentColor" strokeWidth="3" />}</> : <path d="M15 19h34" stroke="currentColor" strokeWidth={kind === 'bolsillo-cierre' ? 3 : 1} strokeDasharray={kind === 'bolsillo-cierre' ? '1 1.5' : '3 2'} />}
-      {kind === 'bolsillo-cargo' && <path d="M22 34v15M42 34v15" stroke="currentColor" strokeDasharray="2 2" />}
-      {kind === 'porta-herramientas' && <><path d="M23 25v26M38 25v26" stroke="currentColor" /><path d="M18 18V7M30 18V5M44 18V9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></>}
-    </>}
-  </svg>;
+  const camera = kind === 'porta-telefono-camara';
+  return <svg className="component-icon" viewBox="0 0 64 64" fill="none" aria-hidden="true">{strap ? <><path d="M23 8h18v48H23z" fill="var(--mat-soft)" stroke="currentColor" strokeWidth="1.6" /><path d="M23 18h18M23 46h18" stroke="currentColor" strokeDasharray="2 2" /></> : <><path d={kind === 'bolsillo-punta' ? 'M12 12h40v34L32 56 12 46Z' : kind === 'bolsillo-redondeado' ? 'M12 12h40v25q0 18-20 18T12 37Z' : 'M12 12h40v42H12Z'} fill="var(--mat-soft)" stroke="currentColor" strokeWidth="1.6" />{flap && <path d="M9 10h46v15l-23 6-23-6Z" fill="var(--tape-soft)" stroke="currentColor" strokeWidth="1.6" />}{(kind.includes('boton') || kind === 'bolsillo-cargo') && <circle cx="32" cy="23" r="2.3" fill="currentColor" />}{kind === 'bolsillo-cierre' && <path d="M16 21h32" stroke="currentColor" strokeWidth="3" strokeDasharray="1 1.5" />}{kind === 'porta-herramientas' && <path d="M25 19v32M39 19v32M18 20V8M32 20V6M46 20V10" stroke="currentColor" strokeWidth="2" />}{camera && <rect x="20" y="18" width="17" height="14" rx="2" fill="var(--surface)" stroke="currentColor" strokeWidth="1.6" />}</>}</svg>;
 }

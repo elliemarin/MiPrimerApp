@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 /** Enrutador por hash: funciona en GitHub Pages sin configuración del servidor. */
 export function currentPath(): string {
   const h = window.location.hash.replace(/^#/, '');
-  return h || '/proyectos';
+  return h && h !== '/' ? h : '/biblioteca';
 }
 
 export function navigate(path: string, replace = false) {

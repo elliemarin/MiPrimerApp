@@ -61,6 +61,8 @@ function buildLeg(opts: {
   L: number;
   hemW: number;
   kneeW: number | null;
+  /** Both legs share the same finished knee level, despite back crotch drop. */
+  kneeY?: number;
   seam: number;
   hemAllowance: number;
   hemFinish: 'dobladillo' | 'costura';
@@ -81,7 +83,7 @@ function buildLeg(opts: {
     ...extra
   });
   if (kneeW !== null) {
-    const yK = yCrotch + (L - yCrotch) * 0.45;
+    const yK = opts.kneeY ?? yCrotch + (L - yCrotch) * 0.45;
     const kIn: Pt = { x: crease + kneeW / 2, y: yK };
     const kOut: Pt = { x: crease - kneeW / 2, y: yK };
     const run = yK - yCrotch;
@@ -236,7 +238,10 @@ export function generatePants(ctx: GeneratorContext, P: Params): GeneratorResult
   const T: Pt = { x: Bw - tilt, y: -backRise };
   const S: Pt = { x: Bw, y: R - hB };
   const cbDir = norm(sub(S, T));
-  const xcB = (Bw + Be) / 2 - He * 0.01;
+  // The outside seam is one construction line shared by front and back. Put
+  // the extra back width toward the inseam, preserving both requested hems.
+  const frontHemOuter = frontLeg.nodes.find(node=>node.id==='bajo-ext')!;
+  const xcB = frontHemOuter.x + hemWB / 2;
   const legWB = Bw + Be;
 
   const frontInseam = frontLeg.edges.filter((e) => inseamIds(frontLeg.knee).includes(e.id)).reduce((s, e) => s + lenOf(front, e), 0);
@@ -251,10 +256,22 @@ export function generatePants(ctx: GeneratorContext, P: Params): GeneratorResult
       L,
       hemW: hemWB,
       kneeW: kneeFor(legWB, hemWB),
+      kneeY: frontLeg.nodes.find(node=>node.id==='rodilla-ext')?.y,
       seam: SA,
       hemAllowance,
       hemFinish
     });
+    // Reusing only the outer nodes/curves keeps side seams equal independently
+    // of the separate back-crotch solver. Hip, waist, hem width and length do
+    // not move; the back's inner leg retains its own width and crotch curve.
+    for(const id of ['bajo-ext','rodilla-ext']) {
+      const template=frontLeg.nodes.find(node=>node.id===id), node=leg.nodes.find(node=>node.id===id);
+      if(template&&node) {node.x=template.x;node.y=template.y;}
+    }
+    for(const edge of leg.edges.filter(edge=>edge.id.startsWith('lateral-'))) {
+      const template=frontLeg.edges.find(candidate=>candidate.id===edge.id);
+      if(template) {edge.kind=template.kind;edge.c1=template.c1?{...template.c1}:undefined;edge.c2=template.c2?{...template.c2}:undefined;}
+    }
     const curveRun = tip.y - S.y;
     return {
       id: 'trasero',
@@ -491,6 +508,7 @@ export function generatePants(ctx: GeneratorContext, P: Params): GeneratorResult
     `Cadera de la prenda: cadera ${formatLength(H, 'cm')} + holgura ${formatLength(hipEase, 'cm')}${D ? ' (incluye pañal)' : ''}.`,
     `Extensión de tiro: delantero = cadera terminada / 16 y trasero = cadera terminada / 10${D ? ' + pañal' : ''}.`,
     `Tiro trasero elevado ${formatLength(backRise, 'cm')} e inclinado ${formatLength(tilt, 'cm')}; caída del tiro trasero ${formatLength(drop, 'cm')} calculada para igualar entrepiernas.`,
+    'El delantero y el trasero comparten el trazado exterior del costado y la altura de rodilla. La anchura adicional del trasero se distribuye hacia la entrepierna sin alterar cadera, largo ni contorno de bajo.',
     'Es una propuesta de patrón: confirma el ajuste con una muestra de confección antes de cortar la tela definitiva.'
   ];
 
@@ -513,7 +531,7 @@ export const pantsGenerator: PatternGenerator = {
   id: 'pantalon-cintura-elastica',
   name: 'Pantalón de cintura elástica',
   summary: 'Pantalón sin cierre con jareta y elástico. Delantero y trasero por pierna; puño opcional en versión jogger.',
-  status: 'implementado',
+  status: 'experimental',
   requiredMeasures: ['cintura', 'cadera', 'tiro', 'entrepierna'],
   optionalMeasures: ['muslo', 'tobillo', 'talon', 'largoExterior'],
   params: [
