@@ -12,7 +12,7 @@ Actualízalo al terminar cada tarea.
 
 ```bash
 npm install
-npm test            # 2259 pruebas: catálogo completo, patrones, extras, letras, PDF y estudio
+npm test            # 2260 pruebas: catálogo completo, patrones, extras, letras, PDF y estudio
 npm run dev         # http://localhost:5173/
 npm run build
 ```
@@ -65,8 +65,11 @@ Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
   hechas con 0.1.0 se identifican desactualizadas aunque no cambien parámetros.
 - `newPatternState` conserva copias de medidas/contexto: editar el patrón no
   puede mutar lateralmente la versión de medidas del perfil.
+- Cambiar talla/medidas regenera las vistas físicas al volver a Extras/Acabados.
+  El PDF bloquea vistas antiguas o bordados fuera de la pieza actual, conservando
+  los extras y sus coordenadas para que se revisen sin escalado silencioso.
 
-**Verificado:** 2,259 pruebas en 37 archivos, TypeScript y build. Catálogo completo,
+**Verificado:** 2,260 pruebas en 38 archivos, TypeScript y build. Catálogo completo,
 construcciones, parámetros, márgenes, costuras, fuentes, materiales y posiciones.
 Chromium 320/390/1440 px: filtros/bebé 0–6, C/M/G y medidas personalizadas,
 arrastre táctil/escritorio con zoom, once superficies, abeja+letras, guardado y

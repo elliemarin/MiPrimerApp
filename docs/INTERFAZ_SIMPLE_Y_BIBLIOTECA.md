@@ -96,6 +96,10 @@ una versión del perfil. Un PDF guarda las versiones exactas que lo produjeron.
   presentación). Pantalones/mangas pueden ser pares: elegir lado y transferir
   marcas según cantidad; el campo «Dónde lo vas a coser» guarda la intención.
   Una vista al doblez representa esa pieza de corte, no una simulación vestida.
+- Al cambiar medidas de la base se regeneran sus vistas físicas al entrar a
+  Extras o Acabados. No se escalan ni borran los extras para hacerlos caber.
+  El PDF bloquea vistas antiguas y bordados que queden fuera de la nueva pieza;
+  la persona revisa sus posiciones con la geometría actual.
 - `lib/pdf/placement.ts/preparePlacementGuide` devuelve `placements` y dibujos
   por vista ocupada. Códigos E1/B1, pieza, centro, ancho, alto, giro y cantidad
   forman parte de `confeccion.json`. La cuadrícula de 10 mm con referencias cada
@@ -145,8 +149,8 @@ llevan controles de 50 mm y 100 mm. El pie no invade la barra de calibración.
 
 ## Verificación
 
-Base previa: 450 pruebas y build correctos. Entrega: **2,259 pruebas en
-37 archivos**, TypeScript y build de producción correctos.
+Base previa: 450 pruebas y build correctos. Entrega: **2,260 pruebas en
+38 archivos**, TypeScript y build de producción correctos.
 
 ```bash
 npm install

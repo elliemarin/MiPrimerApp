@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../store/app';
+import { physicalViewsNeedRefresh, prepareSimpleProject } from '../simple/workflow';
 import type { Project } from '../../store/types';
 import { COMPONENT_OPTIONS, makeComponent, optionsForProject, searchComponents } from '../../data/components';
 import { newPatternState } from '../../lib/pattern/engine';
@@ -44,6 +45,7 @@ export function CustomizePage({ projectId }: { projectId: string }) {
   const history = useRef<Pick<Project, 'pattern' | 'design' | 'status'>[]>([]);
   const [canUndo, setCanUndo] = useState(false);
   const base = useMemo(() => project ? basePanelPattern(project) : undefined, [project?.pattern]);
+  useEffect(()=>{if(project&&physicalViewsNeedRefresh(project)){try{updateProject(projectId,current=>prepareSimpleProject(current));}catch{/* Missing or invalid base measurements are reported by the pattern/PDF validation. */}}},[project?.pattern,projectId,updateProject]);
   const recommended = useMemo(() => project ? optionsForProject(project) : [], [project?.modelId, project?.pattern?.generatorId]);
   useEffect(() => { setLimit(24); }, [filter, query]);
   useEffect(() => { setZoomBox(undefined); }, [viewId, projectId]);

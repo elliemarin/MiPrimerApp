@@ -17,7 +17,7 @@ import { buildSummaryPdf, type SummaryCtx } from './summary';
 import { FlowDoc } from './doc';
 import { arrangeForTiles, exportTiledPdf } from './export';
 import { DEFAULT_TILE, validateTileSettings, type TileSettings } from './tile';
-import { missingMaterials } from '../../features/simple/workflow';
+import { artworkPlacementIssues, missingMaterials, physicalViewsNeedRefresh } from '../../features/simple/workflow';
 import { preparePlacementGuide, type Placement } from './placement';
 
 export type SewingPackMode = 'complete' | 'intervention';
@@ -66,6 +66,8 @@ export function prepareSewingPack(source: Project, ctx: SewingPackCtx): SewingPa
   const blockers: string[] = [];
   const warnings: string[] = [];
   blockers.push(...componentDesignIssues(project));
+  if (physicalViewsNeedRefresh(project)) blockers.push('Cambió la base o la talla. Vuelve a Extras para actualizar las piezas y revisa sus posiciones antes de generar el PDF.');
+  blockers.push(...artworkPlacementIssues(project));
   const unchosen = missingMaterials(project);
   if (unchosen.length) blockers.push(`Elige color o tela en Acabados para ${unchosen.length} partes: ${unchosen.map(target=>target.label).join(', ')}.`);
   const doc = project.design;

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../store/app';
 import { designHash } from '../../store/projects';
 import { Button, Empty, Field, IconButton, LengthInput, PageHead, Sheet } from '../../ui/components';
@@ -11,7 +11,7 @@ import { elementCorners } from '../studio/model';
 import { editElement, removeElements, toLocal } from '../studio/ops';
 import { reconcileComponentDesign } from '../customize/componentDesign';
 import { pointInPreview } from '../customize/placementDrag';
-import { applyMaterial, materialTargets, missingMaterials, simpleViews } from './workflow';
+import { applyMaterial, materialTargets, missingMaterials, physicalViewsNeedRefresh, prepareSimpleProject, simpleViews } from './workflow';
 import { FabricTray } from '../studio/FabricTray';
 import { EmbroideryPicker, type EmbroideryChoice } from './EmbroideryPicker';
 import { createEmbroideryMotif } from '../../lib/draw/embroideryMotifs';
@@ -39,6 +39,7 @@ export function FinishesPage({projectId}:{projectId:string}) {
   const [past,setPast]=useState<DesignDoc[]>([]),[future,setFuture]=useState<DesignDoc[]>([]);
   const svg=useRef<SVGSVGElement>(null);
   const drag=useRef<{id:string;point:Pt;start:DesignElement;doc:DesignDoc;latest:DesignDoc}>();
+  useEffect(()=>{if(project&&physicalViewsNeedRefresh(project)){try{update(projectId,current=>prepareSimpleProject(current));}catch{/* Pattern validation explains missing/invalid measurements. */}}},[project?.pattern,projectId,update]);
   if(!project?.design) return <div className="page"><Empty icon="estudio" title="Elige una base para empezar" action={<Button onClick={()=>navigate('/biblioteca')}>Elegir base</Button>}/></div>;
   const doc=live??project.design;
   const views=simpleViews(doc);

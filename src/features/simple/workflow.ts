@@ -1,6 +1,10 @@
 import type { Fabric, Project } from '../../store/types';
-import { newDesign, type DesignDoc, type DesignView, type Fill } from '../studio/model';
-import { preparePanelViews } from '../studio/panelWorkflow';
+import { elementCorners, newDesign, type DesignDoc, type DesignView, type Fill } from '../studio/model';
+import { pointInPolygon, distToSegment } from '../../lib/geom/vec';
+import { cmdsToPolylines } from '../../lib/draw/flatten';
+import { parseSvgPath } from '../../lib/draw/svgpath';
+import { basePanelPattern, preparePanelViews } from '../studio/panelWorkflow';
+import { pieceSeamPath } from '../../lib/pattern/outline';
 import { componentElementId, componentPaintRoles, reconcileComponentDesign } from '../customize/componentDesign';
 import { getGenerator } from '../../lib/pattern/generators';
 
@@ -13,10 +17,31 @@ export function simpleViews(doc: DesignDoc): DesignView[] {
 export function prepareSimpleProject(project: Project): Project {
   let design = project.design ?? newDesign();
   if (project.pattern && getGenerator(project.pattern.generatorId)) {
-    design = preparePanelViews(project, design).doc;
+    const base = { ...project, pattern: { ...project.pattern, components: undefined } };
+    design = preparePanelViews(base, design).doc;
     design = { ...design, views: design.views.map(view => view.source.type === 'pieza' ? { ...view, label: view.label.replace(/^Patrón real · /, '') } : view) };
   }
   return { ...project, design: { ...design, simpleWorkflow: true, materialChoices: design.materialChoices ?? {} } };
+}
+
+/** A changed size must not leave an old contour behind a physical placement grid. */
+export function physicalViewsNeedRefresh(project: Project): boolean {
+  if (!project.design?.simpleWorkflow || !project.pattern || !getGenerator(project.pattern.generatorId)) return false;
+  const base = basePanelPattern({ ...project, pattern: { ...project.pattern, components: undefined } });
+  if (!base?.pieces.length) return true;
+  return base.pieces.some(piece => !project.design!.views.some(view => view.source.type === 'pieza' && view.source.pieceId === piece.id && view.outline === pieceSeamPath(piece)));
+}
+
+export function artworkPlacementIssues(project: Project): string[] {
+  const doc=project.design;
+  if(!doc?.simpleWorkflow)return [];
+  return doc.elements.filter(element=>element.kind==='grupo'&&element.embroidery&&!element.hidden).flatMap(element=>{
+    const view=doc.views.find(view=>view.id===element.viewId);
+    if(view?.source.type!=='pieza'||!view.outline)return [];
+    const polygons=cmdsToPolylines(parseSvgPath(view.outline),.2).map(contour=>contour.pts);
+    const fits=elementCorners(element).every(point=>polygons.some(poly=>pointInPolygon(point,poly)||poly.some((a,index)=>distToSegment(point,a,poly[(index+1)%poly.length])<.1)));
+    return fits?[]:[`El bordado «${element.name}» se sale de la pieza actual. Revisa su tamaño o posición en Acabados.`];
+  });
 }
 
 export interface MaterialTarget {
