@@ -6,7 +6,6 @@ import { NewProjectSheet } from './NewProjectSheet';
 import { STATUS_LABEL, Project, ProjectStatus } from '../../store/types';
 import { findModel } from '../../data/catalog';
 import { FlatArt } from '../../ui/FlatArt';
-import { importProjectZip } from '../../lib/zip';
 import { navigate } from '../../ui/router';
 import { projectAlerts } from './deps';
 
@@ -87,6 +86,7 @@ function ImportZip({ onDone }: { onDone: (id: string) => void }) {
       accept=".zip,application/zip"
       onFiles={async ([f]) => {
         try {
+          const { importProjectZip } = await import('../../lib/zip');
           const id = await importProjectZip(f);
           onDone(id);
         } catch (e) {

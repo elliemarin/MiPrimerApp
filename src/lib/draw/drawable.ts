@@ -49,7 +49,11 @@ export function drawableBBox(paths: DrawPath[], labels: DrawLabel[]): BBox {
     const b = cmdsBBox(p.cmds);
     if (Number.isFinite(b.minX)) pts.push({ x: b.minX, y: b.minY }, { x: b.maxX, y: b.maxY });
   }
-  for (const l of labels) pts.push(l.at);
+  for (const l of labels) {
+    // Ancho aproximado del texto (Helvetica ≈ 0.55 × alto por carácter) para no encimar etiquetas.
+    const half = l.angle && Math.abs(l.angle) > 1 ? 0 : (l.text.length * l.size * 1.38 * 0.52) / 2;
+    pts.push({ x: l.at.x - half, y: l.at.y - l.size }, { x: l.at.x + half, y: l.at.y + l.size * 0.4 });
+  }
   return bboxOf(pts);
 }
 

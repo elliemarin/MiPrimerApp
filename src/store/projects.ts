@@ -122,7 +122,10 @@ export function projectFromModel(model: CatalogModel, profile?: Profile): Projec
 
 export function makeVersion<T>(prev: VersionRecord<T>[], data: T, label: string): VersionRecord<T> {
   const n = (prev[prev.length - 1]?.n ?? 0) + 1;
-  return { id: uid('ver'), n, createdAt: nowIso(), label, approved: false, hash: stableHash(data), data: JSON.parse(JSON.stringify(data)) };
+  // La huella de un diseño excluye su fecha de modificación (igual que designHash).
+  const isDesign = !!data && typeof data === 'object' && 'views' in (data as object) && 'elements' in (data as object);
+  const hash = isDesign ? designHash(data as unknown as DesignDoc) : stableHash(data);
+  return { id: uid('ver'), n, createdAt: nowIso(), label, approved: false, hash, data: JSON.parse(JSON.stringify(data)) };
 }
 
 export function designHash(d: DesignDoc | undefined) {

@@ -233,7 +233,8 @@ export function StudioEditor({ projectId }: { projectId: string }) {
       }
       if (tool === 'organica') {
         const s = findShape(organicId)!;
-        const W = 80;
+        // En parches pequeños la figura empieza proporcional a la base.
+        const W = Math.min(80, view.width * 0.35);
         createAt(newElement(view.id, { kind: 'organica', organicId, name: s.label, x: w.x, y: w.y, w: W, h: W / s.aspect, fill: { type: 'color', color: '#b9c9bf' }, ...techniqueDefaults('aplicacion') }));
         return true;
       }

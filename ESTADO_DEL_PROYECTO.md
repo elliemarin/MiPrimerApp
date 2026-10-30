@@ -1,62 +1,113 @@
-# Estado del proyecto — Estudio de Diseño (nombre provisional)
+# Estado del proyecto — Hilvana
 
-Este documento es la **bitácora de traspaso**: describe qué está hecho, cómo está
-organizado el código y qué falta. Está pensado para que cualquier persona o
-asistente (Claude, ChatGPT u otro) pueda continuar el trabajo sin contexto previo.
-Actualízalo cada vez que termines una tarea.
+Bitácora de traspaso: qué está hecho, qué falta y en qué orden seguir. Si eres
+una IA (ChatGPT, Claude u otra), **lee primero `AGENTS.md`** y luego este archivo.
+Actualízalo al terminar cada tarea.
 
-> Última actualización: 2026-10-29 — sesión inicial con Claude Code.
+- App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
+  repositorio si se renombra; el flujo de despliegue se adapta solo).
+- Última actualización: 2026-10-30 (Claude Code).
 
-## Cómo trabajar en el repositorio
+## Cómo continuar en 5 minutos
 
 ```bash
-npm install        # instala dependencias
-npm run dev        # servidor local en http://localhost:5173/MiPrimerApp/
-npm test           # pruebas unitarias (vitest)
-npm run build      # compila a dist/ (TypeScript estricto + Vite)
+npm install
+npm test            # 33 pruebas: geometría, PDF, DST, guardado, ZIP y sincronización
+npm run dev         # http://localhost:5173/
+npm run build
 ```
+Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
+(`.github/workflows/deploy.yml`).
 
-- Lenguaje: TypeScript + React 18, empaquetado con Vite.
-- Unidad interna: **milímetros** (número decimal). La interfaz muestra cm o pulgadas.
-- Todo el texto de la interfaz está en español.
-- Skills de diseño descargadas en `.claude/skills/` (frontend-design y webapp-testing,
-  del repositorio público `anthropics/skills`, licencia Apache 2.0).
+## Hecho y verificado
 
-## Hecho
+### Núcleo (src/lib)
+- Unidades en milímetros; vista en cm o pulgadas sin pérdida (`units.ts`).
+- Geometría: vectores, Bézier (longitud por Gauss-Legendre), homografía,
+  acomodo por estantes, desplazamiento robusto de polígonos con Clipper.
+- Motor de patronaje: piezas con ids estables, márgenes por borde con esquinas
+  en espejo en dobladillos y jaretas, validación (contornos, cruces, márgenes,
+  costuras, piquetes, medidas terminadas), ajustes manuales por id con revisión
+  al regenerar, anidado de tallas y comparación con versiones.
+- Generadores implementados: pantalón de cintura elástica (recto, ancho,
+  jogger con puño; bebé con pañal), falda fruncida, bolsa tote con base en caja.
+- PDF carta 1:1 vectorial: mosaico con márgenes y solapamiento configurables,
+  códigos de hoja, rombos de alineación, líneas de recorte, mapa de montaje,
+  cuadrado de 5 × 5 cm y barra de 10 cm verificados al milímetro,
+  `PrintScaling=None`, JSON de trazabilidad adjunto, plantillas acomodadas sin
+  escalar y SVG 1:1.
+- Ficha del proyecto en PDF (vistas vectoriales, medidas, materiales con
+  supuestos, plano de corte estimado, pasos con casillas, técnicas, avances).
+- ZIP completo del proyecto e importación (probado de ida y vuelta).
+- Sincronización con repositorio privado de GitHub (probada contra una API
+  simulada; **falta probar con una cuenta real** — marcada Experimental).
+- DST experimental: puntada recta con verificación de bastidor (prueba de ida
+  y vuelta del formato).
 
-### Motor geométrico y de patronaje (`src/lib/`)
-- `units.ts`: conversión mm ↔ cm/in sin perder precisión, lectura de fracciones ("20 5/8").
-- `geom/vec.ts`, `geom/bezier.ts`: vectores, cúbicas de Bézier (longitud por Gauss-Legendre,
-  aplanado con tolerancia, parámetro por longitud de arco).
-- `geom/pack.ts`: acomodo por estantes sin escalar (para aplicaciones en hojas carta y
-  estimación de tela).
-- `pattern/types.ts`: modelo de pieza: nodos con id estable, bordes (recta o cúbica) con
-  margen y acabado por borde, piquetes, hilo, líneas internas, cantidad de corte, doblez,
-  relaciones de costura.
-- `pattern/offset.ts`: contorno de corte a partir del de costura. Margen por borde, ingletes
-  con límite, esquinas cóncavas recortadas, **esquinas en espejo** en dobladillos y jaretas.
-- `pattern/validate.ts`: contornos cerrados, autointersecciones (costura y corte), margen
-  uniforme por borde (detecta márgenes duplicados), costura dentro del corte, piquetes,
-  correspondencia de costuras (igual / embebido / fruncido / estirado) y medidas terminadas.
-- `pattern/engine.ts`: genera piezas, aplica ajustes manuales por id estable, detecta ajustes
-  que requieren revisión tras regenerar, estima consumo de tela con supuestos explícitos.
-- Generadores paramétricos (`pattern/generators/`):
-  - **Pantalón de cintura elástica** (recto, ancho, jogger con puño). Holgura de cadera, tiro
-    y pañal; caída de tiro trasero resuelta numéricamente para igualar entrepiernas.
-  - **Falda fruncida con elástico** (paneles al doblez).
-  - **Bolsa tote** con base en caja, asas y forro opcional.
-- `sizes/measurements.ts`: 22 medidas corporales con instrucciones de cómo medir.
-- `sizes/tables.ts`: tablas explícitas de referencia propias (infantil por estatura E50–E152,
-  mujer por busto M80–M128, hombre por pecho H88–H130). No equivalen a tallas comerciales.
-- `tests/pattern.test.ts`: 25 pruebas (medidas, márgenes, costuras, regeneración).
+### Interfaz (src/features)
+- Biblioteca: 44 modelos con filtros (destinatario, prenda, dificultad, talla,
+  tejido, elasticidad, ajuste, técnica), dibujos técnicos paramétricos de
+  frente, espalda y costados, tablas de tallas explícitas, fotos de referencia
+  con permiso de uso, estado honesto (implementado / experimental / pendiente).
+- Medidas: perfiles por persona, 22 medidas con guía visual, tablas de
+  referencia, versiones con aprobación y bloqueo (editar una versión usada crea
+  otra), comparación entre versiones.
+- Patronaje: lienzo con reglas físicas, zoom y gestos; herramientas Mover,
+  Puntos (nodos y tiradores), Medir, Comparar costuras, Trazar (con modo
+  asistido que se ajusta a bordes), Calibrar; paneles de medidas/holguras,
+  pieza (márgenes por borde, girar, reflejar, duplicar), revisión, capas de
+  referencia y exportación con vista previa de hojas.
+- Estudio: plantillas con zonas, fotos calibrables, parches, piezas de patrón;
+  formas, 19 figuras orgánicas, lápiz, pincel, línea, pluma, texto, imágenes;
+  telas con escala real, rotación y desplazamiento; técnicas y acabados;
+  recorte libre, máscaras de zona, capas, grupos, alineación; continuidad entre
+  vistas con comprobación de alturas; modos apariencia y técnico; comparación
+  con versiones.
+- Proyecto: estados (idea → terminado), referencias con corrección de
+  perspectiva, análisis de prenda desde fotos (lo visto, lo medido, lo pendiente
+  y propuesta de patrón compatible), medidas, telas y materiales, despiece,
+  guía verificable con imágenes de piezas, versiones (aprobar, restaurar,
+  reemplazar con confirmación), exportaciones con dependencias y avisos de
+  desactualización, avances con fotos, duplicar, archivar, eliminar.
+- Telas: recorte con perspectiva, ajustes de color sin tocar el original,
+  calibración física, hilo y sentido del pelo, datos técnicos; inventario de
+  materiales.
+- Ajustes: unidades, tema, calibración de escala en pantalla, sincronización,
+  privacidad (borrar datos, liberar espacio). Ayuda con estado real de funciones.
 
-## En curso / pendiente (orden sugerido)
+## Pendiente (orden sugerido)
 
-1. Exportación PDF carta 1:1 (`src/lib/pdf/`): mosaico, códigos de hoja, marcas, mapa,
-   cuadrado de 5 × 5 cm, barra de 10 cm, aplicaciones acomodadas sin escalar.
-2. Persistencia: IndexedDB, guardado automático y manual, versiones, ZIP del proyecto.
-3. Interfaz: biblioteca, perfiles de medidas, editor de patronaje, estudio de diseño,
-   telas y materiales, proyectos, ayuda.
-4. Publicación en GitHub Pages.
+1. **Probar la sincronización con una cuenta real de GitHub** (repo privado y
+   token de grano fino). Quitar «Experimental» solo después.
+2. **Más patrones** siguiendo `AGENTS.md §5`: babero y gorro (fáciles), luego
+   bloque de torso y manga para camiseta, sudadera y body de bebé. Cada uno
+   entra como `experimental` hasta revisar una muestra impresa.
+3. **Bolsillos** como módulo reutilizable (parche, laterales, cargo) para
+   pantalones y faldas.
+4. **Plano de corte manual**: acomodar piezas sobre el ancho real de la tela
+   (hoy se estima por rectángulos).
+5. **Exportación de patrón por tallas anidadas** en un solo PDF.
+6. **Bordado**: digitalización real (rellenos, satén) requiere un motor
+   dedicado; hoy solo hay puntada recta experimental.
+7. **3D**: no implementar sin simulación física real.
+8. Pulir dibujos técnicos de prendas superiores (mangas) y bolsos.
+9. Accesibilidad: pruebas con VoiceOver en iPhone.
 
-Las secciones siguientes se completarán a medida que avance el trabajo.
+## Decisiones tomadas
+
+- Nombre: **Hilvana** (de hilvanar: la puntada provisional con que se prueba
+  una prenda). Identidad: papel de tiza, verde de tapete de corte, amarillo de
+  cinta métrica para todo lo que es medida, rojo de hilo para errores.
+  Tipografías Bodoni Moda (títulos) y Figtree (interfaz).
+- Sin servidor propio: datos locales (IndexedDB) + ZIP + repositorio privado de
+  GitHub opcional. Así es privado por defecto y gratuito de mantener.
+- Hojas carta por defecto: margen 8 mm, solapamiento 12 mm, pie de 13 mm.
+- Tablas de tallas propias con códigos que no se confunden con sistemas
+  comerciales (E92, M88, H100).
+
+## Límites conocidos
+
+- La vista de apariencia es plana: no simula caída ni ajuste.
+- Las plantillas del estudio se escalan de forma aproximada a la persona.
+- iOS puede borrar datos de sitios no instalados tras días sin uso: instalar
+  en la pantalla de inicio y usar ZIP o sincronización.

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { useApp } from './store/app';
 import { useRoute, navigate } from './ui/router';
 import { Icon } from './ui/Icon';
@@ -6,17 +6,17 @@ import { SaveIndicator, Toasts } from './ui/components';
 import { LibraryPage } from './features/library/LibraryPage';
 import { ModelDetail } from './features/library/ModelDetail';
 import { ProjectsPage } from './features/projects/ProjectsPage';
-import { ProjectDetail } from './features/projects/ProjectDetail';
+const ProjectDetail = lazy(() => import('./features/projects/ProjectDetail').then((m) => ({ default: m.ProjectDetail })));
 import { ProfilesPage } from './features/profiles/ProfilesPage';
-import { ProfileDetail } from './features/profiles/ProfileDetail';
+const ProfileDetail = lazy(() => import('./features/profiles/ProfileDetail').then((m) => ({ default: m.ProfileDetail })));
 import { PatternHub } from './features/pattern/PatternHub';
-import { PatternEditor } from './features/pattern/PatternEditor';
+const PatternEditor = lazy(() => import('./features/pattern/PatternEditor').then((m) => ({ default: m.PatternEditor })));
 import { StudioHub } from './features/studio/StudioHub';
-import { StudioEditor } from './features/studio/StudioEditor';
+const StudioEditor = lazy(() => import('./features/studio/StudioEditor').then((m) => ({ default: m.StudioEditor })));
 import { FabricsPage } from './features/fabrics/FabricsPage';
-import { FabricDetail } from './features/fabrics/FabricDetail';
-import { HelpPage } from './features/help/HelpPage';
-import { SettingsPage } from './features/settings/SettingsPage';
+const FabricDetail = lazy(() => import('./features/fabrics/FabricDetail').then((m) => ({ default: m.FabricDetail })));
+const HelpPage = lazy(() => import('./features/help/HelpPage').then((m) => ({ default: m.HelpPage })));
+const SettingsPage = lazy(() => import('./features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 import { MorePage } from './features/settings/MorePage';
 import { useSync } from './lib/sync/useSync';
 
@@ -128,7 +128,7 @@ export function App() {
             No se pudo abrir el almacenamiento local: {loadError}. Tus cambios no se guardarán en este navegador.
           </div>
         )}
-        {content}
+        <Suspense fallback={<div className="page" aria-busy="true"><p className="muted">Cargando…</p></div>}>{content}</Suspense>
       </main>
       <nav className="tabbar" aria-label="Secciones principales">
         {TABS.map((k) => {
