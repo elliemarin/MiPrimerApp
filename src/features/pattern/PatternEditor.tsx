@@ -68,6 +68,7 @@ export function PatternEditor({ projectId }: { projectId: string }) {
   const [calib, setCalib] = useState<{ layerId: string; a?: Pt; b?: Pt } | null>(null);
   const [calibAsk, setCalibAsk] = useState<{ layerId: string; a: Pt; b: Pt } | null>(null);
   const [showAllowance, setShowAllowance] = useState(true);
+  const [cursor, setCursor] = useState<Pt | null>(null);
   const fitted = useRef(false);
   const drag = useRef<{ kind: 'piece' | 'node' | 'measure'; start: Pt; s0: PatternState; pieceId?: string; key?: string; base?: Pt; inv?: Mat; from?: Pt } | null>(null);
 
@@ -320,7 +321,8 @@ export function PatternEditor({ projectId }: { projectId: string }) {
     },
     onDoubleTap: () => {
       if (tool === 'trazar' && trace.length >= 3) finishTrace();
-    }
+    },
+    onHover: (bp: BoardPointer) => setCursor(bp.world)
   };
 
   function finishTrace() {
@@ -404,7 +406,7 @@ export function PatternEditor({ projectId }: { projectId: string }) {
         <IconButton icon="redo" label="Rehacer" onClick={hist.redo} disabled={!hist.canRedo} />
         <button className="chip" onClick={() => (setPanel('revision'), setMobilePanel('revision'))} style={{ border: 0, cursor: 'pointer', background: errors ? 'var(--thread-soft)' : warnings ? 'var(--tape-soft)' : 'var(--mat-soft)', color: errors ? 'var(--thread)' : warnings ? 'var(--tape-ink)' : 'var(--mat)' }}>
           <Icon name={errors ? 'warn' : warnings ? 'info' : 'ok'} />
-          {errors ? `${errors} errores` : warnings ? `${warnings} avisos` : 'Verificado'}
+          {errors ? `${errors} ${errors === 1 ? 'error' : 'errores'}` : warnings ? `${warnings} ${warnings === 1 ? 'aviso' : 'avisos'}` : 'Verificado'}
         </button>
       </div>
       <div className="ed-body">
@@ -473,6 +475,7 @@ export function PatternEditor({ projectId }: { projectId: string }) {
           </div>
         )}
         {(hintVisible || (tool === 'calibrar' && calib?.a)) && <div className="status-pill">{tool === 'calibrar' && calib?.a ? 'Ahora toca el segundo punto.' : toolInfo.hint}</div>}
+        {cursor && <div className="desktop-only" style={{ position: 'absolute', right: 10, top: 28, zIndex: 5, padding: '4px 8px', borderRadius: 8, background: 'color-mix(in srgb, var(--surface) 90%, transparent)', border: '1px solid var(--line)', fontSize: 12, fontVariantNumeric: 'tabular-nums', color: 'var(--ink-2)' }}>x {formatLength(cursor.x, unit)} · y {formatLength(cursor.y, unit)}</div>}
         <div className="float-bar zoom-pill">
           <IconButton icon="zoomout" label="Alejar" onClick={() => vp.zoomAt(1 / 1.3, { x: vp.size.current.w / 2, y: vp.size.current.h / 2 })} />
           <button className="icon-btn" style={{ width: 'auto', padding: '0 8px', fontSize: 12.5, fontWeight: 700 }} title="Ver a escala real en pantalla (calibra en Ajustes)" onClick={() => vp.setView((v) => { const c = { x: vp.size.current.w / 2, y: vp.size.current.h / 2 }; const k = realScale / v.scale; return { scale: realScale, tx: c.x - (c.x - v.tx) * k, ty: c.y - (c.y - v.ty) * k }; })}>

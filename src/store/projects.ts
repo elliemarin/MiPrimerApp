@@ -51,7 +51,8 @@ export function templateScaleFor(model: CatalogModel, kind: PersonKind | undefin
     const h = body.estatura;
     if (circ) {
       const sx = circ / ref;
-      const sy = h ? h / 168 : sx;
+      // La estatura se guarda en mm; la plantilla de referencia corresponde a 1680 mm.
+      const sy = h ? h / 1680 : sx;
       return { sx, sy, basis: `Escalada por ${bottoms ? 'cadera' : 'pecho'}${h ? ' y estatura' : ''} del perfil (aproximada)` };
     }
   }

@@ -10,7 +10,8 @@ import { formatLength } from '../../lib/units';
 import { uid } from '../../lib/ids';
 import { loadBitmap } from '../../lib/image';
 import { getFile } from '../../lib/db';
-import { DesignDoc, DesignElement, DesignView, ZoneType, ZONE_TYPE_LABEL, newElement, elementCorners, newDesign } from './model';
+import { DesignDoc, DesignElement, DesignView, ZoneType, ZONE_TYPE_LABEL, newElement, elementCorners, newDesign, smoothCmds } from './model';
+import { cmdsToPolylines } from '../../lib/draw/flatten';
 import { ElementSvg, RenderMode, StudioDefs, ViewBase } from './render';
 import { addElement, expandSelection, refreshGroups, removeElements, toLocal, touch, updateElements, duplicateElements, groupElements, viewElements, techniqueDefaults } from './ops';
 import { Inspector } from './Inspector';
@@ -21,7 +22,7 @@ import { findShape } from '../../data/shapes';
 import { CATALOG } from '../../data/catalog';
 import { viewsFromModel, templateScaleFor, currentValues } from '../../store/projects';
 
-type Tool = 'seleccionar' | 'forma' | 'organica' | 'lapiz' | 'pincel' | 'linea' | 'pluma' | 'texto' | 'recorte' | 'zona' | 'medir' | 'calibrar' | 'referencia';
+type Tool = 'seleccionar' | 'forma' | 'organica' | 'lapiz' | 'pincel' | 'linea' | 'pluma' | 'texto' | 'recorte' | 'zona' | 'medir' | 'calibrar' | 'referencia' | 'guia';
 type Panel = 'elemento' | 'capas' | 'vistas';
 
 const TOOLS: { key: Tool; label: string; icon: string; hint: string }[] = [
@@ -37,7 +38,8 @@ const TOOLS: { key: Tool; label: string; icon: string; hint: string }[] = [
   { key: 'zona', label: 'Zona', icon: 'mask', hint: 'Marca el contorno de una zona de la prenda (delantero, manga…).' },
   { key: 'medir', label: 'Medir', icon: 'ruler', hint: 'Arrastra entre dos puntos para medir.' },
   { key: 'calibrar', label: 'Calibrar', icon: 'target', hint: 'Toca dos puntos de la foto con una distancia conocida.' },
-  { key: 'referencia', label: 'Línea ref.', icon: 'flag', hint: 'Toca para fijar la línea de referencia (cintura, hombro…) que comparten las vistas.' }
+  { key: 'referencia', label: 'Línea ref.', icon: 'flag', hint: 'Toca para fijar la línea de referencia (cintura, hombro…) que comparten las vistas.' },
+  { key: 'guia', label: 'Guías', icon: 'grid', hint: 'Toca para agregar una guía; los elementos se ajustan a ella al moverlos. Toca una guía para quitarla.' }
 ];
 
 type Drag =
@@ -76,6 +78,9 @@ export function StudioEditor({ projectId }: { projectId: string }) {
   const [compare, setCompare] = useState<string | null>(null);
   const [addView, setAddView] = useState(false);
   const [hintVisible, setHintVisible] = useState(true);
+  const [guideAxis, setGuideAxis] = useState<'x' | 'y'>('y');
+  const [smoothCrop, setSmoothCrop] = useState(false);
+  const [cursor, setCursor] = useState<Pt | null>(null);
   const drag = useRef<Drag | null>(null);
   const [live, setLive] = useState<Drag | null>(null);
 
@@ -261,6 +266,13 @@ export function StudioEditor({ projectId }: { projectId: string }) {
         } else setCalibPts(next);
         return true;
       }
+      if (tool === 'guia') {
+        const tol = 8 / vp.view.scale;
+        const hitG = doc.guides.find((g) => g.viewId === view.id && Math.abs((g.axis === 'x' ? w.x : w.y) - g.pos) < tol);
+        if (hitG) commit({ ...doc, guides: doc.guides.filter((g) => g.id !== hitG.id) });
+        else commit({ ...doc, guides: [...doc.guides, { id: uid('guia'), viewId: view.id, axis: guideAxis, pos: guideAxis === 'x' ? w.x : w.y }] });
+        return true;
+      }
       if (tool === 'referencia') {
         commit({ ...doc, views: doc.views.map((v) => (v.id === view.id ? { ...v, refY: w.y } : v)) });
         setTool('seleccionar');
@@ -273,8 +285,23 @@ export function StudioEditor({ projectId }: { projectId: string }) {
       if (!d) return;
       const w = bp.world;
       if (d.kind === 'move') {
-        const dx = w.x - d.start.x;
-        const dy = w.y - d.start.y;
+        let dx = w.x - d.start.x;
+        let dy = w.y - d.start.y;
+        // Imán: bordes o centro de la selección contra las guías de la vista.
+        const guides = d.d0.guides.filter((g) => g.viewId === view.id);
+        if (guides.length) {
+          const movedEls = d.d0.elements.filter((e) => d.ids.includes(e.id));
+          const bb = bboxOf(movedEls.flatMap((e) => elementCorners(e)));
+          const tol = 8 / vp.view.scale;
+          const cand = (axis: 'x' | 'y', vals: number[], delta: number) => {
+            let best = 0;
+            let bd = tol;
+            for (const g of guides.filter((x) => x.axis === axis)) for (const v of vals) { const diff = g.pos - (v + delta); if (Math.abs(diff) < bd) { bd = Math.abs(diff); best = diff; } }
+            return best;
+          };
+          dx += cand('x', [bb.minX, (bb.minX + bb.maxX) / 2, bb.maxX], dx);
+          dy += cand('y', [bb.minY, (bb.minY + bb.maxY) / 2, bb.maxY], dy);
+        }
         hist.preview(refreshGroups(updateElements(d.d0, d.ids, (e) => ({ ...e, x: d.d0.elements.find((x) => x.id === e.id)!.x + dx, y: d.d0.elements.find((x) => x.id === e.id)!.y + dy }))));
         setReadout(`Δ ${formatLength(dx, unit)} · ${formatLength(dy, unit)}`);
       } else if (d.kind === 'scale') {
@@ -387,7 +414,8 @@ export function StudioEditor({ projectId }: { projectId: string }) {
     },
     onDoubleTap: () => {
       if ((tool === 'pluma' || tool === 'recorte' || tool === 'zona') && pen.length >= 3) finishPen(true);
-    }
+    },
+    onHover: (bp: BoardPointer) => setCursor(bp.world)
   };
 
   function finishPen(closed: boolean) {
@@ -401,10 +429,9 @@ export function StudioEditor({ projectId }: { projectId: string }) {
     if (tool === 'recorte') {
       const el = single;
       if (!el || pts.length < 3) return;
-      const clip = pts.map((p) => {
-        const l = toLocal(el, p);
-        return [l.x / el.w, l.y / el.h] as [number, number];
-      });
+      let local = pts.map((p) => toLocal(el, p));
+      if (smoothCrop) local = cmdsToPolylines(smoothCmds(local, true), 0.3)[0]?.pts ?? local;
+      const clip = local.map((l) => [l.x / el.w, l.y / el.h] as [number, number]);
       commit(updateElements(doc, [el.id], (e) => ({ ...e, clip })));
       setTool('seleccionar');
       return;
@@ -511,6 +538,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
               <text x={view.minX + 4 / vp.view.scale} y={view.refY - 4 / vp.view.scale} fontSize={11 / vp.view.scale} fill="var(--tape-ink)" style={{ fontFamily: 'var(--sans)' }}>
                 {view.refLabel}
               </text>
+              {doc.guides.filter((g) => g.viewId === view.id).map((g) => (g.axis === 'x' ? <line key={g.id} x1={g.pos} x2={g.pos} y1={view.minY - 1000} y2={view.minY + view.height + 1000} stroke="#2f8fbf" strokeWidth={1} strokeDasharray="6 4" vectorEffect="non-scaling-stroke" /> : <line key={g.id} y1={g.pos} y2={g.pos} x1={view.minX - 1000} x2={view.minX + view.width + 1000} stroke="#2f8fbf" strokeWidth={1} strokeDasharray="6 4" vectorEffect="non-scaling-stroke" />))}
               {mode === 'tecnica' && <TechnicalMarks doc={doc} view={view} els={els} scale={vp.view.scale} unit={unit} />}
               {compareView && compareDoc && (
                 <g transform={`translate(${compareOffset} 0)`} opacity={0.95}>
@@ -563,6 +591,17 @@ export function StudioEditor({ projectId }: { projectId: string }) {
                 </Button>
               </div>
             )}
+            {tool === 'guia' && (
+              <div className="float-bar" style={{ left: '50%', transform: 'translateX(-50%)', top: 10, padding: 4 }}>
+                <Segmented value={guideAxis} onChange={setGuideAxis} options={[{ value: 'y', label: 'Horizontal' }, { value: 'x', label: 'Vertical' }]} />
+              </div>
+            )}
+            {tool === 'recorte' && (
+              <div className="float-bar" style={{ left: '50%', transform: 'translateX(-50%)', top: 64, padding: 4 }}>
+                <Segmented value={smoothCrop ? 'curva' : 'poligono'} onChange={(v) => setSmoothCrop(v === 'curva')} options={[{ value: 'poligono', label: 'Polígono' }, { value: 'curva', label: 'Curva' }]} />
+              </div>
+            )}
+            {cursor && <div className="desktop-only" style={{ position: 'absolute', right: 10, top: 28, zIndex: 5, padding: '4px 8px', borderRadius: 8, background: 'color-mix(in srgb, var(--surface) 90%, transparent)', border: '1px solid var(--line)', fontSize: 12, fontVariantNumeric: 'tabular-nums', color: 'var(--ink-2)' }}>x {formatLength(cursor.x - (view.seams?.center ?? 0), unit)} · y {formatLength(cursor.y - view.refY, unit)}</div>}
             {tool === 'forma' && (
               <div className="float-bar" style={{ left: '50%', transform: 'translateX(-50%)', top: 10, padding: 4 }}>
                 <Segmented value={shapeKind} onChange={setShapeKind} options={[{ value: 'ellipse', label: 'Elipse' }, { value: 'rect', label: 'Rectángulo' }, { value: 'polygon', label: 'Polígono' }, { value: 'star', label: 'Estrella' }]} />

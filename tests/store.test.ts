@@ -149,3 +149,18 @@ describe('sincronización con repositorio privado (API simulada)', () => {
     expect(useApp.getState().profiles[prof.id]).toBeTruthy();
   });
 });
+
+import { templateScaleFor } from '../src/store/projects';
+
+describe('escala de plantillas', () => {
+  it('usa proporciones razonables para adulto y bebé', () => {
+    const m = findModel('jogger')!;
+    const adult = templateScaleFor(m, 'mujer', findSize('ref-mujer-busto', 'M92')!.values);
+    expect(adult.sx).toBeCloseTo(1, 1);
+    expect(adult.sy).toBeGreaterThan(0.8);
+    expect(adult.sy).toBeLessThan(1.2);
+    const baby = templateScaleFor(m, 'bebe', findSize('ref-infantil-estatura', 'E68')!.values);
+    expect(baby.sx).toBeLessThan(0.6);
+    expect(baby.sy).toBeLessThan(0.6);
+  });
+});
