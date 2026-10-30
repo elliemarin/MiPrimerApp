@@ -74,6 +74,11 @@ de 50/100 mm; intervención de solo mercería con cero plantillas. Regresión de
 materiales/fotos/modelos y auditoría visual sin cambios en geometría guardada.
 Suite final: **2,435 pruebas en 55 archivos**, TypeScript y build para Pages
 correctos. Auditoría de las 269 fuentes sin incidencias de metadatos/integridad.
+También se comprobó la **app publicada**: búsquedas específicas, bebé 0–6 y
+aplicación de adornos a 390 px; fuentes gratuitas a 320/390/1440 px, filtros
+persistidos, ficha del hada y descarga real de una copia PDF de 24 páginas.
+Publicación funcional `b064c1b`: ambos flujos de Pages finalizaron correctamente.
+La prueba de descarga usa el proxy heredado cuando se ejecuta desde la nube.
 
 **Pendiente real:** imprimir y coser muestras de las nuevas decoraciones;
 comprobar iPhone/Safari/cámara y los permisos de descarga en dispositivo físico.

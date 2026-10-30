@@ -4,11 +4,25 @@ Funciona contra Vite o GitHub Pages: no importa módulos /src en el navegador.
 Requiere Python Playwright, Chromium y PyMuPDF.
 """
 import os
+import json
 from urllib.parse import urljoin
+from urllib.request import urlopen
 import fitz
 from playwright.sync_api import sync_playwright
 
 BASE = os.environ.get('HILVANA_TEST_URL', 'http://localhost:5173/').rstrip('/') + '/'
+
+
+def public_file(context, url):
+    # urllib honors the cloud runner's inherited HTTPS_PROXY and CA trust;
+    # Playwright's separate API client does not inherit that proxy automatically.
+    if os.environ.get('HTTPS_PROXY') and url.startswith('https://'):
+        with urlopen(url, timeout=60) as response:
+            assert response.status == 200
+            return response.read()
+    response = context.request.get(url)
+    assert response.ok
+    return response.body()
 
 
 def no_overflow(page):
@@ -24,9 +38,7 @@ def run(browser, width):
     page.get_by_role('button', name='Gratis de internet', exact=True).click()
     panel = page.locator('.free-pattern-library')
     panel.locator('#free-patterns-title').wait_for()
-    response = context.request.get(urljoin(BASE, 'pattern-library/free-patterns.json'))
-    assert response.ok
-    records = response.json()
+    records = json.loads(public_file(context, urljoin(BASE, 'pattern-library/free-patterns.json')))
     assert len(records) >= 200, len(records)
     assert len({entry['id'] for entry in records}) == len(records)
     assert page.locator('.simple-pattern-card').count() == 0
@@ -81,10 +93,8 @@ def run(browser, width):
         assert link.get_attribute('href').endswith(entry['assets']['pattern'])
     first = min(local, key=lambda entry: entry['verification'].get('pdfPages', 1))
     link = panel.locator(f'[data-free-pattern="{first["id"]}"]').get_by_role('link', name='Abrir patrón PDF', exact=True)
-    pdf_response = context.request.get(urljoin(BASE, link.get_attribute('href')))
-    assert pdf_response.ok
-    data = pdf_response.body()
-    assert data.startswith(b'%PDF'), pdf_response.headers
+    data = public_file(context, urljoin(BASE, link.get_attribute('href')))
+    assert data.startswith(b'%PDF')
     document = fitz.open(stream=data, filetype='pdf')
     assert len(document) == first['verification']['pdfPages']
     no_overflow(page)
