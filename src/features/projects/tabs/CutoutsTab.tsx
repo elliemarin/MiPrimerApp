@@ -2,14 +2,15 @@ import { useMemo, useState } from 'react';
 import { useApp } from '../../../store/app';
 import type { Project } from '../../../store/types';
 import { Button, Chip, Empty, Field, Notice, Select, LengthInput } from '../../../ui/components';
-import { computeCutouts, cutoutDrawables, embroideryDrawables, materialSummary } from '../../studio/despiece';
+import { computeCutouts, cutoutDrawables, materialSummary } from '../../studio/despiece';
 import { exportPackedPdf, exportTiledPdf, arrangeForTiles } from '../../../lib/pdf/export';
 import { piecesSvg } from '../../../lib/draw/svgExport';
 import { saveBlob } from '../../../lib/download';
 import { slugify } from '../../../lib/ids';
 import { depsLines, exportRecord, freezeDeps } from '../../../store/exports';
 import { formatLength } from '../../../lib/units';
-import { HOOPS, planStitches, writeDst } from '../../../lib/dst';
+import { planStitches, writeDst } from '../../../lib/dst';
+import { EMBROIDERY_HOOPS, HD9120_HOOP, embroideryForView, embroideryViews } from './embroideryExport';
 import { cmdsToPolylines } from '../../../lib/draw/flatten';
 import { navigate } from '../../../ui/router';
 import { buildPattern } from '../../../lib/pattern/engine';
@@ -22,10 +23,14 @@ export function CutoutsTab({ project }: { project: Project }) {
   const s = useApp();
   const unit = s.settings.unit;
   const [busy, setBusy] = useState(false);
-  const [hoop, setHoop] = useState('130x180');
+  const [hoop, setHoop] = useState(HD9120_HOOP.id);
+  const [embroideryViewId, setEmbroideryViewId] = useState('');
   const [stitchLen, setStitchLen] = useState<number | undefined>(2.5);
   const cutouts = useMemo(() => (project.design ? computeCutouts(project.design, s.fabrics, unit) : []), [project.design, s.fabrics, unit]);
-  const embroidery = useMemo(() => (project.design ? embroideryDrawables(project.design) : []), [project.design]);
+  const viewsWithEmbroidery = useMemo(() => project.design ? embroideryViews(project.design) : [], [project.design]);
+  const embroideryView = viewsWithEmbroidery.find((v) => v.id === embroideryViewId) ?? viewsWithEmbroidery[0];
+  const unsupportedEmbroidery = project.design?.elements.some(e=>e.viewId===embroideryView?.id && e.technique==='bordado' && !e.hidden && (e.kind==='texto'||e.kind==='imagen'||e.kind==='parche'||!!e.clip||!!e.maskZoneId)) ?? false;
+  const embroidery = useMemo(() => project.design && embroideryView ? embroideryForView(project.design, embroideryView.id) : [], [project.design, embroideryView]);
   const built = useMemo(() => (project.pattern ? buildPattern(project.pattern) : null), [project.pattern]);
   if (!project.design && !built) return <Empty icon="scissors" title="Aún no hay nada que despiezar" body="Diseña en el estudio o crea un patrón para obtener piezas, recortes y plantillas." action={<Button onClick={() => navigate(`/estudio/${project.id}`)}>Abrir el estudio</Button>} />;
 
@@ -70,13 +75,17 @@ export function CutoutsTab({ project }: { project: Project }) {
   };
 
   const embroiderySvg = async () => {
-    const svg = piecesSvg(embroidery, `${project.name} · dibujo de bordado`);
-    await record('svg-bordado', new Blob([svg], { type: 'image/svg+xml' }), `${slugify(project.name)}-dibujo-bordado.svg`, { nota: 'Dibujo vectorial 1:1; no es un archivo de puntadas.' });
+    try {
+      const svg = piecesSvg(embroidery, `${project.name} · ${embroideryView.label} · dibujo de bordado`);
+      await record('svg-bordado', new Blob([svg], { type: 'image/svg+xml' }), `${slugify(project.name)}-${slugify(embroideryView.label)}-dibujo-bordado.svg`, { vista: embroideryView.id, nota: 'Dibujo vectorial 1:1; no es un archivo de puntadas.' });
+    } catch (e) {
+      s.toast(e instanceof Error ? e.message : 'No se pudo exportar el bordado.', 'error');
+    }
   };
 
   const runs = embroidery.flatMap((d) => d.paths.flatMap((p) => cmdsToPolylines(p.cmds, 0.2).map((pl) => ({ color: project.design!.elements.find((e) => `bord-${e.id}` === d.id)?.stroke?.color ?? '#000', pts: pl.closed ? [...pl.pts, pl.pts[0]] : pl.pts }))));
   const plan = runs.length && stitchLen ? planStitches(runs, stitchLen) : null;
-  const hoopDef = HOOPS.find((h) => h.id === hoop)!;
+  const hoopDef = EMBROIDERY_HOOPS.find((h) => h.id === hoop)!;
   const sizeW = plan ? (plan.extents.maxX - plan.extents.minX) / 10 : 0;
   const sizeH = plan ? (plan.extents.maxY - plan.extents.minY) / 10 : 0;
   const fits = sizeW <= hoopDef.w - 10 && sizeH <= hoopDef.h - 10;
@@ -154,12 +163,25 @@ export function CutoutsTab({ project }: { project: Project }) {
 
       <section className="stack">
         <h2 className="section-title" style={{ margin: 0 }}>Bordado</h2>
+        <details className="panel panel-pad small">
+          <summary>Preparar para Singer Smart Heavy Duty HD9120</summary>
+          <div className="stack" style={{ marginTop: 10 }}>
+            <p>Con la unidad de bordado instalada, el bastidor de referencia es de 17 × 10 cm. Envía el diseño a la máquina desde CREATIVATE, con conexión Wi-Fi.</p>
+            <p>Descarga el archivo en tu móvil y compruébalo en CREATIVATE → Device. La importación del DST de Hilvana en la HD9120 está pendiente de probar; si no lo admite, revísalo y conviértelo con software de bordado compatible.</p>
+            <p>El SVG sirve para digitalizar tu dibujo. El DST experimental contiene solo puntada recta. Antes de bordar la prenda, revisa el recorrido y haz una muestra en retazo.</p>
+            <a href="https://svpworldwide.widen.net/content/grjpxve9ij/original/471138026F_IM_912X_EN_web.pdf?download=true&u=hcosqv" target="_blank" rel="noreferrer">Consultar el manual oficial de la HD9120 (páginas 1, 4, 29 y 30)</a>
+          </div>
+        </details>
         {embroidery.length === 0 ? (
-          <p className="small muted">Marca trazos o textos con la técnica «Bordado» para obtener su dibujo.</p>
+          <p className="small muted">Marca figuras o trazos con la técnica «Bordado» para obtener su dibujo.</p>
         ) : (
           <>
+            <Field label="Vista que vas a bordar" htmlFor="embroidery-view" hint="Cada vista se exporta por separado, conservando la posición y el tamaño de sus motivos.">
+              <Select id="embroidery-view" value={embroideryView.id} onChange={setEmbroideryViewId} options={viewsWithEmbroidery.map((v) => ({ value: v.id, label: v.label }))} />
+            </Field>
+            {unsupportedEmbroidery && <Notice tone="warn">Esta vista incluye texto, imágenes, parches o máscaras que este exportador de contornos aún no convierte correctamente. Digitalízalos en software de bordado o usa figuras y trazos sin recortar en una vista independiente.</Notice>}
             <div className="row-wrap">
-              <Button icon="download" onClick={() => void embroiderySvg()}>Dibujo de bordado (SVG 1:1)</Button>
+              <Button icon="download" disabled={unsupportedEmbroidery} onClick={() => void embroiderySvg()}>Dibujo de bordado (SVG 1:1)</Button>
             </div>
             <p className="tiny faint">El dibujo es una guía vectorial para transferir o digitalizar. No es un archivo de puntadas.</p>
             <div className="panel panel-pad stack">
@@ -167,10 +189,10 @@ export function CutoutsTab({ project }: { project: Project }) {
                 <strong className="small">Archivo de puntadas DST</strong>
                 <Chip tone="warn">Experimental</Chip>
               </div>
-              <Notice tone="warn">Solo genera puntada recta sobre las líneas: sin relleno, satén, compensación de tirón ni orden optimizado. Ábrelo y revísalo en tu software de bordado antes de bordar.</Notice>
+              <Notice tone="warn">Solo genera puntada recta sobre las líneas: sin relleno, satén, compensación de tirón ni orden optimizado. Revisa el archivo y asigna los colores de hilo en tu software de bordado; DST conserva los cambios de color, pero no la paleta.</Notice>
               <div className="grid-2">
                 <Field label="Bastidor">
-                  <Select value={hoop} onChange={setHoop} options={HOOPS.map((h) => ({ value: h.id, label: h.label }))} />
+                  <Select value={hoop} onChange={setHoop} options={EMBROIDERY_HOOPS.map((h) => ({ value: h.id, label: h.label }))} />
                 </Field>
                 <Field label="Largo de puntada">
                   <LengthInput mm={stitchLen} min={1} max={6} onChange={setStitchLen} />
@@ -179,12 +201,22 @@ export function CutoutsTab({ project }: { project: Project }) {
               {plan && (
                 <>
                   <svg viewBox={`${plan.extents.minX - 20} ${-plan.extents.maxY - 20} ${plan.extents.maxX - plan.extents.minX + 40} ${plan.extents.maxY - plan.extents.minY + 40}`} style={{ width: '100%', height: 180, background: 'var(--canvas)', borderRadius: 10 }}>
-                    <polyline points={plan.stitches.filter((x) => x.kind !== 'color' && x.kind !== 'fin').map((x) => `${x.x},${-x.y}`).join(' ')} fill="none" stroke="#1d2420" strokeWidth={2} />
+                    <path d={plan.stitches.filter((x) => x.kind !== 'color' && x.kind !== 'fin').map((x) => `${x.kind === 'salto' ? 'M' : 'L'}${x.x} ${-x.y}`).join(' ')} fill="none" stroke="#1d2420" strokeWidth={2} />
                     {plan.stitches.filter((x) => x.kind === 'puntada').map((x, i) => <circle key={i} cx={x.x} cy={-x.y} r={4} fill="#b4273a" />)}
                   </svg>
-                  <div className="small">{stitchCount} puntadas · {plan.colors} colores · {formatLength(sizeW, unit)} × {formatLength(sizeH, unit)}</div>
+                  <div className="small">{embroideryView.label} · {stitchCount} puntadas · {plan.colors} bloques de color · {formatLength(sizeW, unit)} × {formatLength(sizeH, unit)}</div>
                   {fits ? <Notice tone="ok">Cabe en el bastidor de {hoopDef.label} con 5 mm de margen.</Notice> : <Notice tone="err">No cabe en el bastidor de {hoopDef.label}. Elige uno mayor o reduce el dibujo.</Notice>}
-                  <Button icon="download" disabled={!fits} onClick={() => void record('dst-bordado', new Blob([writeDst(project.name, plan)], { type: 'application/octet-stream' }), `${slugify(project.name)}-bordado.dst`, { bastidor: hoop, puntadaMm: stitchLen, puntadas: stitchCount })}>Descargar DST experimental</Button>
+                  {hoop === HD9120_HOOP.id && <p className="tiny muted">El tamaño corresponde al bastidor HD9120; la compatibilidad del archivo con CREATIVATE está pendiente de comprobar.</p>}
+                  <Button icon="download" disabled={!fits || busy || !stitchCount || unsupportedEmbroidery} onClick={async () => {
+                    setBusy(true);
+                    try {
+                      await record('dst-bordado', new Blob([writeDst(project.name, plan)], { type: 'application/octet-stream' }), `${slugify(project.name)}-${slugify(embroideryView.label)}-bordado.dst`, { vista: embroideryView.id, bastidor: hoop, puntadaMm: stitchLen, puntadas: stitchCount, compatibilidadHD9120: 'pendiente-de-probar' });
+                    } catch (e) {
+                      s.toast(e instanceof Error ? e.message : 'No se pudo exportar el bordado.', 'error');
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}>Descargar DST experimental</Button>
                 </>
               )}
             </div>

@@ -1,3 +1,4 @@
+import type { FigurineOptions } from '../../lib/draw/figurine';
 import type { Pt, Mat } from '../../lib/geom/vec';
 import { matMul, matRotate, matScale, matTranslate, matApply } from '../../lib/geom/vec';
 import { uid, nowIso } from '../../lib/ids';
@@ -191,6 +192,8 @@ export interface Guide {
 }
 
 export interface DesignDoc {
+  /** Preferencias del figurín de presentación, sin alterar el patrón. */
+  figurine?: FigurineOptions;
   id: string;
   views: DesignView[];
   elements: DesignElement[];

@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { CATALOG, CatalogModel, GarmentType, Recipient, RECIPIENT_LABEL, STATUS_INFO, TYPE_LABEL, TECHNIQUE_LABEL, Technique } from '../../data/catalog';
-import { Chip, Empty, PageHead, Segmented, Sheet, Button } from '../../ui/components';
+import { Chip, Empty, PageHead, Segmented, Sheet, Button, Field, Select } from '../../ui/components';
 import { Icon } from '../../ui/Icon';
 import { FlatArt } from '../../ui/FlatArt';
+import { SIZE_TABLES } from '../../lib/sizes/tables';
 import { navigate } from '../../ui/router';
 
 type Filters = {
@@ -44,6 +45,7 @@ export function matches(m: CatalogModel, f: Filters): boolean {
 
 export function LibraryPage() {
   const [f, setF] = useState<Filters>(INITIAL);
+  const [babySize, setBabySize] = useState('B0-3');
   const [showFilters, setShowFilters] = useState(false);
   const list = useMemo(() => CATALOG.filter((m) => matches(m, f)), [f]);
   const extra = [f.difficulty, f.fabric !== 'todos', f.stretch !== 'todos', f.fit !== 'todos', f.technique !== 'todas', f.size !== 'todas', f.type !== 'todos'].filter(Boolean).length;
@@ -84,13 +86,16 @@ export function LibraryPage() {
             </button>
           ))}
         </div>
+        {f.recipient === 'bebe' && <Field label="Talla de bebé" htmlFor="library-baby-size" hint="Se llevará al proyecto. La edad orienta; verifica las medidas antes de cortar.">
+          <Select id="library-baby-size" value={babySize} onChange={setBabySize} options={SIZE_TABLES.find(t => t.id === 'ref-bebe-meses')!.rows.map(r => ({ value: r.code, label: `${r.label} · hasta ${r.values.estatura! / 10} cm` }))} />
+        </Field>}
         <Segmented
           label="Disponibilidad"
           value={f.onlyAvailable ? 'si' : 'no'}
           onChange={(v) => setF({ ...f, onlyAvailable: v === 'si' })}
           options={[
             { value: 'no', label: 'Todo el catálogo' },
-            { value: 'si', label: 'Solo patrones disponibles' }
+            { value: 'si', label: 'Listos para trabajar' }
           ]}
         />
       </div>
@@ -105,7 +110,7 @@ export function LibraryPage() {
             </h2>
             <div className="cards">
               {models.map((m) => (
-                <a key={m.id} className="card" href={`#/biblioteca/${m.id}`}>
+                <a key={m.id} className="card" href={`#/biblioteca/${m.id}?para=${f.recipient}${f.recipient === 'bebe' ? `&talla=${babySize}` : ''}`}>
                   <div className="art">
                     <FlatArt id={m.id} spec={m.flat} title={`Dibujo técnico de ${m.name}`} />
                   </div>
@@ -113,7 +118,7 @@ export function LibraryPage() {
                     <span className="name">{m.name}</span>
                     <span className="sub">{m.recipients.map((r) => RECIPIENT_LABEL[r]).slice(0, 3).join(', ')}{m.recipients.length > 3 ? '…' : ''}</span>
                     <span>
-                      <Chip tone={STATUS_INFO[m.status].tone}>{STATUS_INFO[m.status].label}</Chip>
+                      <Chip tone={STATUS_INFO[m.status].tone}>{m.studioOnly ? 'Diseño editable' : STATUS_INFO[m.status].label}</Chip>
                     </span>
                   </div>
                 </a>
@@ -122,6 +127,15 @@ export function LibraryPage() {
           </section>
         ))
       )}
+
+      <details className="panel panel-pad small" style={{marginTop:24}}>
+        <summary>Explorar más patrones a medida</summary>
+        <div className="stack" style={{marginTop:10}}>
+          <p>FreeSewing ofrece diseños paramétricos con tus medidas. Su catálogo se abre en otra web; todavía no se importa como piezas editables de Hilvana.</p>
+          <a href="https://freesewing.eu/" target="_blank" rel="noreferrer">Explorar el catálogo de FreeSewing</a>
+          <p className="muted">Si traes un PDF propio o con permiso, crea un proyecto desde «Patrón en imagen», calibra y traza sus piezas. Una imagen o un PDF no se vuelve un patrón paramétrico automáticamente.</p>
+        </div>
+      </details>
 
       {showFilters && (
         <Sheet title="Filtros" onClose={() => setShowFilters(false)} footer={<div className="spread"><Button variant="ghost" onClick={() => setF({ ...INITIAL, q: f.q, recipient: f.recipient })}>Restablecer</Button><Button variant="primary" onClick={() => setShowFilters(false)}>Ver {list.length} modelos</Button></div>}>

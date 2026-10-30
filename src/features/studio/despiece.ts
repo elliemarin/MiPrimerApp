@@ -1,5 +1,5 @@
 import type { Pt } from '../../lib/geom/vec';
-import { bboxOf, matApply, matMul, matRotate, matScale, Mat } from '../../lib/geom/vec';
+import { bboxOf, matApply, matInvert, matMul, matRotate, matScale, Mat } from '../../lib/geom/vec';
 import { cmdsToPolylines } from '../../lib/draw/flatten';
 import { transformCmds, polylineCmds, PathCmd } from '../../lib/draw/paths';
 import { offsetPolygons, polygonsArea, intersectPolygons } from '../../lib/geom/polyoffset';
@@ -84,6 +84,19 @@ export function computeCutouts(doc: DesignDoc, fabrics: Record<string, Fabric>, 
       if (el.clip && el.clip.length >= 3) {
         const clip = el.clip.map(([x, y]) => matApply(m, { x: x * el.w, y: y * el.h }));
         finalPolys = intersectPolygons(finalPolys, [clip]);
+      }
+      if (el.maskZoneId) {
+        const mask = view.zones.find((z) => z.id === el.maskZoneId);
+        // Una máscara inexistente tampoco muestra contenido en SVG.
+        if (!mask) return;
+        // Zona: vista → caja local del elemento → plantilla con hilo vertical.
+        // Así el recorte exportado coincide con la máscara incluso al girar,
+        // reflejar o rotar el estampado de la tela.
+        const worldToTemplate = matMul(m, matInvert(elementMatrix(el)));
+        const maskPolys = cmdsToPolylines(transformCmds(parseSvgPath(mask.d), worldToTemplate), 0.15)
+          .filter((p) => p.pts.length >= 3)
+          .map((p) => p.pts);
+        finalPolys = intersectPolygons(finalPolys, maskPolys);
       }
       if (!finalPolys.length) return;
       const cutPolys = el.allowance > 0 ? offsetPolygons(finalPolys, el.allowance) : offsetPolygons(finalPolys, 0);

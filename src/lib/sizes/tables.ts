@@ -4,7 +4,7 @@ export type PersonKind = 'bebe' | 'toddler' | 'infantil' | 'mujer' | 'hombre' | 
 
 export const KIND_LABEL: Record<PersonKind, string> = {
   bebe: 'Bebé',
-  toddler: 'Toddler',
+  toddler: '1–4 años',
   infantil: 'Niña o niño',
   mujer: 'Mujer',
   hombre: 'Hombre',
@@ -140,7 +140,24 @@ const hombre: SizeTable = {
   )
 };
 
-export const SIZE_TABLES: SizeTable[] = [infantil, mujer, hombre];
+
+/** Conveniencia por meses: referencias propias, nunca equivalencias comerciales. */
+const bebeMeses: SizeTable = {
+  id: 'ref-bebe-meses', name: 'Bebé por meses', kinds: ['bebe'],
+  basis: 'Referencias propias de Hilvana por meses y estatura máxima orientativa. La edad no determina el cuerpo: comprueba pecho, cintura, cadera y largo antes de cortar. Incluye espacio corporal sobre pañal; el patrón agrega la holgura por separado.',
+  rows: [
+    ['B-RN', 'Recién nacido', 'E56'], ['B0-3', '0–3 meses', 'E62'], ['B0-6', '0–6 meses', 'E68'], ['B3-6', '3–6 meses', 'E68'], ['B6-9', '6–9 meses', 'E74'], ['B9-12', '9–12 meses', 'E80'], ['B12-18', '12–18 meses', 'E86'], ['B18-24', '18–24 meses', 'E92']
+  ].map(([code, label, heightCode]) => {
+    const row = infantil.rows.find(r => r.code === heightCode)!;
+    return { code, label, ageHint: label, kind: 'bebe' as const, values: { ...row.values } };
+  })
+};
+
+export function rowsForKinds(table: SizeTable, kinds?: string[]): SizeRow[] {
+  return table.rows.filter(r => !kinds || kinds.includes(r.kind));
+}
+
+export const SIZE_TABLES: SizeTable[] = [bebeMeses, infantil, mujer, hombre];
 
 export function findTable(id: string): SizeTable | undefined {
   return SIZE_TABLES.find((t) => t.id === id);

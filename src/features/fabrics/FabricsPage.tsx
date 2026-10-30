@@ -6,6 +6,7 @@ import { uid, nowIso } from '../../lib/ids';
 import type { Fabric, Material, MaterialCategory } from '../../store/types';
 import { navigate } from '../../ui/router';
 import { loadBitmap } from '../../lib/image';
+import { FabricLibrary, NotionsLibrary } from './FabricLibrary';
 
 export const CATEGORY_LABEL: Record<MaterialCategory, string> = {
   hilo: 'Hilos',
@@ -37,7 +38,7 @@ export function FabricsPage() {
   const materials = useApp((s) => Object.values(s.materials));
   const put = useApp((s) => s.put);
   const addFile = useApp((s) => s.addFile);
-  const [tab, setTab] = useState<'telas' | 'materiales'>('telas');
+  const [tab, setTab] = useState<'catalogo' | 'telas' | 'materiales'>('catalogo');
   const [editing, setEditing] = useState<Material | null>(null);
   const addFabric = async (files: File[]) => {
     for (const file of files) {
@@ -65,9 +66,9 @@ export function FabricsPage() {
     <div className="page page-wide">
       <PageHead
         title="Telas y materiales"
-        sub="Tus telas fotografiadas y calibradas, y el inventario de hilos, botones, cierres y más."
+        sub="Explora telas para tus diseños, guarda tus muestras y organiza materiales."
         actions={
-          tab === 'telas' ? (
+          tab !== 'materiales' ? (
             <FilePick accept="image/*" multiple onFiles={(f) => void addFabric(f)}>
               {(open) => <Button variant="primary" icon="camera" onClick={open}>Agregar tela</Button>}
             </FilePick>
@@ -77,9 +78,9 @@ export function FabricsPage() {
         }
       />
       <div style={{ marginBottom: 18 }}>
-        <Segmented value={tab} onChange={setTab} options={[{ value: 'telas', label: `Telas (${fabrics.length})` }, { value: 'materiales', label: `Materiales (${materials.length})` }]} />
+        <Segmented value={tab} onChange={setTab} options={[{ value: 'catalogo', label: 'Catálogo' }, { value: 'telas', label: `Mis telas (${fabrics.length})` }, { value: 'materiales', label: 'Materiales' }]} />
       </div>
-      {tab === 'telas' ? (
+      {tab === 'catalogo' ? <FabricLibrary /> : tab === 'telas' ? (
         fabrics.length === 0 ? (
           <Empty icon="telas" title="Fotografía tus telas" body="Toma la foto de frente sobre una superficie plana, con una regla o una hoja carta al lado para calibrar el tamaño del estampado." />
         ) : (
@@ -111,6 +112,7 @@ export function FabricsPage() {
           );
         })
       )}
+      {tab === 'materiales' && <div style={{ marginTop: 28 }}><NotionsLibrary /></div>}
       {editing && <MaterialSheet m={editing} onClose={() => setEditing(null)} />}
     </div>
   );

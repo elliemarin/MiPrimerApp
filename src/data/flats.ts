@@ -450,7 +450,7 @@ function bagView(key: FlatViewKey, kind: 'tote' | 'neceser' | 'bandolera'): Flat
   return finishView(key, zones, details, [], 0, 'Boca', { center: 0 });
 }
 
-function accessoryView(key: FlatViewKey, kind: 'babero' | 'gorro' | 'parche' | 'cojin'): FlatView {
+function accessoryView(key: FlatViewKey, kind: 'babero' | 'gorro' | 'parche' | 'cojin' | 'funda-bebida' | 'dona' | 'bandana' | 'rectangulo' | 'delantal' | 'antifaz' | 'banderin', object?: { width: number; height: number; label: string }): FlatView {
   const zones: Zone[] = [];
   const details: FlatView['details'] = [];
   if (kind === 'babero') {
@@ -459,6 +459,33 @@ function accessoryView(key: FlatViewKey, kind: 'babero' | 'gorro' | 'parche' | '
   } else if (kind === 'gorro') {
     zones.push(zone('base', 'Gorro', 'base', `${M([-120, 220])} ${Lp([-120, 120])} ${C([-120, -20], [120, -20], [120, 120])} ${Lp([120, 220])} Z`));
     zones.push(zone('pretina', 'Doblez', 'pretina', rect(-124, 160, 248, 70)));
+  } else if (kind === 'rectangulo') {
+    const w = object?.width ?? 300, h = object?.height ?? 200;
+    zones.push(zone('base', object?.label ?? 'Base rectangular', 'base', rect(-w / 2, 0, w, h)));
+    details.push({ d: rect(-w / 2 + 5, 5, w - 10, h - 10), style: 'pespunte' });
+  } else if (kind === 'delantal') {
+    zones.push(zone('cuerpo', 'Cuerpo del delantal', 'base', 'M-120 0 L120 0 Q120 180 290 240 L300 780 L-300 780 L-290 240 Q-120 180 -120 0 Z'));
+    zones.push(zone('bolsillo', 'Bolsillo frontal', 'base', rect(-150, 380, 300, 200)));
+    zones.push(zone('cuello', 'Cinta de cuello', 'base', 'M-120 0 L-120 -130 Q0 -250 120 -130 L120 0 L95 0 L95 -110 Q0 -205 -95 -110 L-95 0 Z'));
+    zones.push(zone('lazo-a', 'Lazo izquierdo', 'base', rect(-560, 240, 270, 35)));
+    zones.push(zone('lazo-b', 'Lazo derecho', 'base', rect(290, 240, 270, 35)));
+  } else if (kind === 'antifaz') {
+    zones.push(zone('base', 'Cara del antifaz', 'base', 'M-100 0 C-100 -55 -50 -60 0 -35 C50 -60 100 -55 100 0 C100 55 35 50 15 20 Q0 0 -15 20 C-35 50 -100 55 -100 0 Z'));
+  } else if (kind === 'banderin') {
+    const w = object?.width ?? 180, h = object?.height ?? 240;
+    zones.push(zone('base', 'Banderín', 'base', poly([[-w / 2, 0], [w / 2, 0], [0, h]])));
+    details.push({ d: line([-w / 2, 15], [w / 2, 15]), style: 'doblez' });
+  } else if (kind === 'funda-bebida') {
+    zones.push(zone('base', 'Exterior de la funda abierta', 'base', rect(-120, 0, 240, 110)));
+    zones.push(zone('cierre', 'Traslape de velcro', 'base', rect(95, 0, 25, 110)));
+    details.push({ d: rect(-115, 5, 230, 100), style: 'pespunte' });
+  } else if (kind === 'bandana') {
+    zones.push(zone('base', 'Cara de la bandana', 'base', poly([[-350, 0], [350, 0], [0, 300]])));
+    details.push({ d: poly([[-330, 7], [330, 7], [0, 287]]), style: 'pespunte' });
+  } else if (kind === 'dona') {
+    // Continuous ring in absolute cubic coordinates, including the inner opening.
+    zones.push(zone('base', 'Dona de tela', 'base', 'M-85 0 C-85 -48 -48 -85 0 -85 C48 -85 85 -48 85 0 C85 48 48 85 0 85 C-48 85 -85 48 -85 0 Z M-25 0 C-25 14 -14 25 0 25 C14 25 25 14 25 0 C25 -14 14 -25 0 -25 C-14 -25 -25 -14 -25 0 Z'));
+    for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8; details.push({ d: line([Math.cos(a) * 32, Math.sin(a) * 32], [Math.cos(a + 0.08) * 78, Math.sin(a + 0.08) * 78]), style: 'pliegue' }); }
   } else if (kind === 'cojin') {
     zones.push(zone('base', 'Funda', 'base', rect(-200, -200, 400, 400)));
   } else {
@@ -477,7 +504,8 @@ export interface FlatSpec {
   dress?: DressOpts;
   baby?: { legs: 'body' | 'mameluco'; sleeve: TopOpts['sleeve'] };
   bag?: 'tote' | 'neceser' | 'bandolera';
-  accessory?: 'babero' | 'gorro' | 'parche' | 'cojin';
+  accessory?: 'babero' | 'gorro' | 'parche' | 'cojin' | 'funda-bebida' | 'dona' | 'bandana' | 'rectangulo' | 'delantal' | 'antifaz' | 'banderin';
+  object?: { width: number; height: number; label: string };
   /** Pijama: conjunto de superior y pantalón. */
   set?: boolean;
 }
@@ -507,7 +535,7 @@ export function buildFlat(id: string, spec: FlatSpec): FlatDef {
       for (const k of keys) views.push(bagView(k, spec.bag!));
       break;
     case 'accesorio':
-      views.push(accessoryView('frente', spec.accessory!));
+      views.push(accessoryView('frente', spec.accessory!, spec.object));
       break;
   }
   return { id, views };

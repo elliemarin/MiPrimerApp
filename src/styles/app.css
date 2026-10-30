@@ -373,3 +373,16 @@ button.list-row:hover, a.list-row:hover { background: var(--surface-2); }
 .start-card .ic svg { width: 24px; height: 24px; }
 .start-card .t { font-weight: 600; }
 .start-card .s { color: var(--ink-2); font-size: 14px; }
+
+/* Muestrario compacto: se comparte el espacio con el lienzo, también en móvil. */
+.fabric-tray { padding: 8px 10px; background: var(--surface); border-bottom: 1px solid var(--line); min-width: 0; }
+.fabric-tray .input { min-height: 34px; padding: 6px 9px; }
+.fabric-swatches { display: flex; gap: 8px; overflow-x: auto; padding: 7px 0; max-width: 100%; }
+.fabric-swatch { flex: 0 0 76px; display: flex; flex-direction: column; align-items: stretch; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 3px; cursor: grab; touch-action: none; text-align: left; }
+.fabric-swatch[aria-pressed=true] { outline: 2px solid var(--mat); outline-offset: -2px; }
+.fabric-swatch > img, .fabric-swatch > div { width: 68px; height: 42px; object-fit: cover; border-radius: 3px; overflow: hidden; pointer-events: none; }
+.fabric-swatch > div img { width: 100%; height: 100%; object-fit: cover; }
+.fabric-swatch span { font-size: 11px; line-height: 1.15; padding: 3px 0 0; }
+@media(max-width: 600px) { .fabric-tray .row { gap: 4px !important; } .fabric-tray .btn { padding-left: 8px; padding-right: 8px; } .fabric-tray .tiny { font-size: 10px; } }
+/* Las lecturas informativas nunca interceptan gestos de edición. */
+.status-pill, .readout { pointer-events: none; }

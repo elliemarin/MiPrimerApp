@@ -106,3 +106,39 @@ Debe imprimir `[50.0, 100.0]` (cuadrado y barra en mm).
 
 `tests/pattern.test.ts` (geometría y patrones), `tests/pdf.test.ts` (mosaico y
 PDF). Ejecuta `npm test` antes de cada commit.
+
+
+## 9. Biblioteca ampliada y herramientas de diseño (2026-10-30)
+
+- `data/materialLibrary.ts`: 54 fichas textiles y 30 insumos originales;
+  `recommendFabrics` puntúa compatibilidad/recomendación por modelo sin inventar
+  mediciones. `swatchSvg/Url` producen referencias procedurales (seis motivos).
+- `lib/fabricLibrary.ts`: convierte SVG original a PNG y crea `Fabric`/archivo
+  locales. No asigna calibración, elasticidad medida ni stock ficticio.
+- `FabricTray.tsx`: catálogo/sugeridas/mis telas; HTML drag para escritorio y
+  Pointer Events con captura para móvil. `surfaces.ts` localiza el contorno real
+  y aplica `Fill` inmutable; el historial vive en `StudioEditor`. Las cargas
+  asíncronas leen el documento más reciente antes de aplicar el relleno.
+- `data/shapes.ts`: IDs estables, categorías/tags y búsqueda sin acentos;
+  contornos originales normalizados 0..100. Se conservan todos los IDs previos.
+- `Board.tsx`: `BoardPinch` y ciclo opcional `onPinchStart/Move/End`; si el
+  editor no captura el gesto se conserva el zoom. `StudioEditor` guarda un
+  documento de inicio y un último preview para un solo commit al terminar.
+- `despiece.ts`: las máscaras de zona se transforman desde vista a espacio de
+  plantilla y se intersectan después del recorte libre y antes del margen.
+- `ColorimetrySheet.tsx` + `lib/draw/colors.ts`: conversiones HSL/HEX,
+  selección táctil/teclado y armonías; selección o vista completa como destino.
+- `FigurineSheet.tsx` + `lib/draw/figurine.ts`: croquis SVG original, preferencias
+  opcionales `DesignDoc.figurine` (compatibles con diseños viejos), capas reales
+  del estudio y exportación autónoma con imágenes incrustadas.
+- `lib/pattern/generators/accessories.ts`: cinco motores nuevos experimentales;
+  mantienen milímetros/IDs/márgenes/comprobaciones del motor existente.
+- `lib/sizes/tables.ts`: tabla propia de bebé por intervalos de meses; el código
+  se conserva en el perfil y la selección se pasa en la ruta de biblioteca.
+- `projects/tabs/embroideryExport.ts`: selección de una sola vista y posiciones
+  físicas de los motivos restauradas antes de SVG/DST. Preset HD9120 170×100;
+  5 mm de resguardo por lado. No garantiza formato aceptado por la máquina.
+
+Verificación: `npm test` (86 casos) y `npm run build`; pruebas visuales en
+Chromium 390×844 y escritorio. Detalles de fuentes y pruebas físicas pendientes
+en `FUENTES_Y_MAQUINA.md` y la bitácora principal.

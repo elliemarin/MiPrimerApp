@@ -15,6 +15,17 @@ export interface BoardPointer {
   event: PointerEvent | React.PointerEvent;
 }
 
+/** Pellizco en coordenadas físicas de la vista; factor y giro relativos al inicio. */
+export interface BoardPinch {
+  points: [Pt, Pt];
+  midpoint: Pt;
+  distance: number;
+  angle: number;
+  factor: number;
+  rotation: number;
+  event: PointerEvent | React.PointerEvent;
+}
+
 export interface BoardHandlers {
   /** Devuelve true si la herramienta toma el gesto; si no, el lienzo se desplaza. */
   onDown?: (p: BoardPointer) => boolean;
@@ -22,6 +33,10 @@ export interface BoardHandlers {
   onUp?: (p: BoardPointer) => void;
   onHover?: (p: BoardPointer) => void;
   onDoubleTap?: (p: BoardPointer) => void;
+  /** true captura el gesto para editar; false conserva el zoom del lienzo. */
+  onPinchStart?: (p: BoardPinch) => boolean;
+  onPinchMove?: (p: BoardPinch) => void;
+  onPinchEnd?: (p: BoardPinch) => void;
 }
 
 export function useViewport(initial: View = { scale: 1, tx: 40, ty: 40 }) {
@@ -81,7 +96,7 @@ export function Board({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, Pt>());
-  const gesture = useRef<{ mode: 'tool' | 'pan' | 'pinch' | null; last?: Pt; dist?: number; mid?: Pt }>({ mode: null });
+  const gesture = useRef<{ mode: 'tool' | 'pan' | 'pinch' | 'pinch-tool' | null; last?: Pt; dist?: number; mid?: Pt; start?: BoardPinch }>({ mode: null });
   const lastTap = useRef(0);
   const { view, setView, zoomAt, size, toWorld } = vp;
   const [dims, setDims] = useState({ w: 800, h: 600 });
@@ -128,15 +143,39 @@ export function Board({
     return { screen: s, world: toWorld(s, view), event: e };
   };
 
+  const pinchSample = (e: React.PointerEvent, start?: BoardPinch): BoardPinch => {
+    const [a, b] = [...pointers.current.values()];
+    const points: [Pt, Pt] = [toWorld(a, view), toWorld(b, view)];
+    const distance = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y);
+    const angle = Math.atan2(points[1].y - points[0].y, points[1].x - points[0].x);
+    const delta = angle - (start?.angle ?? angle);
+    return {
+      points,
+      midpoint: { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 },
+      distance,
+      angle,
+      factor: start && start.distance > 0.001 ? distance / start.distance : 1,
+      rotation: Math.atan2(Math.sin(delta), Math.cos(delta)),
+      event: e
+    };
+  };
+
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button === 2) return;
-    (e.target as Element).setPointerCapture?.(e.pointerId);
+    // Un tercer dedo no inicia otra herramienta ni cambia la pareja del gesto.
+    if (pointers.current.size >= 2) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     pointers.current.set(e.pointerId, local(e));
     if (pointers.current.size === 2) {
-      // Cancela la herramienta y empieza el gesto de pellizco.
       if (gesture.current.mode === 'tool') handlers.onUp?.(bp(e));
-      const [a, b] = [...pointers.current.values()];
-      gesture.current = { mode: 'pinch', dist: Math.hypot(a.x - b.x, a.y - b.y), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
+      const sample = pinchSample(e);
+      if (handlers.onPinchStart?.(sample)) {
+        gesture.current = { mode: 'pinch-tool', start: sample };
+      } else {
+        const [a, b] = [...pointers.current.values()];
+        gesture.current = { mode: 'pinch', dist: Math.hypot(a.x - b.x, a.y - b.y), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
+      }
+      lastTap.current = 0;
       return;
     }
     const now = Date.now();
@@ -158,7 +197,10 @@ export function Board({
     }
     pointers.current.set(e.pointerId, local(e));
     const g = gesture.current;
-    if (g.mode === 'pinch' && pointers.current.size >= 2) {
+    if (g.mode === 'pinch-tool' && pointers.current.size >= 2) {
+      const sample = pinchSample(e, g.start);
+      handlers.onPinchMove?.(sample);
+    } else if (g.mode === 'pinch' && pointers.current.size >= 2) {
       const [a, b] = [...pointers.current.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
       const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
@@ -178,10 +220,17 @@ export function Board({
     } else if (g.mode === 'tool') handlers.onMove?.(bp(e));
   };
   const onPointerUp = (e: React.PointerEvent) => {
+    if (!pointers.current.has(e.pointerId)) return;
+    const g = gesture.current;
+    // Termina una sola vez, antes de retirar las coordenadas del dedo.
+    if (g.mode === 'pinch-tool' && pointers.current.size >= 2) {
+      if (e.type === 'pointerup') pointers.current.set(e.pointerId, local(e));
+      handlers.onPinchEnd?.(pinchSample(e, g.start));
+      gesture.current = { mode: null };
+    } else if (g.mode === 'tool') handlers.onUp?.(bp(e));
     pointers.current.delete(e.pointerId);
-    if (gesture.current.mode === 'tool') handlers.onUp?.(bp(e));
-    if (pointers.current.size === 0) gesture.current = { mode: null };
-    else if (gesture.current.mode === 'pinch') gesture.current = { mode: null };
+    // El dedo restante queda inerte: no puede dibujar ni mover por accidente.
+    if (pointers.current.size === 0 || g.mode === 'pinch') gesture.current = { mode: null };
   };
 
   const st = niceStep(view.scale, unit);
@@ -210,6 +259,7 @@ export function Board({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onLostPointerCapture={onPointerUp}
       onContextMenu={(e) => e.preventDefault()}
     >
       <svg className="board" width={dims.w} height={dims.h}>

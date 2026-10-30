@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../store/app';
-import { Board, BoardPointer, useViewport } from '../../ui/Board';
+import { Board, BoardPointer, BoardPinch, useViewport } from '../../ui/Board';
 import { useHistory } from '../../ui/useHistory';
 import { Icon } from '../../ui/Icon';
 import { Button, Empty, FilePick, IconButton, SaveIndicator, Segmented, Sheet, Field, LengthInput, TextInput, Select } from '../../ui/components';
@@ -19,16 +19,20 @@ import { LayersPanel } from './LayersPanel';
 import { ViewsPanel, AddViewSheet } from './ViewsPanel';
 import { ShapesSheet } from './ShapesSheet';
 import { findShape } from '../../data/shapes';
+import { surfaceAt, fillSurface, Surface } from './surfaces';
+import { FabricTray, FabricChoice, resolveFabricChoice } from './FabricTray';
+import { ColorimetrySheet } from './ColorimetrySheet';
+import { FigurineSheet } from './FigurineSheet';
 import { CATALOG } from '../../data/catalog';
 import { viewsFromModel, templateScaleFor, currentValues } from '../../store/projects';
 
-type Tool = 'seleccionar' | 'forma' | 'organica' | 'lapiz' | 'pincel' | 'linea' | 'pluma' | 'texto' | 'recorte' | 'zona' | 'medir' | 'calibrar' | 'referencia' | 'guia';
+type Tool = 'tela' | 'seleccionar' | 'forma' | 'organica' | 'lapiz' | 'pincel' | 'linea' | 'pluma' | 'texto' | 'recorte' | 'zona' | 'medir' | 'calibrar' | 'referencia' | 'guia';
 type Panel = 'elemento' | 'capas' | 'vistas';
 
 const TOOLS: { key: Tool; label: string; icon: string; hint: string }[] = [
-  { key: 'seleccionar', label: 'Elegir', icon: 'select', hint: 'Toca un elemento para elegirlo; arrástralo o usa los tiradores para escalar y girar.' },
+  { key: 'seleccionar', label: 'Elegir', icon: 'select', hint: 'Toca un elemento para elegirlo. Estira con dos dedos o con los tiradores; pellizca fuera para acercar el lienzo.' },
   { key: 'forma', label: 'Formas', icon: 'shape', hint: 'Arrastra para dibujar la forma o toca para insertarla.' },
-  { key: 'organica', label: 'Orgánicas', icon: 'leaf', hint: 'Toca el lienzo para colocar la figura elegida.' },
+  { key: 'organica', label: 'Figuras', icon: 'leaf', hint: 'Toca el lienzo para colocar la figura elegida.' },
   { key: 'lapiz', label: 'Lápiz', icon: 'pencil', hint: 'Dibuja a mano alzada: trazos finos para bordado o detalles.' },
   { key: 'pincel', label: 'Pincel', icon: 'brush', hint: 'Trazos anchos de pintura textil.' },
   { key: 'linea', label: 'Línea', icon: 'line', hint: 'Arrastra para trazar una línea recta (cintas, pespuntes).' },
@@ -68,6 +72,11 @@ export function StudioEditor({ projectId }: { projectId: string }) {
   const [panel, setPanel] = useState<Panel>('elemento');
   const [mobilePanel, setMobilePanel] = useState<Panel | null>(null);
   const [shapeKind, setShapeKind] = useState<'rect' | 'ellipse' | 'polygon' | 'star'>('ellipse');
+  const [showFabrics, setShowFabrics] = useState(false);
+  const [activeFabric, setActiveFabric] = useState<string | null>(null);
+  const [showColors, setShowColors] = useState(false);
+  const [showFigurine, setShowFigurine] = useState(false);
+  const [paintTarget, setPaintTarget] = useState<Surface | undefined>();
   const [organicId, setOrganicId] = useState('montana');
   const [showShapes, setShowShapes] = useState(false);
   const [pen, setPen] = useState<Pt[]>([]);
@@ -81,6 +90,8 @@ export function StudioEditor({ projectId }: { projectId: string }) {
   const [guideAxis, setGuideAxis] = useState<'x' | 'y'>('y');
   const [smoothCrop, setSmoothCrop] = useState(false);
   const [cursor, setCursor] = useState<Pt | null>(null);
+  const canvasWrap = useRef<HTMLDivElement>(null);
+  const pinchEdit = useRef<{doc:DesignDoc; latest?:DesignDoc; ids:string[]; midpoint:Pt} | null>(null);
   const drag = useRef<Drag | null>(null);
   const [live, setLive] = useState<Drag | null>(null);
 
@@ -185,10 +196,65 @@ export function StudioEditor({ projectId }: { projectId: string }) {
     setTool('seleccionar');
   };
 
+  const applyFabricAt = (fabricId: string, point: Pt) => {
+    const target = surfaceAt(doc, view, point);
+    if (!target) { setReadout('Suelta la tela dentro de una zona o un recorte.'); return; }
+    commit(fillSurface(doc, view.id, target, { type: 'tela', fabricId, rotation: 0, offsetX: 0, offsetY: 0, scale: 1 }));
+    updateProject(projectId, p => ({...p, fabricIds: [...new Set([...p.fabricIds, fabricId])]}));
+    setReadout(`Tela aplicada a ${target.label}`);
+    setMode('apariencia');
+  };
+  const dropFabric = async (choice: FabricChoice, screen: Pt) => {
+    const board = canvasWrap.current?.querySelector('.ed-canvas');
+    const r = board?.getBoundingClientRect();
+    if (!r || screen.x < r.left || screen.x > r.right || screen.y < r.top || screen.y > r.bottom) return;
+    const point = vp.toWorld({x:screen.x-r.left, y:screen.y-r.top}, vp.view);
+    if (!surfaceAt(doc,view,point)) { setReadout('Suelta la tela dentro de una zona o un recorte.'); return; }
+    try {
+      const fabric = await resolveFabricChoice(choice);
+      setActiveFabric(fabric.id);
+      // Avoid applying to an older document if another edit happened while the sample loaded.
+      const latest = histRef.current.state;
+      const latestView = latest?.views.find(v=>v.id===view.id);
+      const target = latest && latestView ? surfaceAt(latest,latestView,point) : undefined;
+      if (latest && latestView && target) {
+        histRef.current.commit(touch(fillSurface(latest,latestView.id,target,{type:'tela',fabricId:fabric.id,rotation:0,offsetX:0,offsetY:0,scale:1})));
+        updateProject(projectId,p=>({...p,fabricIds:[...new Set([...p.fabricIds,fabric.id])]}));
+        setReadout(`Tela aplicada a ${target.label}`); setMode('apariencia');
+      }
+    } catch(e) { useApp.getState().toast(e instanceof Error ? e.message : 'No se pudo cargar la tela.', 'error'); }
+  };
   const handlers = {
+    onPinchStart: (p: BoardPinch): boolean => {
+      if (tool !== 'seleccionar' || !single || single.locked || !p.points.some(point => {
+        const l=toLocal(single,point); return Math.abs(l.x)<=single.w/2+hs*2 && Math.abs(l.y)<=single.h/2+hs*2;
+      })) return false;
+      pinchEdit.current={doc, ids:expandSelection(doc,[single.id]), midpoint:p.midpoint};
+      return true;
+    },
+    onPinchMove: (p: BoardPinch) => {
+      const start=pinchEdit.current; if (!start) return;
+      const k=Math.max(.05,Math.min(20,p.factor)); const a=p.rotation;
+      const next=refreshGroups(updateElements(start.doc,start.ids,e=>{
+        const dx=(e.x-start.midpoint.x)*k, dy=(e.y-start.midpoint.y)*k;
+        return {...e,x:p.midpoint.x+dx*Math.cos(a)-dy*Math.sin(a),y:p.midpoint.y+dx*Math.sin(a)+dy*Math.cos(a),w:e.w*k,h:e.h*k,rotation:e.rotation+a*180/Math.PI};
+      }));
+      start.latest=next;
+      hist.preview(next);
+      setReadout(`Tamaño ${Math.round(k*100)} %`);
+    },
+    onPinchEnd: () => {
+      const start=pinchEdit.current; pinchEdit.current=null;
+      if (start?.latest) histRef.current.commit(touch(start.latest),start.doc);
+    },
     onDown: (bp: BoardPointer): boolean => {
       const w = bp.world;
       const shift = (bp.event as PointerEvent).shiftKey || multi;
+      if (tool === 'tela') {
+        if (activeFabric) applyFabricAt(activeFabric,w);
+        else { setShowFabrics(true); setReadout('Elige una tela de la biblioteca.'); }
+        return true;
+      }
       if (tool === 'seleccionar') {
         if (single && !single.locked) {
           const h = handlesFor(single);
@@ -415,7 +481,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
     onDoubleTap: () => {
       if ((tool === 'pluma' || tool === 'recorte' || tool === 'zona') && pen.length >= 3) finishPen(true);
     },
-    onHover: (bp: BoardPointer) => setCursor(bp.world)
+    onHover: (bp: BoardPointer) => { setCursor(bp.world); setPaintTarget(tool==='tela' ? surfaceAt(doc,view,bp.world) : undefined); }
   };
 
   function finishPen(closed: boolean) {
@@ -476,7 +542,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
     if (p === 'capas') return <LayersPanel doc={doc} view={view} sel={sel} setSel={setSel} commit={commit} />;
     return <ViewsPanel doc={doc} view={view} commit={commit} setViewId={setViewId} onAdd={() => setAddView(true)} setTool={(t) => setTool(t as Tool)} />;
   };
-  const toolInfo = TOOLS.find((t) => t.key === tool)!;
+  const toolInfo = tool==='tela' ? {hint:'Arrastra una muestra sobre la prenda o toca una zona para aplicar la tela elegida.'} : TOOLS.find((t) => t.key === tool)!;
   const visibleTools = TOOLS.filter((t) => (t.key === 'calibrar' ? view.source.type === 'foto' : true));
 
   return (
@@ -498,6 +564,9 @@ export function StudioEditor({ projectId }: { projectId: string }) {
       </div>
       <div className="ed-body">
         <div className="ed-rail" role="toolbar" aria-label="Herramientas">
+          <button className="tool" aria-pressed={showFabrics} onClick={()=>{setShowFabrics(!showFabrics);setTool('tela');}}><Icon name="telas" />Telas</button>
+          <button className="tool" onClick={()=>setShowColors(true)}><Icon name="palette" />Tonos</button>
+          <button className="tool" onClick={()=>setShowFigurine(true)}><Icon name="hanger" />Figurín</button>
           {visibleTools.map((t) => (
             <button key={t.key} className="tool" aria-pressed={tool === t.key} onClick={() => (t.key === 'organica' ? (setTool('organica'), setShowShapes(true)) : setTool(t.key))} title={t.hint}>
               <Icon name={t.icon} />
@@ -527,10 +596,14 @@ export function StudioEditor({ projectId }: { projectId: string }) {
               <Segmented value={mode} onChange={setMode} options={[{ value: 'apariencia', label: 'Apariencia' }, { value: 'tecnica', label: 'Técnica' }]} />
             </span>
           </div>
-          <div style={{ flex: 1, position: 'relative', display: 'flex' }}>
+          {showFabrics && <FabricTray modelId={project.modelId} activeId={activeFabric} onClose={()=>setShowFabrics(false)} onChoose={id=>{setActiveFabric(id);setTool('tela');setReadout('Toca la zona o arrastra otra muestra.');}} onDrop={dropFabric} />}
+          <div ref={canvasWrap} style={{ flex: 1, position: 'relative', display: 'flex', minHeight: 0 }}
+            onDragOver={e=>{if(e.dataTransfer.types.includes('application/x-hilvana-fabric')){e.preventDefault();e.dataTransfer.dropEffect='copy';}}}
+            onDrop={e=>{const raw=e.dataTransfer.getData('application/x-hilvana-fabric');if(!raw)return;e.preventDefault();try{void dropFabric(JSON.parse(raw),{x:e.clientX,y:e.clientY});}catch{ /* invalid external payload */ }}}>
             <Board vp={vp} handlers={handlers} unit={unit} grid={mode === 'tecnica'} cursor={tool === 'seleccionar' ? 'default' : 'crosshair'}>
               <StudioDefs doc={doc} view={view} fabrics={fabrics} prefix={prefix} />
               <ViewBase view={view} mode={mode} prefix={prefix} fabrics={fabrics} />
+              {tool==='tela' && paintTarget?.kind==='zona' && <path d={view.zones.find(z=>z.id===paintTarget.id)?.d} fill="none" stroke="var(--tape)" strokeWidth={4} vectorEffect="non-scaling-stroke" />}
               {els.map((e) => (
                 <ElementSvg key={e.id} el={e} mode={mode} prefix={prefix} doc={doc} fabrics={fabrics} />
               ))}
@@ -636,6 +709,9 @@ export function StudioEditor({ projectId }: { projectId: string }) {
         </aside>
       </div>
       <div className="ed-bottom" role="toolbar" aria-label="Herramientas">
+        <button className="tool" aria-pressed={showFabrics} onClick={()=>{setShowFabrics(!showFabrics);setTool('tela');}}><Icon name="telas" />Telas</button>
+        <button className="tool" onClick={()=>setShowColors(true)}><Icon name="palette" />Tonos</button>
+        <button className="tool" onClick={()=>setShowFigurine(true)}><Icon name="hanger" />Figurín</button>
         <button className="tool" onClick={() => setMobilePanel('elemento')} aria-pressed={false}>
           <Icon name="palette" />
           Propiedades
@@ -669,6 +745,12 @@ export function StudioEditor({ projectId }: { projectId: string }) {
           {panelBody(mobilePanel)}
         </Sheet>
       )}
+      {showColors && <ColorimetrySheet onClose={()=>setShowColors(false)} applyLabel={sel.length ? "Aplicar a la selección" : "Aplicar a toda la vista"} colors={[...Object.values(fabrics).map(f=>f.color),...doc.elements.filter(e=>e.viewId===view.id).flatMap(e=>e.fill.type==='color'?[e.fill.color]:[]),...Object.values(view.zoneFills??{}).flatMap(f=>f.type==='color'?[f.color]:[])]} onApply={color=>{
+        if(sel.length) commit(updateElements(doc,expandSelection(doc,sel).filter(id=>!doc.elements.find(e=>e.id===id)?.locked),e=>({...e,fill:{type:'color',color}})));
+        else commit({...doc,views:doc.views.map(v=>v.id===view.id?{...v,zoneFills:Object.fromEntries(v.zones.map(z=>[z.id,{type:'color',color}]))}:v)});
+        setMode('apariencia');setShowColors(false);
+      }} />}
+      {showFigurine && <FigurineSheet doc={doc} view={view} value={doc.figurine} onChange={figurine=>commit({...doc,figurine})} onClose={()=>setShowFigurine(false)} />}
       {showShapes && <ShapesSheet value={organicId} onPick={(id) => { setOrganicId(id); setShowShapes(false); setTool('organica'); }} onClose={() => setShowShapes(false)} />}
       {addView && <AddViewSheet project={project} doc={doc} onClose={() => setAddView(false)} commit={(d, id) => { commit(d); setViewId(id); }} />}
       {calibAsk && <CalibrateViewSheet a={calibAsk[0]} b={calibAsk[1]} view={view} doc={doc} commit={commit} onClose={() => { setCalibAsk(null); setTool('seleccionar'); }} />}

@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { CatalogModel, CATALOG, findModel } from '../../data/catalog';
+import { CatalogModel, CATALOG, findModel, Recipient } from '../../data/catalog';
 import { useApp } from '../../store/app';
 import { Button, Field, FilePick, Notice, Segmented, Sheet, TextInput, Select } from '../../ui/components';
 import { Icon } from '../../ui/Icon';
 import { navigate } from '../../ui/router';
-import { ProfileChoice, ProfilePicker, resolveProfile } from './ProfilePicker';
+import { ProfileChoice, ProfilePicker, resolveProfile, defaultProfileChoice } from './ProfilePicker';
 import { blankProject, projectFromModel, currentValues, templateScaleFor, viewsFromModel } from '../../store/projects';
-import { GENERATORS } from '../../lib/pattern/generators';
+import { GENERATORS, getGenerator } from '../../lib/pattern/generators';
 import { newPatternState } from '../../lib/pattern/engine';
 import { FIT_LABEL, Fit, FabricType } from '../../lib/pattern/generator';
 import { ORIGIN_LABEL, ProjectOrigin, Reference, ReferenceKind, ViewKind, VIEW_LABEL } from '../../store/types';
@@ -25,7 +25,7 @@ const STARTS: { origin: ProjectOrigin; icon: string; text: string }[] = [
 
 const INTERVENE = ['intervenir-camisa', 'intervenir-pantalon', 'camiseta-basica', 'sudadera', 'hoodie', 'falda-fruncida', 'vestido-camisero', 'chaqueta-cierre', 'bolsa-tote', 'parche-personalizado', 'cojin'];
 
-export function NewProjectSheet({ model, onClose }: { model?: CatalogModel; onClose: () => void }) {
+export function NewProjectSheet({ model, onClose, initialRecipient, initialBabySize }: { model?: CatalogModel; onClose: () => void; initialRecipient?: Recipient; initialBabySize?: string }) {
   const [origin, setOrigin] = useState<ProjectOrigin | null>(model ? 'catalogo' : null);
   return (
     <Sheet title={origin ? ORIGIN_LABEL[origin] : 'Nuevo proyecto'} onClose={onClose}>
@@ -42,7 +42,7 @@ export function NewProjectSheet({ model, onClose }: { model?: CatalogModel; onCl
           ))}
         </div>
       )}
-      {origin === 'catalogo' && model && <FromModel model={model} onClose={onClose} />}
+      {origin === 'catalogo' && model && <FromModel model={model} onClose={onClose} initialRecipient={initialRecipient} initialBabySize={initialBabySize} />}
       {origin === 'base' && <FromBase onClose={onClose} />}
       {(origin === 'patron-imagen' || origin === 'fotos' || origin === 'boceto') && <FromUploads origin={origin} onClose={onClose} />}
       {origin === 'intervencion' && <FromIntervention onClose={onClose} />}
@@ -68,13 +68,17 @@ function FabricFit({ fabric, setFabric, stretch, setStretch, fit, setFit }: { fa
   );
 }
 
-function FromModel({ model, onClose }: { model: CatalogModel; onClose: () => void }) {
+function FromModel({ model, onClose, initialRecipient, initialBabySize }: { model: CatalogModel; onClose: () => void; initialRecipient?: Recipient; initialBabySize?: string }) {
   const put = useApp((s) => s.put);
   const profiles = useApp((s) => s.profiles);
   const [name, setName] = useState(model.name);
-  const kinds = model.recipients.flatMap((r) => (r === 'unisex' ? ['mujer', 'hombre'] : [r]));
-  const needs = !!model.generatorId && model.id !== 'bolsa-tote';
-  const [choice, setChoice] = useState<ProfileChoice>(Object.keys(profiles).length ? { type: 'perfil', id: Object.values(profiles)[0].id } : needs ? { type: 'tabla', tableId: kinds.some((k) => ['bebe', 'toddler', 'infantil'].includes(k)) && !kinds.includes('mujer') ? 'ref-infantil-estatura' : 'ref-mujer-busto', code: kinds.includes('mujer') || kinds.includes('hombre') ? 'M92' : 'E92' } : { type: 'ninguno' });
+  const recipients = initialRecipient && model.recipients.includes(initialRecipient) ? [initialRecipient] : model.recipients;
+  const kinds = recipients.flatMap((r) => (r === 'unisex' ? ['mujer', 'hombre'] : [r]));
+  const gen = model.generatorId ? getGenerator(model.generatorId) : undefined;
+  const needs = !!gen?.requiredMeasures.length;
+  const usesBody = model.flat.family !== 'bolso' && model.flat.family !== 'accesorio';
+  const requiresProfile = needs || (usesBody && recipients.length === 1 && recipients[0] === 'bebe');
+  const [choice, setChoice] = useState<ProfileChoice>(() => defaultProfileChoice(kinds, profiles, requiresProfile, initialBabySize));
   const [fabric, setFabric] = useState<FabricType>(model.fabrics[0]);
   const [stretch, setStretch] = useState(model.fabrics[0] === 'punto' ? 30 : 0);
   const [fit, setFit] = useState<Fit>(model.fits.includes('regular') ? 'regular' : model.fits[0]);
@@ -95,10 +99,10 @@ function FromModel({ model, onClose }: { model: CatalogModel; onClose: () => voi
       <Field label="Nombre del proyecto">
         <TextInput value={name} onChange={setName} />
       </Field>
-      {model.id !== 'bolsa-tote' && <ProfilePicker value={choice} onChange={setChoice} allowNone={!needs} kinds={kinds} />}
-      {model.generatorId && model.id !== 'bolsa-tote' && <FabricFit {...{ fabric, setFabric, stretch, setStretch, fit, setFit }} />}
+      {(usesBody || needs) && <ProfilePicker value={choice} onChange={setChoice} allowNone={!requiresProfile} kinds={kinds} />}
+      {needs && <FabricFit {...{ fabric, setFabric, stretch, setStretch, fit, setFit }} />}
       {model.status === 'pendiente' && <Notice>Este modelo es solo inspiración: el proyecto tendrá el dibujo técnico como plantilla de diseño, sin patrón generado.</Notice>}
-      <Button variant="primary" block onClick={create} disabled={needs && choice.type === 'ninguno'}>
+      <Button variant="primary" block onClick={create} disabled={requiresProfile && choice.type === 'ninguno'}>
         Crear proyecto
       </Button>
     </div>

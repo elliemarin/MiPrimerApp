@@ -1,0 +1,87 @@
+import { useRef, useState } from 'react';
+import type { Pt } from '../../lib/geom/vec';
+import { useApp } from '../../store/app';
+import { Fabric } from '../../store/types';
+import { FABRIC_LIBRARY, recommendFabrics, searchLibraryFabric, swatchUrl } from '../../data/materialLibrary';
+import { findModel } from '../../data/catalog';
+import { addLibraryFabric } from '../../lib/fabricLibrary';
+import { Button, IconButton, TextInput, Thumb } from '../../ui/components';
+
+export type FabricChoice = { source: 'propia' | 'catalogo'; id: string };
+const pending = new Map<string, Promise<Fabric>>();
+export async function resolveFabricChoice(choice: FabricChoice): Promise<Fabric> {
+  if (choice.source === 'propia') {
+    const fabric = useApp.getState().fabrics[choice.id];
+    if (!fabric) throw new Error('Esta tela ya no está en tu biblioteca.');
+    return fabric;
+  }
+  if (choice.source !== 'catalogo' || !FABRIC_LIBRARY.some(f=>f.id===choice.id)) throw new Error('Muestra desconocida.');
+  // Reuse a previously chosen catalog sample; do not duplicate it on every tap.
+  const key=`[biblioteca:${choice.id}]`;
+  const existing=Object.values(useApp.getState().fabrics).find(f=>f.notes?.includes(key));
+  if(existing) return existing;
+  if(!pending.has(choice.id)) pending.set(choice.id,addLibraryFabric(choice.id).then(f=>{
+    useApp.getState().updateFabric(f.id, prev=>({...prev, notes:`${prev.notes??''}\n${key}`}));
+    return useApp.getState().fabrics[f.id];
+  }).finally(()=>pending.delete(choice.id)));
+  return pending.get(choice.id)!;
+}
+
+export function FabricTray({modelId,activeId,onChoose,onDrop,onClose}:{modelId?:string;activeId:string|null;onChoose:(id:string)=>void;onDrop:(choice:FabricChoice,point:Pt)=>void;onClose:()=>void}) {
+  const fabrics=useApp(s=>s.fabrics);
+  const [q,setQ]=useState('');
+  const [own,setOwn]=useState(false);
+  const [all,setAll]=useState(false);
+  const suppressClick=useRef(false);
+  const [busy,setBusy]=useState(false);
+  const [ghost,setGhost]=useState<Pt|null>(null);
+  const gesture=useRef<{choice:FabricChoice;start:Pt;moved:boolean}|null>(null);
+  const recommendations=recommendFabrics(modelId?findModel(modelId):undefined);
+  const list=q?FABRIC_LIBRARY.filter(f=>searchLibraryFabric(f,q)):!all&&recommendations.length?recommendations.map(r=>r.fabric):FABRIC_LIBRARY;
+  const choose=async(choice:FabricChoice)=>{
+    setBusy(true);
+    try{const fabric=await resolveFabricChoice(choice);onChoose(fabric.id);}
+    catch(e){useApp.getState().toast(e instanceof Error?e.message:'No se pudo cargar la tela.','error');}
+    finally{setBusy(false);}
+  };
+  const attrs=(choice:FabricChoice)=>({
+    draggable:true,
+    onDragStart:(e:React.DragEvent)=>{e.dataTransfer.setData('application/x-hilvana-fabric',JSON.stringify(choice));e.dataTransfer.effectAllowed='copy';},
+    onPointerDown:(e:React.PointerEvent)=>{
+      if(e.pointerType==='mouse')return;
+      e.stopPropagation();e.currentTarget.setPointerCapture(e.pointerId);
+      gesture.current={choice,start:{x:e.clientX,y:e.clientY},moved:false};
+    },
+    onPointerMove:(e:React.PointerEvent)=>{
+      const g=gesture.current;if(!g)return;
+      if(Math.hypot(e.clientX-g.start.x,e.clientY-g.start.y)>9)g.moved=true;
+      if(g.moved)setGhost({x:e.clientX,y:e.clientY});
+    },
+    onPointerUp:(e:React.PointerEvent)=>{
+      const g=gesture.current;gesture.current=null;setGhost(null);
+      if(g?.moved){suppressClick.current=true;setTimeout(()=>{suppressClick.current=false;},400);e.preventDefault();e.stopPropagation();onDrop(g.choice,{x:e.clientX,y:e.clientY});}
+    },
+    onPointerCancel:()=>{gesture.current=null;setGhost(null);},
+    onClick:()=>{if(!busy&&!suppressClick.current)void choose(choice);}
+  });
+  return <section className="fabric-tray" aria-label="Telas para el estudio">
+    <div className="row" style={{gap:8}}>
+      <Button size="sm" variant={own?'ghost':'primary'} onClick={()=>setOwn(false)}>Catálogo</Button>
+      <Button size="sm" variant={own?'primary':'ghost'} onClick={()=>setOwn(true)}>Mis telas</Button>
+      <div className="grow"><TextInput value={q} onChange={setQ} placeholder="Buscar tela…" aria-label="Buscar tela para el estudio" /></div>
+      <IconButton icon="close" label="Cerrar telas" onClick={onClose}/>
+    </div>
+    <div className="fabric-swatches">
+      {own?Object.values(fabrics).filter(f=>!q||f.name.toLocaleLowerCase().includes(q.toLocaleLowerCase())).map(f=><button key={f.id} className="fabric-swatch" aria-pressed={activeId===f.id} {...attrs({source:'propia',id:f.id})}>
+        <div style={{background:f.color}}>{f.photo&&<Thumb fileId={f.photo.processedFileId??f.photo.originalFileId} alt="" />}</div><span>{f.name}</span>
+      </button>):list.map(f=><button key={f.id} className="fabric-swatch" {...attrs({source:'catalogo',id:f.id})} title={recommendations.find(r=>r.fabric.id===f.id)?.reason}>
+        <img src={swatchUrl(f)} alt="" draggable={false}/><span>{f.name}</span>
+      </button>)}
+      {own&&!Object.keys(fabrics).length&&<p className="small muted">Elige una muestra del catálogo o agrega una foto de tu tela.</p>}
+      {!own&&!list.length&&<p className="small muted">No hay telas con ese nombre.</p>}
+    </div>
+    {!own&&recommendations.length>0&&<button className="tiny" onClick={()=>setAll(!all)} style={{background:'none',border:0,padding:'2px 0',color:'var(--mat)',textDecoration:'underline'}}>{all?'Ver sugeridas para el proyecto':`Ver las ${FABRIC_LIBRARY.length} telas`}</button>}
+    <p className="tiny muted" role="status" style={{margin:0}}>{busy?'Preparando muestra…':q?'Arrastra al lienzo o elige la tela y toca una zona.':'Sugerencias para tu proyecto. Arrastra o elige y toca la zona; las muestras son ilustrativas.'}</p>
+    {ghost&&<div aria-hidden="true" style={{position:'fixed',left:ghost.x-22,top:ghost.y-22,width:44,height:44,borderRadius:6,background:'var(--mat)',border:'3px solid var(--tape)',pointerEvents:'none',zIndex:999}}/>}
+  </section>;
+}

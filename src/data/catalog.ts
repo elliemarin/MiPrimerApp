@@ -5,7 +5,7 @@ export type Recipient = 'bebe' | 'toddler' | 'infantil' | 'mujer' | 'hombre' | '
 
 export const RECIPIENT_LABEL: Record<Recipient, string> = {
   bebe: 'Bebé',
-  toddler: 'Toddler',
+  toddler: '1–4 años',
   infantil: 'Niñas y niños',
   mujer: 'Mujer',
   hombre: 'Hombre',
@@ -342,7 +342,7 @@ export const CATALOG: CatalogModel[] = [
       name,
       type: 'superiores',
       sub,
-      recipients: ['infantil', 'mujer', 'hombre', 'unisex'],
+      recipients: id === 'blusa-v' ? ['infantil', 'mujer'] : ['infantil', 'mujer', 'hombre', 'unisex'],
       difficulty: id === 'camisa-clasica' ? 3 : 2,
       fabrics: [...fabrics],
       stretch: fabrics[0] === 'punto' ? 'media' : 'ninguna',
@@ -539,7 +539,7 @@ export const CATALOG: CatalogModel[] = [
   },
   {
     id: 'cojin',
-    name: 'Funda de cojín',
+    name: 'Funda de cojín con cierre de sobre',
     type: 'bolsos',
     sub: 'Hogar textil',
     recipients: ['unisex'],
@@ -548,13 +548,67 @@ export const CATALOG: CatalogModel[] = [
     stretch: 'ninguna',
     fits: ['regular'],
     techniques: ['costura-recta', 'aplicacion', 'collage'],
-    status: 'pendiente',
+    status: 'experimental',
+    generatorId: 'cojin-sobre',
     flat: { family: 'accesorio', accessory: 'cojin' },
-    description: 'Funda cuadrada con cierre de sobre. Como lienzo para collage funciona ya en el estudio.',
+    description: 'Funda rectangular o cuadrada con frente y dos espaldas superpuestas. Cambia sus medidas, interviene el frente y exporta las tres piezas a escala real.',
     variants: [],
     recommendedFabrics: ['Lona', 'Lino'],
     materials: ['Relleno', 'Hilo']
   },
+
+  // Accesorios con geometría paramétrica real. Falta muestra física antes de promoverlos.
+  {
+    id: 'funda-cheve', name: 'Funda para cheve, lata o botella', type: 'bolsos', sub: 'Fundas para bebidas', recipients: ['unisex'], difficulty: 1,
+    fabrics: ['plano'], stretch: 'ninguna', fits: ['regular'], techniques: ['costura-recta', 'forro', 'aplicacion', 'bordado'], status: 'experimental', generatorId: 'funda-bebida',
+    flat: { family: 'accesorio', accessory: 'funda-bebida' }, description: 'Envuelve tu lata con una funda de tela, forro y velcro. Introduce su contorno real y añade iniciales, hongos o un parche. Abierta por debajo.',
+    variants: [{ name: 'Cualquier recipiente cilíndrico', text: 'Ajusta contorno, alto y traslape. No se calcula a partir de mililitros.' }], recommendedFabrics: ['Lona', 'Denim', 'Algodón', 'Fieltro'], materials: ['Velcro', 'Hilo']
+  },
+  {
+    id: 'funda-vaso', name: 'Manga para vaso reutilizable', type: 'bolsos', sub: 'Fundas para bebidas', recipients: ['unisex'], difficulty: 1,
+    fabrics: ['plano'], stretch: 'ninguna', fits: ['regular'], techniques: ['costura-recta', 'forro', 'aplicacion'], status: 'experimental', generatorId: 'funda-bebida', params: { contorno: 280, alto: 80, traslape: 30 },
+    flat: { family: 'accesorio', accessory: 'funda-bebida' }, description: 'Manga corta para personalizar un vaso de paredes casi rectas. Ajuste con velcro; mide el contorno en la zona donde irá. No es protección térmica.',
+    variants: [], recommendedFabrics: ['Lona', 'Algodón', 'Fieltro'], materials: ['Velcro', 'Hilo']
+  },
+  {
+    id: 'dona-cabello', name: 'Dona de tela para cabello', type: 'bolsos', sub: 'Cabello y complementos', recipients: ['mujer', 'hombre', 'unisex'], difficulty: 1,
+    fabrics: ['plano'], stretch: 'ninguna', fits: ['regular'], techniques: ['costura-recta', 'frunces'], status: 'experimental', generatorId: 'dona-cabello',
+    flat: { family: 'accesorio', accessory: 'dona' }, description: 'Aprovecha retazos para una dona o scrunchie. Cambia el ancho del tubo, el frunce y el aro de elástico; el patrón calcula la tela sin duplicar márgenes.',
+    variants: [{ name: 'Delgada o voluminosa', text: 'Cambia el ancho del tubo y la proporción de frunce.' }], recommendedFabrics: ['Satén', 'Algodón', 'Viscosa', 'Terciopelo'], materials: ['Elástico de 5–8 mm', 'Hilo']
+  },
+  {
+    id: 'bandana-reversible', name: 'Bandana triangular reversible', type: 'bolsos', sub: 'Pañuelos y complementos', recipients: ['mujer', 'hombre', 'unisex'], difficulty: 1,
+    fabrics: ['plano'], stretch: 'ninguna', fits: ['regular'], techniques: ['costura-recta', 'aplicacion', 'bordado'], status: 'experimental', generatorId: 'bandana-reversible',
+    flat: { family: 'accesorio', accessory: 'bandana' }, description: 'Dos caras triangulares para combinar telas o bordar. Introduce ancho y profundidad; ajusta el largo para anudar con comodidad.',
+    variants: [], recommendedFabrics: ['Popelina', 'Batista', 'Lino', 'Algodón'], materials: ['Hilo']
+  },
+  {
+    id: 'cesta-textil', name: 'Cesta textil para el escritorio', type: 'bolsos', sub: 'Organización y hogar', recipients: ['unisex'], difficulty: 1,
+    fabrics: ['plano'], stretch: 'ninguna', fits: ['regular'], techniques: ['costura-recta', 'forro'], status: 'implementado', generatorId: 'bolsa-tote', params: { ancho: 220, alto: 220, fondo: 120, largoAsa: 150, anchoAsa: 20 },
+    flat: { family: 'bolso', bag: 'tote' }, description: 'Versión compacta de la tote con base en caja y asas cortas para ordenar hilos, retazos o herramientas. Usa el mismo generador comprobado de la tote.',
+    variants: [], recommendedFabrics: ['Lona', 'Loneta estampada', 'Denim'], materials: ['Entretela', 'Hilo resistente']
+  },
+
+  ...([
+    ['individual-reversible', 'Mantel individual reversible', 450, 320, 'Mesa y cocina'],
+    ['posavasos-textil', 'Posavasos textil reversible', 110, 110, 'Mesa y cocina'],
+    ['servilleta-reversible', 'Servilleta de dos caras', 350, 350, 'Mesa y cocina'],
+    ['marcapaginas-textil', 'Marcapáginas de tela', 50, 200, 'Regalos y lectura'],
+    ['tapete-maquina', 'Tapete para la máquina de coser', 600, 400, 'Organización y hogar']
+  ] as const).map(([id, name, width, height, sub]): CatalogModel => ({
+    id, name, sub, type: 'bolsos', recipients: ['unisex'], difficulty: 1, fabrics: ['plano'], stretch: 'ninguna', fits: ['regular'], techniques: ['costura-recta', 'aplicacion', 'bordado'],
+    status: 'experimental', generatorId: 'textil-doble-cara', params: { ancho: width, alto: height, margen: 7 }, flat: { family: 'accesorio', accessory: 'rectangulo', object: { width, height, label: name } },
+    description: 'Base rectangular reversible, con dos caras cosidas y medidas editables. Personaliza cada cara con telas, recortes o bordados y exporta su patrón. Sin relleno ni aislamiento térmico.',
+    variants: [], recommendedFabrics: ['Algodón', 'Lino', 'Popelina', 'Loneta'], materials: ['Hilo']
+  })),
+  ...([
+    ['delantal-estudio', 'Delantal creativo', 'delantal', 'Cocina y taller', 'Cuerpo, bolsillo, cuello y lazos como zonas independientes. Plantilla para diseñar: todavía no genera las piezas de confección.'],
+    ['antifaz-estudio', 'Antifaz para descansar', 'antifaz', 'Viaje y descanso', 'Diseña la cara de un antifaz con colores, bordado o apliques. Plantilla visual: falta el patrón de costura y el elástico.'],
+    ['banderin-estudio', 'Banderín para guirnalda', 'banderin', 'Fiestas y regalos', 'Combina letras, figuras y retazos para planear una guirnalda. Plantilla visual: falta la jareta y el patrón de confección.']
+  ] as const).map(([id, name, accessory, sub, description]): CatalogModel => ({
+    id, name, sub, description, type: 'bolsos', recipients: ['unisex'], difficulty: 1, fabrics: ['plano'], stretch: 'ninguna', fits: ['regular'], techniques: ['aplicacion', 'bordado', 'collage'], status: 'implementado', studioOnly: true,
+    flat: { family: 'accesorio', accessory }, variants: [], recommendedFabrics: ['Algodón', 'Lino', 'Denim', 'Fieltro'], materials: ['Hilo', 'Materiales según el acabado']
+  })),
   // ---------- Reparación y transformación (flujos del estudio)
   {
     id: 'intervenir-camisa',

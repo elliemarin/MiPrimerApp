@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { findModel, RECIPIENT_LABEL, STATUS_INFO, TYPE_LABEL, TECHNIQUE_LABEL, CatalogModel } from '../../data/catalog';
+import { findModel, RECIPIENT_LABEL, STATUS_INFO, TYPE_LABEL, TECHNIQUE_LABEL, CatalogModel, Recipient } from '../../data/catalog';
 import { Button, Chip, Empty, FilePick, Notice, PageHead, Segmented, Thumb, Select, Field } from '../../ui/components';
 import { FlatViewSvg, getFlat } from '../../ui/FlatArt';
-import { goBack } from '../../ui/router';
+import { goBack, queryParam } from '../../ui/router';
 import { useApp } from '../../store/app';
-import { SIZE_TABLES, SizeTable } from '../../lib/sizes/tables';
+import { SIZE_TABLES, SizeTable, rowsForKinds } from '../../lib/sizes/tables';
 import { MEASURE_BY_KEY } from '../../lib/sizes/measurements';
 import { formatLength } from '../../lib/units';
 import { getGenerator } from '../../lib/pattern/generators';
@@ -14,18 +14,25 @@ import { NewProjectSheet } from '../projects/NewProjectSheet';
 const DIFF = ['', 'Fácil', 'Intermedia', 'Avanzada'];
 const VIEW_NAME: Record<string, string> = { frente: 'Frente', espalda: 'Espalda', 'costado-der': 'Costado der.', 'costado-izq': 'Costado izq.' };
 
-export function tablesFor(m: CatalogModel): SizeTable[] {
-  return SIZE_TABLES.filter((t) => t.kinds.some((k) => m.recipients.includes(k as never) || (m.recipients.includes('unisex') && (k === 'mujer' || k === 'hombre'))));
+export function tablesFor(m: CatalogModel, recipient?: Recipient): SizeTable[] {
+  const gen = m.generatorId ? getGenerator(m.generatorId) : undefined;
+  if ((m.flat.family === 'bolso' || m.flat.family === 'accesorio') && !gen?.requiredMeasures.length) return [];
+  const recipients = recipient && m.recipients.includes(recipient) ? [recipient] : m.recipients;
+  const kinds = recipients.flatMap(r => r === 'unisex' ? ['mujer', 'hombre'] : [r]);
+  return SIZE_TABLES.map(t => ({ ...t, rows: rowsForKinds(t, kinds) })).filter(t => t.rows.length > 0);
 }
 
 export function ModelDetail({ id }: { id: string }) {
   const model = findModel(id);
+  const para = queryParam('para');
+  const recipient = model?.recipients.find(r => r === para);
+  const babyCode = queryParam('talla') ?? undefined;
   const [view, setView] = useState('frente');
   const [creating, setCreating] = useState(false);
   if (!model) return <div className="page"><Empty icon="biblioteca" title="Modelo no encontrado" action={<Button onClick={() => goBack('/biblioteca')}>Volver</Button>} /></div>;
   const flat = getFlat(model.id, model.flat);
   const v = flat.views.find((x) => x.key === view) ?? flat.views[0];
-  const st = STATUS_INFO[model.status];
+  const st = model.studioOnly ? { ...STATUS_INFO[model.status], label: 'Diseño editable', text: 'Plantilla editable por zonas en el estudio. Puedes exportar recortes y bordados; no genera un patrón de confección de la prenda.' } : STATUS_INFO[model.status];
   const gen = model.generatorId ? getGenerator(model.generatorId) : undefined;
 
   return (
@@ -103,9 +110,9 @@ export function ModelDetail({ id }: { id: string }) {
         </div>
       </div>
 
-      <SizeTables model={model} />
+      <SizeTables model={model} recipient={recipient} />
       <ModelPhotos model={model} />
-      {creating && <NewProjectSheet model={model} onClose={() => setCreating(false)} />}
+      {creating && <NewProjectSheet model={model} initialRecipient={recipient} initialBabySize={babyCode} onClose={() => setCreating(false)} />}
     </div>
   );
 }
@@ -119,8 +126,8 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SizeTables({ model }: { model: CatalogModel }) {
-  const tables = tablesFor(model);
+function SizeTables({ model, recipient }: { model: CatalogModel; recipient?: Recipient }) {
+  const tables = tablesFor(model, recipient);
   const unit = useApp((s) => s.settings.unit);
   const [tid, setTid] = useState(tables[0]?.id ?? '');
   const t = tables.find((x) => x.id === tid);
@@ -153,7 +160,7 @@ function SizeTables({ model }: { model: CatalogModel }) {
           <tbody>
             {t.rows.map((r) => (
               <tr key={r.code}>
-                <td><strong>{r.code}</strong></td>
+                <td><strong>{r.code}</strong>{t.id === 'ref-bebe-meses' && <span className="small"> · {r.label}</span>}</td>
                 {r.ageHint !== undefined && <td className="muted">{r.ageHint}</td>}
                 {keys.map((k) => (
                   <td key={k} className="n">{r.values[k as keyof typeof r.values] !== undefined ? formatLength(r.values[k as keyof typeof r.values]!, unit, { suffix: false }) : '—'}</td>
