@@ -105,23 +105,22 @@ la Singer Smart Heavy Duty HD9120.
   recomendaciones, límites de los 111 contornos, máscaras con giro/espejo/
   recorte, composición y aislamiento de vistas DST, colorimetría y figurines.
 
-### Publicación bloqueada en esta sesión
+### Permisos corregidos y publicación
 
-La lectura de GitHub funciona, y la consulta de metadatos anunciaba `push:true`,
-pero el **push real de prueba devuelve 403** (`Permission ... denied to
-PaulHRios`) y la API Git de la integración devuelve **403 Resource not
-accessible by integration**. Por ello este cambio **no está publicado** en
-GitHub Pages ni se debe afirmar que ya está en el remoto. Se conserva como
-commit local y paquete de fuente/parche para aplicar tras revisar invitación,
-permisos efectivos y acceso de la app GitHub al repositorio de Ellie.
-También se intentó crear un fork para entregar un PR, pero esa operación fue
-rechazada con el mismo 403 de la integración. No se modificaron permisos ni
-conexiones de cuenta.
+La primera entrega quedó bloqueada por 403 en push, API y fork. Tras el ajuste
+hecho por la persona usuaria, la comprobación `git push --dry-run origin
+HEAD:main` pasó y el remoto seguía en el commit base `6a5dcab`, sin avances
+intermedios que integrar. Se sube el cambio de biblioteca/estudio junto con este
+relevo actualizado. Consultar Actions para el resultado final de la publicación;
+no confundir subida del código con despliegue terminado.
+
+El respaldo local anterior sigue disponible, pero su nota de bloqueo describe
+el intento inicial; esta bitácora del repositorio es el estado más reciente.
 
 ### Siguiente trabajo recomendado para Claude
 
-1. Aplicar/subir el commit local y comprobar Actions/Pages. Conservar esta
-   bitácora; no sobrescribir cambios remotos posteriores al commit base.
+1. Comprobar Actions/Pages tras la subida y revisar la app publicada. Conservar
+   esta bitácora y los cambios posteriores de otras personas.
 2. Probar Safari y VoiceOver en un iPhone físico: arrastre, pellizco, gestos
    cerca de los tiradores y zonas pequeñas. Chromium móvil no sustituye iOS.
 3. Imprimir a 100 % y coser muestras de los nuevos accesorios (además de

@@ -1,4 +1,8 @@
-# Aplicar el relevo de biblioteca y estudio
+# Aplicar el respaldo de biblioteca y estudio
+
+**Actualización:** los permisos fueron corregidos y la entrega se sube a `main`.
+Estas instrucciones se conservan para recuperar el respaldo inicial; no hace
+falta aplicarlo de nuevo si el remoto ya contiene los cambios.
 
 Esta entrega conserva los cambios en un commit local de la rama
 `codex/biblioteca-estudio`. El remoto de Ellie rechazó la escritura con 403;
