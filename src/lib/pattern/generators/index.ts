@@ -9,8 +9,10 @@ import { beanieGenerator } from './beanie';
 import { sleeveGenerator, cushionGenerator, scrunchieGenerator, bandanaGenerator, reversibleRectangleGenerator } from './accessories';
 import { hoodieGenerator } from './hoodie';
 import { COSTUME_GENERATORS } from './costumes';
+import { babyBodysuitGenerator } from './babyBodysuit';
+import { COSTUME_EXPANSION_GENERATORS } from './costumeExpansion';
 
-export const GENERATORS: PatternGenerator[] = [pantsGenerator, skirtGenerator, toteGenerator, bibGenerator, beanieGenerator, sleeveGenerator, cushionGenerator, scrunchieGenerator, bandanaGenerator, reversibleRectangleGenerator, relaxedJacketGenerator, relaxedTopGenerator, ponchoGenerator, pinaforeGenerator, hoodieGenerator, ...ACCESSORY_PLUS_GENERATORS, ...COSTUME_GENERATORS];
+export const GENERATORS: PatternGenerator[] = [pantsGenerator, skirtGenerator, toteGenerator, bibGenerator, beanieGenerator, sleeveGenerator, cushionGenerator, scrunchieGenerator, bandanaGenerator, reversibleRectangleGenerator, relaxedJacketGenerator, relaxedTopGenerator, ponchoGenerator, pinaforeGenerator, hoodieGenerator, babyBodysuitGenerator, ...ACCESSORY_PLUS_GENERATORS, ...COSTUME_GENERATORS, ...COSTUME_EXPANSION_GENERATORS];
 
 export function getGenerator(id: string): PatternGenerator | undefined {
   return GENERATORS.find((g) => g.id === id);

@@ -49,6 +49,13 @@ def run(browser, width):
     page.goto(BASE)
     page.wait_for_load_state('networkidle')
     page.get_by_role('searchbox', name='Buscar prendas y accesorios', exact=True).wait_for()
+    grouped_count = page.evaluate('''async()=>{
+      const {CATALOG}=await import('/src/data/catalog.ts');
+      const {modelHasPattern}=await import('/src/features/library/filters.ts');
+      const {groupCatalog}=await import('/src/features/library/groups.ts');
+      return groupCatalog(CATALOG.filter(modelHasPattern)).length;
+    }''')
+    assert grouped_count == 110, grouped_count
     no_overflow(page)
     page.screenshot(path=f'/tmp/hilvana-grouped-library-{width}.png', full_page=True)
 
@@ -85,9 +92,10 @@ def run(browser, width):
     before = state['project']['pattern']
 
     # Measures lead to intervention, then colours and embroidery as requested.
-    page.get_by_role('button', name='Elegir telas y bordados', exact=True).click()
+    page.get_by_role('button', name='Elegir telas', exact=True).click()
     page.wait_for_url('**/#/acabados/**')
-    assert page.get_by_role('button', name='Bordados', exact=True).is_disabled()
+    assert page.get_by_role('button', name='Vista previa y bordados', exact=True).is_disabled()
+    page.get_by_text('Cambiar una parte o bolsillo', exact=True).click()
     page.locator('.finish-material-list>button').first.click()
     page.get_by_role('button', name='Elegir una tela o subir foto', exact=True).click()
     dialog = page.get_by_role('dialog', name=re.compile('^Tela para '))

@@ -155,6 +155,9 @@ export interface DesignElement {
   embroidery?: { kind: 'motif' | 'lettering'; motifId?: string; fontId?: string; text?: string };
   id: string;
   viewId: string;
+  /** The assembled instance (for example the right sleeve) of a physical piece. */
+  assemblySurfaceId?: string;
+  assemblySurfaceLabel?: string;
   kind: ElementKind;
   name: string;
   locked: boolean;

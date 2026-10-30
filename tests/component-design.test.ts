@@ -40,6 +40,10 @@ describe('Complementos del catálogo vinculados al estudio', () => {
     expect(ids).toContain('trabilla-cinturon');
     expect(ids).not.toContain('trabilla-colgar');
     expect(optionsForProject(bag).some(option => option.id === 'trabilla-colgar')).toBe(true);
+    const wings = projectFromModel(findModel('disfraz-alas-hada')!);
+    expect(optionsForProject(wings).length).toBeGreaterThan(10);
+    expect(optionsForProject(wings).every(option => option.group === 'decoracion')).toBe(true);
+    expect(COMPONENT_OPTIONS.some(option => option.id === 'porta-martillo')).toBe(true);
   });
 
   it('conserva nombre del preset, centro y etiqueta de montaje al guardar', () => {

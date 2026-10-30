@@ -11,7 +11,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // Keep the running page and its lazy chunks on the same release. A newer
+      // worker waits until the person saves and accepts the update.
+      registerType: 'prompt',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Hilvana',
@@ -30,7 +32,8 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2,mjs}'],
+        clientsClaim: true,
+        globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2,mjs}'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024
       }
     })

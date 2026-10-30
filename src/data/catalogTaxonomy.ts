@@ -1,15 +1,17 @@
 import type { CatalogModel, GarmentType, Recipient, Technique } from './catalog';
+import { COSTUME_EXPANSION_FAMILY_LABELS, COSTUME_EXPANSION_FAMILIES } from './costumeExpansion';
 
 /** A family identifies the item itself. Collections, fabric recommendations and
  * optional decorations never assign a family. Every current design is listed. */
 export const FAMILY_LABEL = {
+  ...COSTUME_EXPANSION_FAMILY_LABELS,
   hoodie: 'Hoodies', sudadera: 'Sudaderas sin capucha', chaqueta: 'Chaquetas',
   chaleco: 'Chalecos', cardigan: 'Cárdigans', abrigo: 'Abrigos y parkas',
   poncho: 'Ponchos', ruana: 'Ruanas', capa: 'Capas',
   camiseta: 'Camisetas', camisa: 'Camisas', top: 'Blusas, tops y túnicas', sueter: 'Suéteres',
   pantalon: 'Pantalones', jogger: 'Joggers', short: 'Shorts', falda: 'Faldas',
   vestido: 'Vestidos', peto: 'Petos y jumpers', mono: 'Monos y enterizos', pijama: 'Pijamas',
-  body: 'Bodies de bebé', mameluco: 'Mamelucos', babero: 'Baberos', gorro: 'Gorros de punto',
+  body: 'Pañaleros / bodies', mameluco: 'Mamelucos', babero: 'Baberos', gorro: 'Gorros de punto',
   tote: 'Bolsas tote', 'bolsa-jareta': 'Bolsas con jareta', estuche: 'Estuches y neceseres', bandolera: 'Bandoleras',
   'funda-tecnologia': 'Fundas para tecnología', 'funda-lectura': 'Fundas para libros y documentos',
   'funda-costura': 'Fundas para costura', 'funda-lentes': 'Fundas para lentes',
@@ -64,7 +66,7 @@ const DESIGNS: Partial<Record<CatalogFamily, readonly string[]>> = {
   reparacion: ['intervenir-camisa', 'intervenir-pantalon', 'remiendo-rodilla', 'acortar-bajo'],
   aplicacion: ['parche-personalizado', 'collage-montanas']
 };
-export const FAMILY_BY_DESIGN = Object.fromEntries(Object.entries(DESIGNS).flatMap(([family, ids]) => ids.map(id => [id, family]))) as Record<string, CatalogFamily>;
+export const FAMILY_BY_DESIGN = { ...Object.fromEntries(Object.entries(DESIGNS).flatMap(([family, ids]) => ids.map(id => [id, family]))), ...COSTUME_EXPANSION_FAMILIES } as Record<string, CatalogFamily>;
 
 export function familyOf(model: CatalogModel): CatalogFamily {
   return FAMILY_BY_DESIGN[model.designGroup?.id ?? model.id] ?? 'sin-clasificar';

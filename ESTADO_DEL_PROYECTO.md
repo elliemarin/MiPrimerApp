@@ -12,16 +12,94 @@ Actualízalo al terminar cada tarea.
 
 ```bash
 npm install
-npm test            # 2435 pruebas: catálogo, fuentes, patrones, adornos, PDF y láminas
+npm test            # 2859 pruebas: catálogo, vistas, patrones, persistencia, PDF e imágenes
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Prenda completa, pañalero y 44 disfraces (2026-10-30)
+
+**Este es el relevo más reciente.** El recorrido principal ahora es **Base →
+Extras sobre la prenda completa → Telas y colores → Bordados → PDF**. Se conservan
+los proyectos existentes, sus medidas físicas y las piezas independientes.
+
+- **Intervenir sin recargar:** se reprodujo el fallo con dos despliegues reales.
+  El service worker anterior activaba una actualización mientras la pestaña
+  seguía necesitando módulos de la versión vieja. Ahora espera a **Guardar y
+  actualizar**, guarda antes de activar y conserva la página si guardar falla.
+  La hidratación de IndexedDB también protege cambios y eliminaciones concurrentes.
+- **Primera actualización desde la versión anterior:** cerrar todas las pestañas
+  y ventanas de Hilvana, incluida la app instalada, y abrirla de nuevo. Recargar
+  una pestaña antigua por sí solo puede dejar el worker nuevo esperando. No borrar
+  los datos del navegador. Las actualizaciones siguientes usan el nuevo aviso.
+- **Vista armada compartida** entre Extras y Acabados, con frente/espalda donde
+  hay correspondencias físicas. Arrastrar coloca el centro en mm sobre una pieza
+  real y distingue copias derecha/izquierda y caras de manga. El bolsillo genera
+  su propio patrón; no altera el contorno de corte de la prenda. **Piezas** queda
+  como vista técnica opcional. Las letras y ventanas de cámara no se invierten
+  en las instancias en espejo; la guía canónica PDF compensa esa orientación.
+- **Materiales más sencillos:** un botón para todo el diseño y excepciones al
+  tocar una zona, solapa o marco. Fotos/carrete permanecen en Telas. Después se
+  pasa a bordados sobre la misma vista, con arrastre, tamaño, borrar y deshacer.
+  Las herramientas secundarias quedan plegadas. Alas, colas y accesorios de
+  personaje sugieren primero decoraciones; los bolsillos siguen en Todos. Se reduce el texto en móvil
+  para conservar espacio de selección sin esconder la prenda.
+- **Pañalero / body real:** un diseño, manga corta o larga, tallas por meses
+  RN–24 meses o medidas personalizadas. Apertura frontal y entrepierna con
+  broches, tapetas integradas, mangas, ribetes medidos y refuerzos. Nueve
+  plantillas (17 piezas contando copias); no es un cuello envolvente. Se corrigió
+  también la doble reducción de las antiguas ilustraciones infantiles.
+- **40 construcciones nuevas de disfraz → 44 diseños en esa colección:**
+  tabardos, chalecos, faldones de pétalos/hojas/tentáculos, alas, colas, diademas,
+  cuellos, puños, polainas, pecheras, faja y cuatro conjuntos. Cambian contorno o
+  inventario; tamaños y colores siguen dentro del mismo diseño. Los conjuntos
+  conservan IDs por componente, reversos, refuerzos, márgenes y pasos reales.
+- **Catálogo:** 1,923 registros, 1,846 recetas con motor, **110 diseños editables**.
+  Bebé tiene siete diseños agrupados. Se mantiene la clasificación estricta y
+  los 269 recursos externos de la entrega anterior en su biblioteca separada.
+- **Imágenes generadas con IA:** fotografías ilustrativas propias para los 110
+  diseños, optimizadas en láminas WebP. Se usan en catálogo, detalle y variantes;
+  el estudio editable y los patrones conservan geometría vectorial. Las imágenes
+  son referencias visuales, no fotografías de muestras cosidas verificadas.
+
+**Verificado:** 2,859 pruebas en 61 archivos. Recorridos reales a
+320/390/1440 px, arrastre táctil y ratón, cambios de lado y vista técnica,
+material global y de solapa, fotos, bordados legibles y conservación al reabrir.
+Auditoría por interfaz de las 53 familias nativas. Pañalero: nueve plantillas en
+PDF de 19 páginas. Tabardo, kit dragón y alas de hada: seis descargas verificadas;
+comprobación vectorial de controles de 50/100 mm, cuadrícula de 10 mm, colores,
+manifiesto y PrintScaling=None. Las 110 imágenes se cargaron y decodificaron
+en auditoría a 390/1500 px. TypeScript y build para Pages pasan. El build
+con prefijo `/MiPrimerApp/` abre Intervenir sin recargar, descarga el PDF del
+pañalero y conserva la biblioteca y sus imágenes al recargar sin conexión
+(`tests/browser/production_smoke.py`).
+
+**Límites que debe conocer la siguiente IA:** los patrones nuevos siguen como
+experimentales hasta imprimir y coser muestras. La vista armada es orientativa
+2D, sin simulación de caída ni vistas laterales inventadas. Babero, gorro, cojín,
+dona y banderín conservan una cara física principal. Los proyectos antiguos sin
+identidad de lado se asignan a una copia determinista, sin duplicar extras;
+pueden recolocarse después. Un bordado superpuesto a un bolsillo sigue anclado a
+la pieza base, no se convierte automáticamente en hijo del bolsillo. Verificar
+Safari/iPhone y cámara en dispositivo físico sigue pendiente.
+
+**Siguiente paso recomendado:** confeccionar muestras del pañalero y de una
+construcción de cada familia de disfraces; registrar medidas, correcciones y
+fotos antes de cambiar su estado. Después añadir correspondencias de costado
+verificables y anclaje opcional de bordado a un bolsillo independiente.
+
+Relevo técnico: [actualización sin recarga](docs/INTERVENIR_SIN_RECARGA.md),
+[vista armada](docs/VISTA_ARMADA.md),
+[acabados](docs/ACABADOS_EN_DISENO_COMPLETO.md),
+[pañalero](docs/PANALERO_BEBE.md) y
+[disfraces](docs/DISFRACES_AMPLIADOS.md) e
+[imágenes del catálogo](docs/IMAGENES_CATALOGO_IA.md).
+
 ## Catálogo auditado, fuentes gratuitas y decoraciones (2026-10-30)
 
-**Este es el relevo más reciente.** Se revisaron los **1,882 registros** del
+**Relevo anterior.** Se revisaron los **1,882 registros** del
 catálogo, incluidas las variantes y referencias sin motor. Se conservan los
 **1,804 patrones paramétricos agrupados en 69 diseños**; la ampliación de fuentes
 externas no infla ese número ni convierte PDF descargados en geometría editable.

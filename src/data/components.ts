@@ -72,6 +72,10 @@ export type ComponentPreset = ComponentOption;
 
 export function componentPresetsFor(model?: CatalogModel): ComponentOption[] {
   if (!model) return [...COMPONENT_OPTIONS];
+  // Soft costume props usually need trim first. All pockets and tool holders
+  // remain available in their own filters and in Todos.
+  if (model.collection === 'Disfraces' && model.family && ['alas', 'cola', 'diadema-disfraz', 'cuello-disfraz', 'puno-disfraz', 'polaina', 'conjunto-disfraz', 'sombrero', 'corona', 'orejas'].includes(model.family))
+    return COMPONENT_OPTIONS.filter(option => option.group === 'decoracion');
   return COMPONENT_OPTIONS.filter(option => option.families.includes(model.flat.family));
 }
 

@@ -30,6 +30,9 @@
 .customize-reference-note { color: var(--ink-2); font-size: 11px; margin: 3px 0 7px; }
 .customize-no-view { min-height: 260px; display: grid; place-content: center; justify-items: center; gap: 15px; padding: 25px; text-align: center; color: var(--ink-2); border: 1px dashed var(--line-strong); border-radius: var(--r-lg); }
 .customize-gallery { min-width: 0; }
+.customize-pieces-toggle { border: 0; background: transparent; padding: 9px 4px; min-height: 44px; color: var(--ink-2); font-size: 12px; text-decoration: underline; cursor: pointer; }
+.customize-look-tabs .filter-chip { min-width: 80px; }
+.customize-whole-look { background: #f5f1e9; }
 .customize-gallery h2 { font-family: var(--display); font-size: 26px; font-weight: 500; margin-bottom: 12px; }
 .customize-filters { margin-top: 9px; }
 .customize-result-count { color: var(--ink-2); font-size: 11px; margin-bottom: 9px; }
@@ -72,6 +75,7 @@
   .customize-view-tabs .filter-chip { min-height: 32px; height: 32px; }
   .customize-preview-top > .icon-btn { width: 34px; height: 34px; }
   .customize-selection { min-height: 47px; padding: 3px 0; }
+  .customize-reference-note { display: none; }
   .customize-selection strong { font-size: 12px; }
   .customize-selection small { font-size: 11px; }
   .customize-added-list:empty { display: none; }

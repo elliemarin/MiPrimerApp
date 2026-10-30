@@ -13,8 +13,9 @@ describe('Una base por diseño, con medidas elegidas después', () => {
     const before = JSON.stringify(CATALOG);
     const grouped = groupCatalog(patterns);
     const ids = grouped.flatMap(entry => entry.models.map(item => item.id));
-    expect(grouped.length).toBeLessThan(90);
-    expect(grouped.length).toBeGreaterThan(35);
+    // Forty new costume constructions and the restored baby body add designs,
+    // while dimensional presets still share their original cards.
+    expect(grouped).toHaveLength(110);
     expect(patterns.length).toBeGreaterThanOrEqual(1789);
     expect(ids).toHaveLength(patterns.length);
     expect(new Set(ids).size).toBe(ids.length);

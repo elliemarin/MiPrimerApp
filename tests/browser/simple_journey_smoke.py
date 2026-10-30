@@ -56,7 +56,8 @@ def component_point(page, project_id, component_id):
       const {useApp}=await import('/src/store/app.ts');
       const c=useApp.getState().projects[args.project].pattern.components.find(c=>c.id===args.component);
       const svg=document.querySelector('.customize-art svg');
-      const p=new DOMPoint(c.placement.x,c.placement.y+c.height*.2).matrixTransform(svg.getScreenCTM());
+      const surface=c.placement.assemblySurfaceId&&svg.querySelector(`[data-assembly-surface="${c.placement.assemblySurfaceId}"] > g[transform]`);
+      const p=new DOMPoint(c.placement.x,c.placement.y+c.height*.2).matrixTransform((surface||svg).getScreenCTM());
       return {x:p.x,y:p.y};
     }''', {'project': project_id, 'component': component_id})
 
@@ -157,7 +158,10 @@ def save_and_reload(page, project_id):
 
 
 def start_from_model(page, model_id, intent='customize', size='Mediana'):
-    page.goto(BASE + '/#/biblioteca/' + model_id)
+    if page.url.startswith(BASE):
+        page.evaluate('id=>{ location.hash="/biblioteca/"+id; }', model_id)
+    else:
+        page.goto(BASE + '/#/biblioteca/' + model_id)
     page.wait_for_load_state('networkidle')
     no_overflow(page)
     page.get_by_role('button', name='Obtener patrón' if intent == 'pattern' else 'Intervenir', exact=True).click()
@@ -287,6 +291,30 @@ def world_point(page, selector, x, y):
     }''', {'x': x, 'y': y})
 
 
+def physical_point(page, selector, surface_id, x, y):
+    """A physical millimetre point projected through the visible garment face."""
+    return page.locator(selector).evaluate('''(svg,args)=>{
+      const surface=args.surface&&svg.querySelector(`[data-assembly-surface="${args.surface}"] > g[transform]`);
+      const p=new DOMPoint(args.x,args.y).matrixTransform((surface||svg).getScreenCTM());
+      return{x:p.x,y:p.y};
+    }''', {'surface': surface_id, 'x': x, 'y': y})
+
+
+def surface_fraction(page, project_id, fx, fy):
+    return page.evaluate('''async args=>{
+      const {useApp}=await import('/src/store/app.ts');
+      const {buildAssembly}=await import('/src/features/simple/assembled.ts');
+      const svg=document.querySelector('.customize-art svg');
+      const sceneId=svg.querySelector('[data-assembly-view]')?.dataset.assemblyView;
+      if(!sceneId) { const b=svg.viewBox.baseVal;const p=new DOMPoint(b.x+b.width*args.fx,b.y+b.height*args.fy).matrixTransform(svg.getScreenCTM());return{x:p.x,y:p.y}; }
+      const scene=buildAssembly(useApp.getState().projects[args.id]).find(s=>s.id===sceneId);
+      const surface=scene.surfaces.find(s=>s.primary)||scene.surfaces[0],b=surface.physicalBounds;
+      const g=svg.querySelector(`[data-assembly-surface="${surface.id}"] > g[transform]`);
+      const p=new DOMPoint(b.minX+(b.maxX-b.minX)*args.fx,b.minY+(b.maxY-b.minY)*args.fy).matrixTransform(g.getScreenCTM());
+      return{x:p.x,y:p.y};
+    }''', {'id': project_id, 'fx': fx, 'fy': fy})
+
+
 def add_extra_by_drag(page, context, project_id, name, fx, fy, touch):
     handle = page.get_by_role('button', name='Arrastrar ' + name, exact=True)
     # Fixed navigation and the sticky preview reduce the usable viewport.
@@ -295,7 +323,7 @@ def add_extra_by_drag(page, context, project_id, name, fx, fy, touch):
     handle.click(trial=True)
     source = handle.bounding_box()
     start = {'x': source['x']+source['width']/2, 'y': source['y']+source['height']/2}
-    end = svg_point(page, '.customize-art svg', fx, fy)
+    end = surface_fraction(page, project_id, fx, fy)
     before = len(project_state(page, project_id)['project']['pattern'].get('components', []))
     drag(page, context, start, end, touch)
     page.wait_for_function('args=>window.__hilvanaQaApp.getState().projects[args.id].pattern.components?.length===args.count', arg={'id': project_id, 'count': before+1})
@@ -309,12 +337,18 @@ def run_simple_customization(browser, mobile=True):
     page = context.new_page()
     errors = []
     page.on('pageerror', lambda error: errors.append(str(error)))
+    previous_id = start_from_model(page, 'pantalon-recto-elastico')
+    page.locator('.customize-art svg').wait_for()
+    page.evaluate('window.hilvanaNoReload = true')
     project_id = start_from_model(page, 'coleccion-sudadera-660-540-260-capucha')
+    assert previous_id != project_id and page.evaluate('window.hilvanaNoReload') is True
     page.get_by_role('heading', name='Coloca tus extras', exact=True).wait_for()
     initial = project_state(page, project_id)
     assert_pattern(initial)
     assert initial['project']['pattern']['generatorId'] == 'sudadera-capucha-holgada'
     assert len(initial['pieces']) == 4
+    assert page.locator('.customize-whole-look').count() == 1
+    assert page.get_by_role('group', name='Lado de la prenda').get_by_role('button').count() == 2
     no_overflow(page)
     page.get_by_role('textbox', name='Buscar extras', exact=True).fill('bolsillo cargo')
     cargo = add_extra_by_drag(page, context, project_id, 'bolsillo cargo', .38, .62, mobile)
@@ -324,27 +358,39 @@ def run_simple_customization(browser, mobile=True):
     # Zoom once and drag in that coordinate system. Physical coordinates must
     # change by the requested millimetres, without resizing the sewing piece.
     page.get_by_role('button', name='Acercar zona', exact=True).click()
-    start = world_point(page,'.customize-art svg',before['x'],before['y']+cargo['height']*.2)
-    end = world_point(page,'.customize-art svg',before['x']+40,before['y']+cargo['height']*.2-20)
+    start = physical_point(page,'.customize-art svg',before['assemblySurfaceId'],before['x'],before['y']+cargo['height']*.2)
+    end = physical_point(page,'.customize-art svg',before['assemblySurfaceId'],before['x']+40,before['y']+cargo['height']*.2-20)
     drag(page,context,start,end,mobile)
     moved = project_state(page,project_id)['project']['pattern']['components'][0]
     assert abs(moved['placement']['x']-before['x']-40)<.05 and abs(moved['placement']['y']-before['y']+20)<.05, (before,moved)
     assert moved['width']==cargo['width'] and moved['height']==cargo['height']
-    page.get_by_role('button',name='Ver pieza completa',exact=True).click()
+    page.get_by_role('button',name='Ver diseño completo',exact=True).click()
+    page.get_by_role('button',name='Espalda',exact=True).click()
+    assert not page.locator(f'[data-assembly-element="componente-{cargo["id"]}--grupo"]').count()
     page.get_by_role('textbox',name='Buscar extras',exact=True).fill('cámara compacta arriba')
     camera = add_extra_by_drag(page,context,project_id,'portacelular · cámara compacta arriba a la izquierda',.76,.64,mobile)
     assert camera['kind']=='porta-telefono-camara' and camera['camera']['width']==45, camera
+    assert camera['placement']['pieceId']=='espalda' and camera['placement']['assemblySurfaceId'].startswith('armado-espalda/'), camera
+    start=component_point(page,project_id,camera['id'])
+    end=physical_point(page,'.customize-art svg',camera['placement']['assemblySurfaceId'],camera['placement']['x']-20,camera['placement']['y']+camera['height']*.2-15)
+    drag(page,context,start,end,mobile)
+    camera_moved=project_state(page,project_id)['project']['pattern']['components'][1]
+    assert abs(camera_moved['placement']['x']-camera['placement']['x']+20)<.1 and abs(camera_moved['placement']['y']-camera['placement']['y']+15)<.1, camera_moved
     configured=project_state(page,project_id)
     assert_pattern(configured)
     assert len(configured['pieces'])==12, configured['pieces']
+    for original in initial['pieces']:
+        unchanged=next(piece for piece in configured['pieces'] if piece['id']==original['id'])
+        assert unchanged['nodes']==original['nodes'] and unchanged['edges']==original['edges'], original['id']
     page.evaluate('window.scrollTo(0,0)')
     page.screenshot(path=f'/tmp/hilvana-simple-{label}-extras.png',full_page=True)
-    page.get_by_role('button',name='Elegir telas y bordados',exact=True).click()
+    page.get_by_role('button',name='Elegir telas',exact=True).click()
     page.wait_for_url('**/#/acabados/**')
-    page.get_by_role('heading',name='Telas y bordados',exact=True).wait_for()
+    page.get_by_role('heading',name='Telas y colores',exact=True).wait_for()
     generate=page.get_by_role('button',name='Generar patrones',exact=True)
-    assert generate.is_disabled(), 'Faltan materiales: todavía no debe permitirse el PDF'
-    assert page.get_by_role('button',name='Bordados',exact=True).is_disabled()
+    next_step=page.get_by_role('button',name='Continuar a bordados',exact=True)
+    assert generate.count()==0 and next_step.is_disabled(), 'Faltan materiales: todavía no debe permitirse el PDF'
+    assert page.get_by_role('button',name='Vista previa y bordados',exact=True).is_disabled()
     # The final exporter must enforce the same requirement even if someone
     # opens the PDF step directly instead of using the disabled main button.
     page.locator(f'.project-journey a[href="#/confeccion/{project_id}"]').click()
@@ -353,17 +399,20 @@ def run_simple_customization(browser, mobile=True):
     assert blocked.is_disabled(), 'El enlace al PDF no debe saltarse los materiales pendientes'
     page.get_by_role('dialog').get_by_role('button',name='Cerrar',exact=True).click()
     page.locator(f'.project-journey a[href="#/acabados/{project_id}"]').click()
-    page.get_by_role('heading',name='Telas y bordados',exact=True).wait_for()
+    page.get_by_role('heading',name='Telas y colores',exact=True).wait_for()
+    page.get_by_text('Cambiar una parte o bolsillo',exact=True).click()
     targets=page.get_by_role('button',name=re.compile('^Elegir color o tela:'))
     assert targets.count()==11, targets.all_text_contents()
     targets.first.click()
     page.get_by_role('button',name='Color #3366AA',exact=True).click()
-    assert generate.is_disabled(), 'Elegir una parte no debe completar las demás'
+    assert next_step.is_disabled(), 'Elegir una parte no debe completar las demás'
     targets.first.click()
     page.get_by_text('Usar el mismo material en todo',exact=True).click()
     page.get_by_role('button',name='Usar en todas las partes',exact=True).click()
-    assert generate.is_enabled()
+    assert next_step.is_enabled()
     page.get_by_role('button',name='Continuar a bordados',exact=True).click()
+    page.get_by_role('heading',name='Tu diseño y sus bordados',exact=True).wait_for()
+    page.get_by_role('group',name='Vista del diseño',exact=True).get_by_role('button',name='Frente',exact=True).click()
     page.get_by_role('button',name='Añadir bordado o letras',exact=True).click()
     page.get_by_role('textbox',name='Buscar bordados',exact=True).fill('abejita')
     page.get_by_role('button',name='Agregar abeja',exact=True).click()
@@ -374,8 +423,8 @@ def run_simple_customization(browser, mobile=True):
     assert all(e.get('vectorPath') for e in bee_state['project']['design']['elements'] if e.get('parentId')==bee['id'])
     # Move the multicolour group as a single motif, then resize it physically.
     page.locator('.finish-art svg').scroll_into_view_if_needed()
-    start=world_point(page,'.finish-art svg',bee['x'],bee['y'])
-    end=world_point(page,'.finish-art svg',bee['x']-100,bee['y']-65)
+    start=physical_point(page,'.finish-art svg',bee['assemblySurfaceId'],bee['x'],bee['y'])
+    end=physical_point(page,'.finish-art svg',bee['assemblySurfaceId'],bee['x']-100,bee['y']-65)
     drag(page,context,start,end,mobile)
     control=page.locator('#embroidery-width')
     control.fill('8');control.press('Enter')

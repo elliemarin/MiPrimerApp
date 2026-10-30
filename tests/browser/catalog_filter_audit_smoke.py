@@ -63,6 +63,8 @@ def run_layout(browser, width):
     baby.click()
     assert page.locator('#baby-simple').input_value() == 'B0-6'
     cards = page.locator('.simple-pattern-card')
+    assert cards.count() == 7, cards.all_text_contents()
+    assert page.locator('.simple-pattern-card[data-design-group="body-bebe"]').count() == 1
     assert all('para=bebe&talla=B0-6' in href for href in cards.evaluate_all('(cards)=>cards.map(card=>card.getAttribute("href"))'))
     models = page.evaluate('''async()=>{
       const {findModel}=await import('/src/data/catalog.ts');
@@ -71,7 +73,7 @@ def run_layout(browser, width):
     assert models and all('bebe' in model['recipients'] for model in models)
     page.screenshot(path=f'/tmp/hilvana-audited-baby-{width}.png', full_page=True)
     no_overflow(page)
-    cards.first.click()
+    page.locator('.simple-pattern-card[data-design-group="body-bebe"]').click()
     page.get_by_role('button', name='Intervenir', exact=True).click()
     # A recipient already chosen in the library is fixed, so its selector is omitted.
     assert page.locator('#simple-child-size').input_value() == 'B0-6'

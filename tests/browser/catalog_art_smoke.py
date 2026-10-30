@@ -1,8 +1,8 @@
 """Contact sheet for every grouped pattern, plus real mobile catalog cards.
 
-The temporary contact sheet uses the same FlatArt component as LibraryPage. Its
-reference objects are presentation only; the underlying flat is compared before
-and after rendering. No project or pattern is created or changed.
+The temporary contact sheet uses the same CatalogImage component as LibraryPage.
+Every native design must load its own local AI illustration without falling back
+to a technical drawing. Pattern geometry is compared before/after rendering.
 """
 import json
 import os
@@ -23,13 +23,16 @@ with sync_playwright() as playwright:
         if width == 390:
             page.get_by_role('searchbox', name='Buscar prendas y accesorios').fill('funda')
             page.wait_for_timeout(300)
-            assert page.locator('.simple-pattern-card .catalog-reference').count() >= 8
+            assert page.locator('.simple-pattern-card .catalog-photo').count() >= 8
+            page.wait_for_function('Array.from(document.querySelectorAll(".catalog-photo-atlas")).slice(0,4).every(img=>img.complete&&img.naturalWidth>0)')
+            assert page.locator('.catalog-photo-crop').first.bounding_box()['height'] > 140
             page.screenshot(path='/tmp/hilvana-art-library-390.png', full_page=True)
         data = page.evaluate('''async () => {
           const {CATALOG}=await import('/src/data/catalog.ts');
           const {groupCatalog}=await import('/src/features/library/groups.ts');
           const {modelHasPattern}=await import('/src/features/library/filters.ts');
-          const {getFlat,FlatArt}=await import('/src/ui/FlatArt.tsx');
+          const {getFlat}=await import('/src/ui/FlatArt.tsx');
+          const {CatalogImage}=await import('/src/ui/CatalogImage.tsx');
           const React=(await import('/node_modules/.vite/deps/react.js')).default;
           const {createRoot}=(await import('/node_modules/.vite/deps/react-dom_client.js')).default;
           const groups=groupCatalog(CATALOG.filter(modelHasPattern));
@@ -41,15 +44,20 @@ with sync_playwright() as playwright:
             key:g.id,'data-contact-id':g.id,
             style:{height:245,padding:10,background:'#f1eee5',font:'13px sans-serif',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}
           },React.createElement('div',{style:{height:195,width:'100%',display:'flex',alignItems:'center',justifyContent:'center'}},
-             React.createElement(FlatArt,{id:g.representative.id,spec:g.representative.flat,title:g.name,catalog:true})),
+             React.createElement(CatalogImage,{model:g.representative,title:g.name,eager:true})),
              React.createElement('strong',{style:{paddingTop:10}},g.name)))));
           window.__catalogArtAudit={groups,before,getFlat};
           return groups.map(g=>({id:g.id,name:g.name,model:g.representative.id}));
         }''')
-        page.add_style_tag(content='#contact svg.flat-art{height:185px!important;width:100%!important;}')
-        page.wait_for_timeout(400)
+        page.wait_for_function('document.querySelectorAll("#contact .catalog-photo-atlas").length===110 && Array.from(document.querySelectorAll("#contact .catalog-photo-atlas")).every(img=>img.complete&&img.naturalWidth>0)')
+        page.evaluate('async()=>{await Promise.all(Array.from(document.querySelectorAll(".catalog-photo-atlas")).map(img=>img.decode()));await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));}')
         assert page.locator('[data-contact-id]').count() == len(data)
-        assert page.locator('.catalog-reference').count() >= 25
+        assert page.locator('.catalog-photo').count() == len(data) == 110
+        assert page.locator('svg.flat-art').count() == 0
+        assert page.evaluate('''()=>Array.from(document.querySelectorAll('.catalog-photo-crop')).every(crop=>{
+          const rect=crop.getBoundingClientRect(), image=crop.querySelector('img').getBoundingClientRect();
+          return rect.width>100 && rect.height>100 && Math.abs(image.width-image.height)<1 && getComputedStyle(crop).overflow==='hidden';
+        })''')
         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
         assert page.evaluate('''()=>{const {groups,before,getFlat}=window.__catalogArtAudit;
           return groups.every((g,i)=>JSON.stringify(getFlat(g.representative.id,g.representative.flat))===before[i]);}''')
@@ -58,6 +66,6 @@ with sync_playwright() as playwright:
         if width == 1500:
             with open('/tmp/hilvana-art-audit.json', 'w') as artifact:
                 json.dump(data, artifact, ensure_ascii=False, indent=2)
-        print(f'PASS: {len(data)} diseños, {width}px, referencias separadas, geometría sin mutación')
+        print(f'PASS: {len(data)} imágenes propias cargadas, {width}px, recortes sin desbordes, geometría sin mutación')
         context.close()
     browser.close()

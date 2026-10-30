@@ -40,7 +40,7 @@ export interface PatternComponent {
   /** Additional bought hardware specific to an original preset (e.g. a D-ring). */
   materialNeeds?: MaterialNeed[];
   /** x/y are the centre in local piece/view mm. Only pieceId defines exact placement. */
-  placement?: { pieceId?: string; viewId?: string; x: number; y: number; label?: string };
+  placement?: { pieceId?: string; viewId?: string; x: number; y: number; label?: string; assemblySurfaceId?: string; assemblySurfaceLabel?: string };
 }
 
 const names: Record<ComponentKind, string> = {

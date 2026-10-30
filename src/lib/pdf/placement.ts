@@ -3,7 +3,9 @@ import type { DesignDoc, DesignElement, DesignView } from '../../features/studio
 import { elementCorners, elementWorldCmds } from '../../features/studio/model';
 import { componentElementId, isComponentElementId } from '../../features/customize/componentDesign';
 import { bboxOf } from '../geom/vec';
-import { cmdsBBox, polylineCmds } from '../draw/paths';
+import type { Mat } from '../geom/vec';
+import { cmdsBBox, polylineCmds, transformCmds, type PathCmd } from '../draw/paths';
+import { assemblyArtworkReflection, buildAssembly } from '../../features/simple/assembled';
 import { parseSvgPath } from '../draw/svgpath';
 import { drawableBBox, wrapLabelText, type DrawLabel, type DrawPath, type Drawable } from '../draw/drawable';
 
@@ -21,6 +23,10 @@ export interface Placement {
   height: number;
   rotation: number;
   quantity?: number;
+  assemblySurfaceId?: string;
+  assemblySurfaceLabel?: string;
+  /** The canonical-piece guide is reversed for a mirrored sewn copy. */
+  mirroredOnGuide?: boolean;
   precise: boolean;
 }
 
@@ -32,7 +38,7 @@ export interface PlacementDrawing {
   note: string;
 }
 
-type Located = { placement: Placement; element?: DesignElement; art: DesignElement[] };
+type Located = { placement: Placement; element?: DesignElement; art: DesignElement[]; reflection?: Mat };
 const mm = (value: number) => Number(value.toFixed(2)).toString().replace('.', ',');
 
 function visible(element: DesignElement, doc: DesignDoc): boolean {
@@ -66,7 +72,7 @@ function viewPaths(view: DesignView): DrawPath[] {
   return paths.filter(Boolean).map(path => ({ style: 'costura', color: '#54675B', cmds: parseSvgPath(path) }));
 }
 
-function guideDrawing(view: DesignView, located: Located[]): PlacementDrawing {
+function guideDrawing(view: DesignView, located: Located[], surfaceId?: string, surfaceLabel?: string): PlacementDrawing {
   const base = viewPaths(view);
   const bounds = base.length ? drawableBBox(base, []) : { minX: view.minX, minY: view.minY, maxX: view.minX + view.width, maxY: view.minY + view.height };
   // Keep the drafting origin explicit. view.minX/minY include display padding
@@ -95,6 +101,7 @@ function guideDrawing(view: DesignView, located: Located[]): PlacementDrawing {
 
   for (const item of located) {
     const placement = item.placement;
+    const onGuide = (cmds: PathCmd[]) => item.reflection ? transformCmds(cmds, item.reflection) : cmds;
     if (placement.kind === 'extra') {
       const footprint = item.element ? elementWorldCmds(item.element) : polylineCmds([
         { x: placement.x - placement.width / 2, y: placement.y - placement.height / 2 },
@@ -102,13 +109,13 @@ function guideDrawing(view: DesignView, located: Located[]): PlacementDrawing {
         { x: placement.x + placement.width / 2, y: placement.y + placement.height / 2 },
         { x: placement.x - placement.width / 2, y: placement.y + placement.height / 2 }
       ], true);
-      paths.push({ style: 'colocacion', color: '#9B651B', cmds: footprint });
+      paths.push({ style: 'colocacion', color: '#9B651B', cmds: onGuide(footprint) });
     } else {
-      for (const element of item.art) paths.push({ style: 'bordado', cmds: elementWorldCmds(element),
+      for (const element of item.art) paths.push({ style: 'bordado', cmds: onGuide(elementWorldCmds(element)),
         color: element.stroke?.color ?? (element.fill.type === 'color' ? element.fill.color : '#18211D'),
         ...(element.fill.type === 'color' ? { fillColor: element.fill.color } : {})
       });
-      if (item.element) paths.push({ style: 'colocacion', color: '#78518A', cmds: polylineCmds(elementCorners(item.element), true) });
+      if (item.element) paths.push({ style: 'colocacion', color: '#78518A', cmds: onGuide(polylineCmds(elementCorners(item.element), true)) });
     }
     const { x, y } = placement;
     paths.push({ style: 'colocacion', cmds: polylineCmds([{ x: x - 3, y }, { x: x + 3, y }], false) },
@@ -120,7 +127,7 @@ function guideDrawing(view: DesignView, located: Located[]): PlacementDrawing {
   const legendWidth = Math.max(100, right - left);
   const center = (left + right) / 2;
   for (const { placement } of located) {
-    const text = `${placement.code} · ${placement.name}${placement.quantity && placement.quantity > 1 ? ` · ${placement.quantity} copias` : ''} · centro X ${mm(placement.x)}, Y ${mm(placement.y)} mm · ${mm(placement.width)} × ${mm(placement.height)} mm · giro ${mm(placement.rotation)}°`;
+    const text = `${placement.code} · ${placement.name}${placement.assemblySurfaceLabel ? ` · ${placement.assemblySurfaceLabel}` : ''}${placement.quantity && placement.quantity > 1 ? ` · ${placement.quantity} copias` : ''} · centro X ${mm(placement.x)}, Y ${mm(placement.y)} mm · ${mm(placement.width)} × ${mm(placement.height)} mm · giro ${mm(placement.rotation)}°`;
     for (const line of wrapLabelText(text, 2.8, legendWidth)) {
       labels.push({ text: line, at: { x: center, y: legendY }, size: 2.8 });
       legendY += 4.5;
@@ -128,15 +135,18 @@ function guideDrawing(view: DesignView, located: Located[]): PlacementDrawing {
     legendY += 3;
   }
   const precise = located.every(item => item.placement.precise);
-  const note = precise
+  const baseNote = precise
     ? 'Guía de colocación a escala 1:1 sobre la pieza real. Cuadrícula de 10 mm; referencias cada 50 mm. X e Y indican el centro desde el origen 0,0 de la pieza, antes de sus márgenes. No cortes por estas líneas: usa las plantillas de confección. Transfiere las marcas e hilvana antes de coser.'
     : 'Colocación ilustrativa sobre una vista de referencia, no una pieza de confección. La cuadrícula expresa coordenadas del dibujo y no verifica las medidas de una foto o de la prenda real. Usa una pieza de patrón real para ubicar con precisión.';
+  const note = baseNote + (surfaceLabel ? ' Izquierda y derecha corresponden a quien viste la prenda. Conserva el lado indicado y comprueba la ubicación con la prenda hilvanada.' : '') + (located.some(item => item.placement.mirroredOnGuide) ? ' Copia en espejo: transfiere esta guía por el reverso sobre la copia indicada. La plantilla independiente del bordado conserva su orientación legible.' : '');
   for (const line of wrapLabelText(precise ? 'Ubicación en pieza real · no es un contorno de corte' : 'Ubicación ilustrativa · verificar sobre la prenda real', 2.8, legendWidth)) {
     labels.push({ text: line, at: { x: center, y: legendY }, size: 2.8, bold: true });
     legendY += 5;
   }
-  const drawable: Drawable = { id: `ubicacion-${view.id}`, name: `Ubicación en ${view.label}`, paths, labels, grains: [], bbox: drawableBBox(paths, labels) };
-  return { id: `ubicacion-${view.id}`, title: `Guía de ubicación · ${view.label}`, count: located.length, drawables: [drawable], note };
+  const key = `ubicacion-${view.id}${surfaceId ? `-${surfaceId}` : ''}`;
+  const title = surfaceLabel ? `${surfaceLabel} · ${view.label}` : view.label;
+  const drawable: Drawable = { id: key, name: `Ubicación en ${title}`, paths, labels, grains: [], bbox: drawableBBox(paths, labels) };
+  return { id: key, title: `Guía de ubicación · ${title}`, count: located.length, drawables: [drawable], note };
 }
 
 /** Export the exact editing coordinate frame once for each occupied view. */
@@ -156,6 +166,8 @@ export function preparePlacementGuide(project: Project): { placements: Placement
     const placement: Placement = { id: component.id, code: `E${++extra}`, kind: 'extra', name: component.name ?? body?.name ?? 'Complemento', viewId: view.id, pieceId,
       x, y, width: body?.w ?? component.width, height: body?.h ?? component.height,
       rotation: body?.rotation ?? 0, quantity: component.quantity,
+      assemblySurfaceId: component.placement?.assemblySurfaceId,
+      assemblySurfaceLabel: component.placement?.assemblySurfaceLabel,
       precise: !!pieceId && (!component.placement?.pieceId || component.placement.pieceId === pieceId)
     };
     if (finite(placement)) located.push({ placement, element: body, art: [] });
@@ -174,15 +186,27 @@ export function preparePlacementGuide(project: Project): { placements: Placement
     const placement: Placement = { id: root.id, code: `B${++embroidery}`, kind: 'bordado', name: root.name,
       viewId: root.viewId, pieceId: view.source.type === 'pieza' ? view.source.pieceId : undefined,
       x: root.x, y: root.y, width: root.w || b.maxX - b.minX, height: root.h || b.maxY - b.minY,
-      rotation: root.rotation, precise: view.source.type === 'pieza'
+      rotation: root.rotation, precise: view.source.type === 'pieza',
+      assemblySurfaceId: root.assemblySurfaceId, assemblySurfaceLabel: root.assemblySurfaceLabel
     };
     if (finite(placement)) located.push({ placement, element: root, art });
   }
   // Keep the group metadata independent of the source document. This service is
   // read-only; editing history and component definitions belong to the studio.
+  const surfaces = new Map(buildAssembly(project).flatMap(scene => scene.surfaces).map(surface => [surface.id, surface]));
+  for (const item of located) {
+    const surface = surfaces.get(item.placement.assemblySurfaceId ?? '');
+    if (!surface) continue;
+    const reflection = assemblyArtworkReflection(surface, item.element ?? item.placement);
+    if (reflection[0] < 0) { item.reflection = reflection; item.placement.mirroredOnGuide = true; }
+  }
   const drawings = doc.views.flatMap(view => {
     const positions = located.filter(item => item.placement.viewId === view.id);
-    return positions.length ? [guideDrawing(view, positions)] : [];
+    const sides = [...new Set(positions.map(item => item.placement.assemblySurfaceId))];
+    return sides.map(side => {
+      const group = positions.filter(item => item.placement.assemblySurfaceId === side);
+      return guideDrawing(view, group, side, group[0]?.placement.assemblySurfaceLabel);
+    });
   });
   return { placements: located.map(item => item.placement), drawings };
 }

@@ -11,8 +11,8 @@ buscador y filtros al alternar o recargar.
 
 - **Bebé** aparece como segundo acceso rápido, visible en una pantalla de 320 px.
   Abre todas las construcciones compatibles y limpia la búsqueda/filtros previos
-  para que un filtro adulto no oculte la sección. Actualmente son seis diseños
-  agrupados: pantalón recto, jogger, short, pantalón de pijama, babero y gorro.
+  para que un filtro adulto no oculte la sección. Actualmente son siete diseños
+  agrupados: pantalón recto, jogger, short, pantalón de pijama, pañalero, babero y gorro.
 - Al elegir bebé, **Talla por meses** aparece sobre los resultados. Su código
   se transmite en cada enlace `?para=bebe&talla=B0-6` y llega a la hoja de
   medidas antes de intervenir. La selección de edad no convierte un modelo
@@ -59,7 +59,7 @@ el indicador de cantidad.
 1440 px: hoodie/hoddies, ausencia de fuentes externas mezcladas, entrada bebé,
 meses hasta la hoja de intervención, cero resultados, filtros activos,
 combinaciones y recarga, memoria independiente de secciones y ausencia de
-desbordamiento. Recorre también las **43 familias con patrón** seleccionando
+desbordamiento. Recorre también las **53 familias con patrón** seleccionando
 cada una por UI y contrastando todos sus representantes y sus cuentas agrupadas
 con el catálogo real. Incluye búsquedas de servilleta, banda y monedero para
 impedir que un término preciso vuelva a incluir todos los artículos de una

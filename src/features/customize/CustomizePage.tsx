@@ -18,11 +18,14 @@ import { componentIdForElement, syncComponentDesign } from './componentDesign';
 import { componentAtPoint, componentFits, componentPlacementProblem, firstFittingPosition, pointInPreview } from './placementDrag';
 import { isBoughtTrim, isDecoration } from '../../lib/pattern/decorations';
 import { decorationFoldPath, decorationPath } from './decorationArt';
+import { buildAssembly, assemblyHit, assemblyPoint, inverseAssemblyPoint, assemblyComponentFits, firstFittingAssemblyPosition, type AssemblySurface } from '../simple/assembled';
+import { AssemblyArtwork } from '../simple/AssemblyArtwork';
 import type { ComponentOption } from '../../data/components';
 import './customize.css';
 
 type Filter = 'recomendados' | 'bolsillos' | 'herramientas' | 'decoracion' | 'todos';
 type Drag = { pointerId: number; kind: 'add' | 'move'; presetId?: string; componentId?: string; start: Pt; client: Pt; point?: Pt; offset?: Pt };
+type Anchor = { view: DesignView; point: Pt; surface?: AssemblySurface };
 const nameOf = (component: PatternComponent) => component.name ?? COMPONENT_OPTIONS.find(option => option.kind === component.kind)?.name ?? 'Extra';
 const viewName = (view: DesignView) => view.label.replace(/^Patrón real · /, '').replace(/en par simétrico/i, '(par)').replace(/completa/i, '').trim();
 const DRAG_TYPE = 'application/x-hilvana-extra';
@@ -34,10 +37,13 @@ export function CustomizePage({ projectId }: { projectId: string }) {
   const unit = useApp(state => state.settings.unit);
   const [selectedId, setSelectedId] = useState<string>();
   const [viewId, setViewId] = useState<string>();
+  const [previewMode, setPreviewMode] = useState<'look' | 'pieces'>('look');
+  const [sceneId, setSceneId] = useState<string>();
+  const [target, setTarget] = useState<{ surfaceId: string; point: Pt }>();
   const [filter, setFilter] = useState<Filter>('recomendados');
   const [query, setQuery] = useState('');
   const [limit, setLimit] = useState(24);
-  const [grid, setGrid] = useState(true);
+  const [grid, setGrid] = useState(false);
   const [zoomBox, setZoomBox] = useState<{ x: number; y: number; width: number; height: number }>();
   const [drag, setDrag] = useState<Drag>();
   const dragRef = useRef<Drag>();
@@ -48,21 +54,38 @@ export function CustomizePage({ projectId }: { projectId: string }) {
   const history = useRef<Pick<Project, 'pattern' | 'design' | 'status'>[]>([]);
   const [canUndo, setCanUndo] = useState(false);
   const base = useMemo(() => project ? basePanelPattern(project) : undefined, [project?.pattern]);
+  const scenes = useMemo(() => project ? buildAssembly(project) : [], [project]);
   useEffect(()=>{if(project&&physicalViewsNeedRefresh(project)){try{updateProject(projectId,current=>prepareSimpleProject(current));}catch{/* Missing or invalid base measurements are reported by the pattern/PDF validation. */}}},[project?.pattern,projectId,updateProject]);
   const recommended = useMemo(() => project ? optionsForProject(project) : [], [project?.modelId, project?.pattern?.generatorId]);
   useEffect(() => { setLimit(24); }, [filter, query]);
-  useEffect(() => { setZoomBox(undefined); }, [viewId, projectId]);
-  useEffect(() => { setSelectedId(undefined); setViewId(undefined); setMessage(''); setPending(undefined); history.current = []; setCanUndo(false); }, [projectId]);
+  useEffect(() => { setZoomBox(undefined); }, [viewId, sceneId, previewMode, projectId]);
+  useEffect(() => { setSelectedId(undefined); setViewId(undefined); setSceneId(undefined); setTarget(undefined); setPreviewMode('look'); setMessage(''); setPending(undefined); history.current = []; setCanUndo(false); }, [projectId]);
 
   if (!project) return <div className="page"><Empty icon="proyectos" title="Proyecto no encontrado" action={<Button onClick={() => navigate('/biblioteca')}>Elegir una base</Button>} /></div>;
   const components = project.pattern?.components ?? [];
   const sourceDoc = project.design ?? newDesign([]);
   const physicalViews = sourceDoc.views.filter(view => view.source.type === 'pieza' && !view.source.pieceId.startsWith('componente-'));
   const views = physicalViews.length ? physicalViews : sourceDoc.views.filter(view => view.source.type !== 'pieza');
-  const view = views.find(item => item.id === viewId) ?? views[0];
+  const scene = scenes.find(item => item.id === sceneId) ?? scenes[0];
+  const assembled = previewMode === 'look' && !!scene;
+  const targetSurface = assembled ? scene.surfaces.find(surface => surface.id === target?.surfaceId) ?? scene.surfaces.find(surface => surface.primary) ?? scene.surfaces[0] : undefined;
+  const view = assembled ? targetSurface?.view ?? views[0] : views.find(item => item.id === viewId) ?? views[0];
+  const canvasView = assembled ? scene.view : view;
+  const anchorAt = (point: Pt): Anchor | undefined => assembled ? assemblyHit(scene, point) : view ? { view, point } : undefined;
+  const position = (component: PatternComponent, anchor: Anchor): PatternComponent => {
+    const placed = componentAtPoint(component, anchor.view, anchor.point);
+    const keepSide = !anchor.surface && component.placement?.viewId === anchor.view.id;
+    return { ...placed, placement: {
+      ...placed.placement!,
+      assemblySurfaceId: anchor.surface?.id ?? (keepSide ? component.placement?.assemblySurfaceId : undefined),
+      assemblySurfaceLabel: anchor.surface?.label ?? (keepSide ? component.placement?.assemblySurfaceLabel : undefined),
+    } };
+  };
+  const withSurface = (component: PatternComponent, surface?: AssemblySurface): PatternComponent => ({ ...component, placement: component.placement ? { ...component.placement, assemblySurfaceId: surface?.id, assemblySurfaceLabel: surface?.label } : undefined });
   const selected = components.find(component => component.id === selectedId);
   const moving = drag?.kind === 'move' && drag.point && view ? components.find(component => component.id === drag.componentId) : undefined;
-  const liveComponents = moving && view && drag?.point ? components.map(component => component.id === moving.id ? componentAtPoint(component, view, drag.point!) : component) : components;
+  const dragAnchor = drag?.point ? anchorAt(drag.point) : undefined;
+  const liveComponents = moving && dragAnchor ? components.map(component => component.id === moving.id ? position(component, dragAnchor) : component) : components;
   const liveProject = moving && project.pattern ? syncComponentDesign({ ...project, pattern: { ...project.pattern, components: liveComponents } }) : project;
   const doc = liveProject.design ?? sourceDoc;
   const displayedSelected = liveComponents.find(component => component.id === selectedId);
@@ -86,19 +109,26 @@ export function CustomizePage({ projectId }: { projectId: string }) {
   };
   const accept = (component: PatternComponent) => {
     save(current => [...current, component], isBoughtTrim(component.kind)?'Decoración añadida con metraje y guía de colocación.':'Extra añadido con sus piezas de confección.');
-    setSelectedId(component.id); setMessage('Arrastra el extra sobre la pieza para cambiarlo de lugar.'); setPending(undefined);
+    setSelectedId(component.id); setMessage('Arrastra el extra sobre el diseño para cambiarlo de lugar.'); setPending(undefined);
   };
   const add = (presetId: string, point?: Pt, exact = false) => {
     if (!view) return;
-    const component = makeComponent(project, presetId, view.id);
-    const placed = point && exact ? componentAtPoint(component, view, point) : firstFittingPosition(component, view, base?.pieces ?? [], point);
-    if (placed && componentFits(placed, view, base?.pieces ?? [])) accept(placed);
-    else { setPending(componentAtPoint(component, view, point ?? { x: view.minX + view.width / 2, y: view.minY + view.height / 2 })); setMessage('Este tamaño no cabe en la pieza elegida. Puedes ajustarlo o elegir otra pieza.'); }
+    const hit = point ? anchorAt(point) : undefined;
+    if (point && assembled && !hit) { setMessage('Suelta el extra sobre la prenda.'); return; }
+    const chosenView = hit?.view ?? view;
+    const surface = hit?.surface ?? targetSurface;
+    const preferred = hit?.point ?? (surface?.id === target?.surfaceId ? target?.point : surface ? { x: (surface.physicalBounds.minX + surface.physicalBounds.maxX) / 2, y: (surface.physicalBounds.minY + surface.physicalBounds.maxY) / 2 } : undefined);
+    const component = makeComponent(project, presetId, chosenView.id);
+    const placed = preferred && exact ? componentAtPoint(component, chosenView, preferred) : surface ? firstFittingAssemblyPosition(component, surface, base?.pieces ?? [], preferred) : firstFittingPosition(component, chosenView, base?.pieces ?? [], preferred);
+    if (placed && componentFits(placed, chosenView, base?.pieces ?? []) && (!surface || assemblyComponentFits(surface, placed))) accept(withSurface(placed, surface));
+    else { setPending(withSurface(componentAtPoint(component, chosenView, preferred ?? { x: chosenView.minX + chosenView.width / 2, y: chosenView.minY + chosenView.height / 2 }), surface)); setMessage('El extra es grande para esta zona. Puedes hacerlo más pequeño.'); }
   };
   const edit = (patch: Partial<PatternComponent>) => {
     if (!selected || !view) return;
     const candidate = { ...selected, ...patch };
     const candidateView = views.find(item => item.id === candidate.placement?.viewId) ?? view;
+    const candidateSurface = scenes.flatMap(item => item.surfaces).find(surface => surface.id === candidate.placement?.assemblySurfaceId);
+    if (candidateSurface && !assemblyComponentFits(candidateSurface, candidate)) { setMessage('El extra no cabe en ese lado de la prenda. Reduce su tamaño o muévelo.'); return; }
     const problem = componentPlacementProblem(candidate, candidateView, base?.pieces ?? []);
     if (problem) { setMessage(problem); return; }
     save(current => current.map(component => component.id === selected.id ? candidate : component)); setMessage('');
@@ -109,14 +139,17 @@ export function CustomizePage({ projectId }: { projectId: string }) {
   };
   const toggleZoom = () => {
     if (zoomBox) { setZoomBox(undefined); return; }
-    if (!selected?.placement || !view || !svgRef.current) return;
+    if (!selected?.placement || !canvasView || !svgRef.current) return;
+    const surface = assembled ? scene.surfaces.find(item => item.id === selected.placement?.assemblySurfaceId) ?? scene.surfaces.find(item => item.viewId === selected.placement?.viewId) : undefined;
+    const center = surface ? assemblyPoint(surface, selected.placement) : selected.placement;
+    const opposite = surface ? assemblyPoint(surface, { x: selected.placement.x + selected.width / 2, y: selected.placement.y + selected.height / 2 }) : { x: center.x + selected.width / 2, y: center.y + selected.height / 2 };
     const box = svgRef.current.getBoundingClientRect();
     const ratio = box.width / Math.max(1, box.height);
-    let width = Math.max(120, selected.width * 2.5), height = Math.max(120, selected.height * 2.5);
+    let width = Math.max(120, Math.abs(opposite.x - center.x) * 5), height = Math.max(120, Math.abs(opposite.y - center.y) * 5);
     if (width / height > ratio) height = width / ratio; else width = height * ratio;
     // The frame is captured once; dragging never chases the selected object.
-    const x = Math.max(view.minX, Math.min(view.minX + view.width - width, selected.placement.x - width / 2));
-    const y = Math.max(view.minY, Math.min(view.minY + view.height - height, selected.placement.y - height / 2));
+    const x = Math.max(canvasView.minX, Math.min(canvasView.minX + canvasView.width - width, center.x - width / 2));
+    const y = Math.max(canvasView.minY, Math.min(canvasView.minY + canvasView.height - height, center.y - height / 2));
     setZoomBox({ x, y, width, height });
   };
   const updateDrag = (next?: Drag) => { dragRef.current = next; setDrag(next); };
@@ -125,7 +158,7 @@ export function CustomizePage({ projectId }: { projectId: string }) {
     event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId);
     updateDrag({ pointerId: event.pointerId, kind: 'add', presetId, start: { x: event.clientX, y: event.clientY }, client: { x: event.clientX, y: event.clientY } });
   };
-  const startMove = (event: React.PointerEvent<SVGGElement>, id: string) => {
+  const startMove = (event: React.PointerEvent<SVGGElement>, id: string, surface?: AssemblySurface) => {
     if (event.button !== 0 || !view) return;
     const component = components.find(item => item.id === id); if (!component) return;
     const body = sourceDoc.elements.find(element => componentIdForElement(element.id) === id && element.id.endsWith('--cuerpo'));
@@ -133,7 +166,9 @@ export function CustomizePage({ projectId }: { projectId: string }) {
     if (body?.locked) { setMessage('Este extra está bloqueado en el diseño guardado.'); return; }
     const point = pointInPreview(svgRef.current, event.clientX, event.clientY); if (!point) return;
     event.preventDefault(); event.stopPropagation(); svgRef.current?.setPointerCapture(event.pointerId);
-    updateDrag({ pointerId: event.pointerId, kind: 'move', componentId: id, start: { x: event.clientX, y: event.clientY }, client: { x: event.clientX, y: event.clientY }, point: { x: component.placement?.x ?? point.x, y: component.placement?.y ?? point.y }, offset: { x: point.x - (component.placement?.x ?? point.x), y: point.y - (component.placement?.y ?? point.y) } });
+    const center = surface && component.placement ? assemblyPoint(surface, component.placement) : { x: component.placement?.x ?? point.x, y: component.placement?.y ?? point.y };
+    if (surface && component.placement) setTarget({ surfaceId: surface.id, point: { x: component.placement.x, y: component.placement.y } });
+    updateDrag({ pointerId: event.pointerId, kind: 'move', componentId: id, start: { x: event.clientX, y: event.clientY }, client: { x: event.clientX, y: event.clientY }, point: center, offset: { x: point.x - center.x, y: point.y - center.y } });
   };
   const movePointer = (event: React.PointerEvent<SVGSVGElement | HTMLButtonElement>) => {
     const current = dragRef.current; if (!current || current.pointerId !== event.pointerId) return;
@@ -148,12 +183,15 @@ export function CustomizePage({ projectId }: { projectId: string }) {
     if (current.kind === 'add' && current.presetId) {
       if (Math.hypot(event.clientX - current.start.x, event.clientY - current.start.y) < 6) add(current.presetId);
       else if (point) add(current.presetId, point, true);
-      else setMessage('Suelta el extra sobre la pieza para añadirlo.');
+      else setMessage('Suelta el extra sobre la prenda para añadirlo.');
     } else if (current.kind === 'move' && current.componentId && point) {
       const component = components.find(item => item.id === current.componentId); if (!component) return;
-      const moved = componentAtPoint(component, view, { x: point.x - (current.offset?.x ?? 0), y: point.y - (current.offset?.y ?? 0) });
-      if (componentFits(moved, view, base?.pieces ?? [])) { save(items => items.map(item => item.id === moved.id ? moved : item)); setMessage(''); }
-      else setMessage('El extra debe quedar dentro de la pieza. Conservamos su posición anterior.');
+      const anchor = anchorAt({ x: point.x - (current.offset?.x ?? 0), y: point.y - (current.offset?.y ?? 0) });
+      if (!anchor) { setMessage('Suelta el extra dentro de la prenda.'); return; }
+      const moved = position(component, anchor);
+      const movedSurface = anchor.surface ?? scenes.flatMap(item => item.surfaces).find(surface => surface.id === moved.placement?.assemblySurfaceId);
+      if (componentFits(moved, anchor.view, base?.pieces ?? []) && (!movedSurface || assemblyComponentFits(movedSurface, moved))) { save(items => items.map(item => item.id === moved.id ? moved : item)); setMessage(''); }
+      else setMessage('El extra no cabe en esa zona. Conservamos su posición anterior.');
     }
   };
   const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
@@ -164,6 +202,17 @@ export function CustomizePage({ projectId }: { projectId: string }) {
   const title = physicalViews.length ? 'Coloca tus extras' : 'Personaliza tu base';
   const displayParts = doc.elements.filter(element => element.viewId === view?.id && !element.hidden);
   const pendingDepth = pending?.kind === 'bolsillo-cargo' ? pending.depth ?? 30 : 0;
+  const focusComponent = (component: PatternComponent) => {
+    setSelectedId(component.id);
+    if (component.placement?.viewId) setViewId(component.placement.viewId);
+    const side = scenes.find(item => item.surfaces.some(surface => surface.id === component.placement?.assemblySurfaceId))
+      ?? scenes.find(item => item.surfaces.some(surface => surface.viewId === component.placement?.viewId));
+    if (side) {
+      setSceneId(side.id);
+      const surface = side.surfaces.find(item => item.id === component.placement?.assemblySurfaceId) ?? side.surfaces.find(item => item.viewId === component.placement?.viewId);
+      if (surface && component.placement) setTarget({ surfaceId: surface.id, point: { x: component.placement.x, y: component.placement.y } });
+    }
+  };
 
   return <div className="page page-wide customize-page">
     <header className="customize-head"><button className="back-link" onClick={() => navigate('/biblioteca')}><Icon name="back" size={18} />Cambiar base</button><h1>{title}</h1><p>{project.name}</p></header>
@@ -171,27 +220,32 @@ export function CustomizePage({ projectId }: { projectId: string }) {
     <div className="customize-layout">
       <section className="customize-preview" aria-label="Colocar extras en la prenda">
         <div className="customize-preview-top">
-          <div className="customize-view-tabs" role="group" aria-label="Pieza de la prenda">{views.map(item => <button className="filter-chip" key={item.id} aria-pressed={item.id === view?.id} onClick={() => { setViewId(item.id); setMessage(''); }}>{viewName(item)}</button>)}</div>
+          {assembled ? <div className="customize-view-tabs customize-look-tabs" role="group" aria-label="Lado de la prenda">{scenes.map(item => <button className="filter-chip" key={item.id} aria-pressed={item.id === scene.id} onClick={() => { setSceneId(item.id); setTarget(undefined); setSelectedId(undefined); setMessage(''); }}>{item.label}</button>)}</div> : <div className="customize-view-tabs" role="group" aria-label="Pieza de la prenda">{views.map(item => <button className="filter-chip" key={item.id} aria-pressed={item.id === view?.id} onClick={() => { setViewId(item.id); setMessage(''); }}>{viewName(item)}</button>)}</div>}
           <IconButton icon="undo" label="Deshacer cambio de extras" disabled={!canUndo} onClick={undo} />
-          <button className="icon-btn" aria-label="Mostrar cuadrícula" aria-pressed={grid} onClick={() => setGrid(!grid)} title="Cuadrícula de 1 cm"><Icon name="grid" /></button>
+          {scenes.length > 0 && <button className="customize-pieces-toggle" aria-label={assembled ? 'Ver piezas del patrón' : 'Volver a la prenda completa'} onClick={() => { setPreviewMode(assembled ? 'pieces' : 'look'); setGrid(!assembled ? false : grid); }}>{assembled ? 'Piezas' : 'Prenda'}</button>}
+          {!assembled && <button className="icon-btn" aria-label="Mostrar cuadrícula" aria-pressed={grid} onClick={() => setGrid(!grid)} title="Cuadrícula de 1 cm"><Icon name="grid" /></button>}
         </div>
-        {view ? <div className={`customize-art${nativeDragging || drag?.kind === 'add' ? ' is-drop-target' : ''}`} onDragOver={event => { if (event.dataTransfer.types.includes(DRAG_TYPE)) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }} onDrop={onDrop}>
-          <svg ref={svgRef} viewBox={zoomBox ? `${zoomBox.x} ${zoomBox.y} ${zoomBox.width} ${zoomBox.height}` : `${view.minX - 12} ${view.minY - 12} ${view.width + 24} ${view.height + 24}`} role="img" aria-label={`${project.name}, ${viewName(view)}`} onPointerMove={movePointer} onPointerUp={event => finishPointer(event)} onPointerCancel={event => finishPointer(event, true)}>
-            <StudioDefs doc={doc} view={view} fabrics={fabrics} prefix="customize-" />
+        {canvasView && view ? <div className={`customize-art${assembled ? ' customize-whole-look' : ''}${nativeDragging || drag?.kind === 'add' ? ' is-drop-target' : ''}`} onDragOver={event => { if (event.dataTransfer.types.includes(DRAG_TYPE)) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }} onDrop={onDrop}>
+          <svg ref={svgRef} viewBox={zoomBox ? `${zoomBox.x} ${zoomBox.y} ${zoomBox.width} ${zoomBox.height}` : `${canvasView.minX - 12} ${canvasView.minY - 12} ${canvasView.width + 24} ${canvasView.height + 24}`} role="img" aria-label={`${project.name}, ${assembled ? scene.label : viewName(view)}`} onPointerMove={movePointer} onPointerUp={event => finishPointer(event)} onPointerCancel={event => finishPointer(event, true)}>
+            {assembled ? <AssemblyArtwork scene={scene} project={liveProject} fabrics={fabrics} selectedId={selectedId} onElementPointerDown={(event, elementId, surface) => { const id = componentIdForElement(elementId); if (id) startMove(event, id, surface); }} onSurfacePointerDown={(event, surface) => {
+              const point = pointInPreview(svgRef.current, event.clientX, event.clientY);
+              if (point) { setTarget({ surfaceId: surface.id, point: inverseAssemblyPoint(surface, point) }); setSelectedId(undefined); setMessage(`${surface.label}: elige el extra que quieres añadir.`); }
+            }}/> : <><StudioDefs doc={doc} view={view} fabrics={fabrics} prefix="customize-" />
             <ViewBase view={view} mode="apariencia" prefix="customize-" fabrics={fabrics} />
             {grid && <PlacementGrid view={view} />}
             {displayParts.map(element => { const id = componentIdForElement(element.id); return <g key={element.id} data-component-id={id} onPointerDown={id ? event => startMove(event, id) : undefined}><ElementSvg el={element} mode="apariencia" prefix="customize-" doc={doc} fabrics={fabrics} /></g>; })}
-            {displayedSelected?.placement?.viewId === view.id && <rect x={displayedSelected.placement.x - displayedSelected.width / 2 - 4} y={displayedSelected.placement.y - displayedSelected.height / 2 - 4} width={displayedSelected.width + 8} height={displayedSelected.height + 8} fill="none" stroke="#a26e00" strokeWidth={1.8} strokeDasharray="5 3" vectorEffect="non-scaling-stroke" pointerEvents="none" />}
+            {displayedSelected?.placement?.viewId === view.id && <rect x={displayedSelected.placement.x - displayedSelected.width / 2 - 4} y={displayedSelected.placement.y - displayedSelected.height / 2 - 4} width={displayedSelected.width + 8} height={displayedSelected.height + 8} fill="none" stroke="#a26e00" strokeWidth={1.8} strokeDasharray="5 3" vectorEffect="non-scaling-stroke" pointerEvents="none" />}</>}
           </svg>
-          {grid && <span className="customize-grid-note">Cada cuadro: 1 cm</span>}
-          {(selected || zoomBox) && <button className="customize-zoom-btn" onClick={toggleZoom}>{zoomBox ? 'Ver pieza completa' : 'Acercar zona'}</button>}
+          {grid && !assembled && <span className="customize-grid-note">Cada cuadro: 1 cm</span>}
+          {(selected || zoomBox) && <button className="customize-zoom-btn" onClick={toggleZoom}>{zoomBox ? 'Ver diseño completo' : 'Acercar zona'}</button>}
         </div> : <div className="customize-no-view"><Icon name="patronaje" size={40} /><p>Elige una base para colocar sus extras.</p></div>}
         <div className="customize-selection" aria-live="polite">
-          {selected ? <><span><strong>{selectedName}</strong><small>Arrastra para mover · {formatLength(selected.width, unit)} × {formatLength(selected.height, unit)}</small></span><IconButton icon="trash" label="Eliminar extra seleccionado" onClick={deleteSelected} /></> : <p>Toca un extra para añadirlo o arrástralo desde su asa.</p>}
+          {selected ? <><span><strong>{selectedName}</strong><small>Arrastra para mover · {formatLength(selected.width, unit)} × {formatLength(selected.height, unit)}</small></span><IconButton icon="trash" label="Eliminar extra seleccionado" onClick={deleteSelected} /></> : <p>{assembled ? 'Toca una zona de la prenda y elige qué agregar.' : 'Toca un extra para añadirlo o arrástralo desde su asa.'}</p>}
         </div>
-        {components.length > 0 && <div className="customize-added-list" role="group" aria-label="Extras añadidos">{components.map(component => <button key={component.id} aria-pressed={selectedId === component.id} onClick={() => { setSelectedId(component.id); if (component.placement?.viewId) setViewId(component.placement.viewId); }}>{nameOf(component)}{component.quantity > 1 ? ` ×${component.quantity}` : ''}</button>)}</div>}
+        {components.length > 0 && <div className="customize-added-list" role="group" aria-label="Extras añadidos">{components.map(component => <button key={component.id} aria-pressed={selectedId === component.id} onClick={() => focusComponent(component)}>{nameOf(component)}{component.quantity > 1 ? ` ×${component.quantity}` : ''}</button>)}</div>}
         {message && <p className="customize-feedback" role="status">{message}</p>}
-        {!physicalViews.length && <p className="customize-reference-note">Vista ilustrativa: prueba la posición sobre la prenda real antes de coser.</p>}
+        {assembled && <p className="customize-reference-note">Aquí ves el diseño completo. Cada bolsillo o extra tendrá su propio patrón en el PDF.</p>}
+        {!physicalViews.length && <p className="customize-reference-note">Vista orientativa: prueba la posición sobre la prenda antes de coser.</p>}
       </section>
 
       <section className="customize-gallery" aria-label="Catálogo de extras">
@@ -213,9 +267,9 @@ export function CustomizePage({ projectId }: { projectId: string }) {
         </div></details>}
       </section>
     </div>
-    <div className="customize-footer"><span>{components.length ? `${components.length} ${components.length === 1 ? 'extra' : 'extras'}` : 'Puedes conservar la base lisa'}</span><Button variant="primary" icon="palette" onClick={() => navigate(`/acabados/${projectId}`)}>Elegir telas y bordados</Button></div>
-    {drag?.kind === 'add' && <div className="customize-drag-ghost" style={{ left: drag.client.x, top: drag.client.y }}><ComponentIcon option={COMPONENT_OPTIONS.find(option => option.id === drag.presetId) ?? COMPONENT_OPTIONS[0]} />Suelta sobre la pieza</div>}
-    {pending && <Sheet title="Ajustar este extra" onClose={() => setPending(undefined)}><div className="stack"><Notice>El extra no cabe todavía en esta pieza. Ajusta sus medidas o vuelve para elegir otra pieza; conservaremos el tamaño que elijas.</Notice><strong>{nameOf(pending)}</strong><ComponentDimensions prefix="pending-component" component={pending} onChange={patch => setPending({ ...pending, ...patch })} />{message && <p className="small" role="status">{message}</p>}<Button variant="primary" onClick={() => { if (!view) return; const placed = firstFittingPosition(pending, view, base?.pieces ?? [], pending.placement); if (placed) accept(placed); else setMessage(componentPlacementProblem(pending, view, base?.pieces ?? []) ?? 'Aún no cabe. Prueba un tamaño menor o elige otra pieza.'); }}>Añadir a esta pieza</Button><Button variant="ghost" onClick={() => setPending(undefined)}>Elegir otra pieza</Button>{pendingDepth > 0 && <p className="tiny muted">El ancho y alto deben admitir el fuelle de {formatLength(pendingDepth, unit)}.</p>}</div></Sheet>}
+    <div className="customize-footer"><span>{components.length ? `${components.length} ${components.length === 1 ? 'extra' : 'extras'}` : 'Puedes conservar la base lisa'}</span><Button variant="primary" icon="palette" onClick={() => navigate(`/acabados/${projectId}`)}>Elegir telas</Button></div>
+    {drag?.kind === 'add' && <div className="customize-drag-ghost" style={{ left: drag.client.x, top: drag.client.y }}><ComponentIcon option={COMPONENT_OPTIONS.find(option => option.id === drag.presetId) ?? COMPONENT_OPTIONS[0]} />Suelta sobre la prenda</div>}
+    {pending && <Sheet title="Ajustar este extra" onClose={() => setPending(undefined)}><div className="stack"><Notice>Este extra es grande para esa zona. Ajusta su tamaño o elige otra zona de la prenda.</Notice><strong>{nameOf(pending)}</strong><ComponentDimensions prefix="pending-component" component={pending} onChange={patch => setPending({ ...pending, ...patch })} />{message && <p className="small" role="status">{message}</p>}<Button variant="primary" onClick={() => { const pendingView = views.find(item => item.id === pending.placement?.viewId) ?? view; if (!pendingView) return; const surface = scenes.flatMap(item => item.surfaces).find(item => item.id === pending.placement?.assemblySurfaceId); const placed = surface ? firstFittingAssemblyPosition(pending, surface, base?.pieces ?? [], pending.placement) : firstFittingPosition(pending, pendingView, base?.pieces ?? [], pending.placement); if (placed) accept(placed); else setMessage(componentPlacementProblem(pending, pendingView, base?.pieces ?? []) ?? 'Aún no cabe. Prueba un tamaño menor.'); }}>Añadir al diseño</Button><Button variant="ghost" onClick={() => setPending(undefined)}>Elegir otra zona</Button>{pendingDepth > 0 && <p className="tiny muted">El ancho y alto deben admitir el fuelle de {formatLength(pendingDepth, unit)}.</p>}</div></Sheet>}
   </div>;
 }
 

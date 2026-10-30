@@ -382,3 +382,43 @@ de `vectorPath` invalidan la correspondencia con el patrón. `projectPack` eval�
 si una intervención está vacía después de incorporar guías de colocación, para
 permitir una intervención útil con solo mercería y cero plantillas. Contratos y
 pruebas: `docs/DECORACIONES_Y_MERCERIA.md`.
+
+
+## 20. Vista armada, materiales y publicación sin interrumpir proyectos
+
+`simple/assembled.ts` proyecta las vistas físicas sobre frente/espalda del diseño.
+Las coordenadas y dimensiones guardadas siguen en mm; `assemblySurfaceId` separa
+instancias de una misma plantilla, como piernas o mangas. `AssemblyArtwork`
+comparte representación entre Personalizar y Acabados, conserva paneles/fotos y
+compensa reflejos del arte interior. Los helpers de colocación verifican tanto
+el contorno físico como la cara visible de manga. `lib/pdf/placement.ts` agrupa
+por pieza e instancia, identifica izquierda/derecha y compensa la guía canónica
+para las copias en espejo, sin invertir la plantilla independiente del bordado.
+
+`FinishesPage` ofrece material global, cambios por parte y luego bordados.
+`finishEmbroidery.ts` mantiene juntos los elementos multicolor y comprueba
+concavidades y límites de cara. `CustomizePage` mantiene los extras independientes
+del patrón base y conserva la identidad de lado al moverlos en vista técnica.
+Contratos y límites: `VISTA_ARMADA.md`, `ACABADOS_EN_DISENO_COMPLETO.md`.
+
+`babyBodysuit.ts` añade el generador de body con broches y `babyPatterns.ts`
+actualiza el ID estable del antiguo body de inspiración; las dos mangas forman
+una tarjeta. `costumeExpansion.ts` contiene 40 construcciones y conjuntos con
+medidas editables; `costumeFlats.ts` enlaza cada superficie a una pieza real,
+incluidos reversos y copias en espejo. Nuevas familias y recetas se clasifican
+explícitamente, se registran en `generators/index.ts` y se auditan en CSV.
+
+La PWA usa `registerType: prompt`. `AppUpdateNotice` espera confirmación explícita
+dentro de la app y un `saveNow()` exitoso antes de activar el worker; los módulos
+viejos siguen disponibles mientras su página los necesita. `store/app.ts` evita
+que una carga tardía sobrescriba cambios, incluidos los ya autoguardados. La
+migración desde el antiguo worker requiere cerrar la última pestaña una vez.
+Prueba reproducible de dos despliegues: `tests/browser/upgrade_navigation_smoke.py`.
+
+
+`catalogImages.ts` y `ui/CatalogImage.tsx` presentan imágenes de IA originales
+para los 110 diseños nativos; 13 láminas WebP suman 1.6 MB. El recorte visual
+revisado vive en el mapa de cada celda, conserva la proporción y evita vecinos.
+Las fotos ilustrativas nunca proporcionan coordenadas ni medidas al motor.
+Las vistas técnicas y el figurín siguen usando geometría editable; los recursos
+WebP se precargan para uso sin conexión. Ver `IMAGENES_CATALOGO_IA.md`.

@@ -22,6 +22,7 @@ const HelpPage = lazy(() => import('./features/help/HelpPage').then((m) => ({ de
 const SettingsPage = lazy(() => import('./features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 import { MorePage } from './features/settings/MorePage';
 import { useSync } from './lib/sync/useSync';
+import { AppUpdateNotice } from './ui/AppUpdateNotice';
 
 const NAV = [
   { key: 'proyectos', label: 'Proyectos', icon: 'proyectos' },
@@ -136,6 +137,7 @@ export function App() {
         </div>
       </nav>
       <main className="main">
+        <AppUpdateNotice />
         {loadError && (
           <div className="notice err" style={{ margin: 12 }}>
             No se pudo abrir el almacenamiento local: {loadError}. Tus cambios no se guardarán en este navegador.

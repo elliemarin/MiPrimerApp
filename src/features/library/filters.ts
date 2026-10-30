@@ -34,7 +34,7 @@ const identityAliases: Partial<Record<CatalogFamily, string[]>> = {
   falda: ['falda', 'faldas', 'skirt', 'skirts'], vestido: ['vestido', 'vestidos', 'dress', 'dresses'],
   peto: ['peto', 'petos', 'jumper', 'jumpers', 'jumpper', 'jumppers', 'overol', 'overoles', 'pinafore'],
   mono: ['mono', 'monos', 'enterizo', 'enterizos', 'jumpsuit', 'jumpsuits', 'playsuit'],
-  pijama: ['pijama', 'pijamas', 'pajama', 'pajamas'], body: ['body', 'bodies', 'bodys', 'bodysuit'],
+  pijama: ['pijama', 'pijamas', 'pajama', 'pajamas'], body: ['body', 'bodies', 'bodys', 'bodysuit', 'bodysuits', 'panalero', 'panaleros', 'onesie', 'onesies'],
   mameluco: ['mameluco', 'mamelucos', 'romper'], babero: ['babero', 'baberos', 'bib', 'bibs'],
   gorro: ['gorro', 'gorros', 'beanie', 'beanies'], tote: ['tote', 'totes'], bandolera: ['bandolera', 'bandoleras'],
   cojin: ['cojin', 'cojines', 'almohada', 'almohadas', 'cushion', 'pillow'],
@@ -48,7 +48,12 @@ const identityAliases: Partial<Record<CatalogFamily, string[]>> = {
   corbata: ['corbata', 'corbatas', 'pajarita', 'pajaritas'], mitones: ['miton', 'mitones'],
   pantuflas: ['pantufla', 'pantuflas'], cinturon: ['cinturon', 'cinturones'],
   pulsera: ['pulsera', 'pulseras'], cesto: ['cesto', 'cestos', 'cesta', 'cestas'],
-  aplicacion: ['parche', 'parches']
+  aplicacion: ['parche', 'parches'],
+  tabardo: ['tabardo', 'tabardos', 'tabard', 'tabards'], alas: ['ala', 'alas', 'wing', 'wings'],
+  cola: ['cola', 'colas', 'tail', 'tails'], 'diadema-disfraz': ['diadema', 'diademas', 'astas', 'cuerno', 'antenas'],
+  'cuello-disfraz': ['cuello', 'cuellos', 'gorguera'], 'puno-disfraz': ['puno', 'punos'],
+  polaina: ['polaina', 'polainas', 'gaiters'], 'peto-disfraz': ['pechera', 'pecheras'],
+  'conjunto-disfraz': ['kit', 'kits']
 };
 const identityFamily = Object.fromEntries(Object.entries(identityAliases).flatMap(([family, aliases]) => aliases.map(alias => [alias, family]))) as Record<string, CatalogFamily>;
 const synonyms: Record<string, string[]> = {
@@ -67,6 +72,7 @@ type ItemIdentity = (model: CatalogModel) => boolean;
  * here are the recipe's name, never the combined card title or search prose. */
 const named = (model: CatalogModel, expression: RegExp) => expression.test(normalizeSearch(model.name));
 const subtypeAliases: [string[], ItemIdentity][] = [
+  [['oreja', 'orejas'], m => is(m, 'orejas', 'diadema-disfraz') && named(m, /\borejas?\b/)],
   [['servilleta', 'servilletas', 'napkin', 'napkins'], m => m.designGroup?.id === 'tipo-textil-servilleta'],
   [['mantel', 'manteles', 'individual', 'individuales', 'placemat', 'placemats'], m => m.designGroup?.id === 'tipo-textil-individual'],
   [['banda', 'bandas', 'headband', 'headbands'], m => m.designGroup?.id === 'tipo-banda-cabello'],

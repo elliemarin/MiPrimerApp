@@ -1,6 +1,8 @@
 import { EXPANDED_CATALOG } from './catalogExpansion';
 import { COLLECTION_CATALOG } from './catalogCollections';
 import { COSTUME_CATALOG } from './costumeCatalog';
+import { withBabyPatterns, BABY_CATALOG_VARIANTS } from './babyPatterns';
+import { COSTUME_EXPANSION_CATALOG } from './costumeExpansion';
 import type { FlatSpec } from './flats';
 import type { Params } from '../lib/pattern/generator';
 import { withDesignGroup, type CatalogDesignGroup } from './catalogGrouping';
@@ -743,11 +745,13 @@ const BASE_CATALOG: CatalogModel[] = [
   },
   ...EXPANDED_CATALOG,
   ...COLLECTION_CATALOG,
-  ...COSTUME_CATALOG
+  ...COSTUME_CATALOG,
+  ...BABY_CATALOG_VARIANTS,
+  ...COSTUME_EXPANSION_CATALOG
 ];
 const ACCESSORY_IDS=new Set(['cojin','funda-cheve','funda-vaso','dona-cabello','bandana-reversible','individual-reversible','posavasos-textil','servilleta-reversible','marcapaginas-textil','tapete-maquina','delantal-estudio','antifaz-estudio','banderin-estudio']);
 const UPGRADED_ACCESSORY:Record<string,string>={'delantal-estudio':'delantal-peto','antifaz-estudio':'antifaz-forrado','banderin-estudio':'banderin-jareta'};
-export const CATALOG:CatalogModel[]=BASE_CATALOG.map(m=>{
+export const CATALOG:CatalogModel[]=BASE_CATALOG.map(withBabyPatterns).map(m=>{
   const gen=UPGRADED_ACCESSORY[m.id];
   return withCatalogTaxonomy(withDesignGroup({...m,type:ACCESSORY_IDS.has(m.id)?'accesorios':m.type,...(gen?{generatorId:gen,status:'experimental' as const,studioOnly:false,description:'Plantilla de diseño y patrón paramétrico con medidas editables del objeto, márgenes y pasos de confección. Nueva construcción experimental: prueba una muestra.'}:{})}));
 });

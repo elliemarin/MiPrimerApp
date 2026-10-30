@@ -58,6 +58,7 @@ let rev = 0;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
 let saving: Promise<boolean> | null = null;
+let initializing: Promise<void> | null = null;
 
 function scheduleSave(get: () => AppState) {
   if (timer) clearTimeout(timer);
@@ -80,22 +81,45 @@ export const useApp = create<AppState>((set, get) => ({
   toasts: [],
 
   async init() {
-    try {
-      const snap = await loadAll();
-      const idx = <T extends { id: string }>(xs: T[]) => Object.fromEntries(xs.map((x) => [x.id, x]));
-      set({
-        ready: true,
-        projects: idx(snap.projects),
-        profiles: idx(snap.profiles),
-        fabrics: idx(snap.fabrics),
-        materials: idx(snap.materials),
-        settings: { ...DEFAULT_SETTINGS, ...(snap.settings ?? {}) },
-        saveStatus: 'guardado'
-      });
-      if (navigator.storage?.persist) void navigator.storage.persist();
-    } catch (e) {
-      set({ ready: true, loadError: e instanceof Error ? e.message : String(e), saveStatus: 'error', saveError: 'No se pudo abrir el almacenamiento del navegador.' });
-    }
+    if (initializing) return initializing;
+    const before = get();
+    initializing = (async () => {
+      try {
+        const snap = await loadAll();
+        set(current => {
+          const idx = <T extends { id: string }>(kind: EntityKind, xs: T[], live: Record<string, T>, initial: Record<string, T>) => {
+            const values = Object.fromEntries(xs.map(value => [value.id, value]));
+            // A delayed hydration must not replace edits or deletions made
+            // since it started, even if those edits have already autosaved.
+            const ids = new Set([...Object.keys(initial), ...Object.keys(live)]);
+            const pending = { ...before.dirty, ...current.dirty };
+            for (const key of Object.keys(pending)) {
+              if (key.startsWith(`${kind}:`)) ids.add(key.slice(kind.length + 1));
+              if (key.startsWith(`del:${kind}:`)) ids.add(key.slice(kind.length + 5));
+            }
+            for (const id of ids) {
+              if (live[id] !== initial[id] || pending[`${kind}:${id}`] || pending[`del:${kind}:${id}`]) {
+                if (live[id]) values[id] = live[id]; else delete values[id];
+              }
+            }
+            return values;
+          };
+          return {
+            ready: true, loadError: undefined,
+            projects: idx('project', snap.projects, current.projects, before.projects),
+            profiles: idx('profile', snap.profiles, current.profiles, before.profiles),
+            fabrics: idx('fabric', snap.fabrics, current.fabrics, before.fabrics),
+            materials: idx('material', snap.materials, current.materials, before.materials),
+            settings: current.settings !== before.settings || before.dirty.settings || current.dirty.settings ? current.settings : { ...DEFAULT_SETTINGS, ...(snap.settings ?? {}) },
+            saveStatus: current.saveStatus === 'guardando' ? 'guardando' : Object.keys(current.dirty).length ? 'pendiente' : 'guardado'
+          };
+        });
+        if (navigator.storage?.persist) void navigator.storage.persist();
+      } catch (e) {
+        set({ ready: true, loadError: e instanceof Error ? e.message : String(e), saveStatus: 'error', saveError: 'No se pudo abrir el almacenamiento del navegador.' });
+      }
+    })();
+    try { await initializing; } finally { initializing = null; }
   },
 
   put(kind, value) {

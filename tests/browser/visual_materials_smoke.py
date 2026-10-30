@@ -152,9 +152,10 @@ def run_model_finishes(browser, width):
     assert 'NaN' not in page.locator('.model-illustration').inner_html()
     # The actual guided journey still owns the physical pattern coordinates.
     project_id=start_from_model(page,model_id)
-    page.get_by_role('button',name='Elegir telas y bordados',exact=True).click()
+    page.get_by_role('button',name='Elegir telas',exact=True).click()
     page.wait_for_url('**/#/acabados/**')
     before=next(project for project in state(page)['projects'] if project['id']==project_id)['pattern']
+    page.get_by_text('Cambiar una parte o bolsillo',exact=True).click()
     page.get_by_role('button',name='Elegir color o tela:',exact=False).first.click()
     page.get_by_role('button',name='Elegir una tela o subir foto',exact=True).click()
     choose_image(page,'Elegir del carrete','Tela acabados',(190,70,115,255))
@@ -162,6 +163,12 @@ def run_model_finishes(browser, width):
     assert page.locator('.finish-art svg image[href^="blob:"]').count()>0
     project=next(project for project in state(page)['projects'] if project['id']==project_id)
     assert any(fill.get('fabricId')==imported['id'] for view in project['design']['views'] for fill in view.get('zoneFills',{}).values())
+    # Complete material choices explicitly before opening the final preview.
+    page.get_by_role('button',name='Elegir color o tela:',exact=False).first.click()
+    page.get_by_text('Usar el mismo material en todo',exact=True).click()
+    page.get_by_role('button',name='Usar en todas las partes',exact=True).click()
+    page.get_by_role('button',name='Continuar a bordados',exact=True).click()
+    page.get_by_text('Más opciones',exact=True).click()
     page.get_by_role('button',name='Ver en modelo',exact=True).click()
     preview=page.get_by_role('dialog',name='Tu diseño en un figurín',exact=True)
     preview.wait_for(state='visible')
@@ -176,11 +183,7 @@ def run_model_finishes(browser, width):
     page.wait_for_timeout(250)
     page.screenshot(path=f'/tmp/hilvana-visual-finished-model-{width}.png')
     page.get_by_role('group',name='Vista del figurín',exact=True).get_by_role('button',name='Espalda',exact=True).click()
-    page.get_by_role('button',name='Volver a las piezas',exact=True).click()
-    # A batch choice remains explicit and enables export without touching the pattern.
-    page.get_by_role('button',name='Elegir color o tela:',exact=False).first.click()
-    page.get_by_text('Usar el mismo material en todo',exact=True).click()
-    page.get_by_role('button',name='Usar en todas las partes',exact=True).click()
+    page.get_by_role('button',name='Volver al diseño',exact=True).click()
     assert page.get_by_role('button',name='Generar patrones',exact=True).is_enabled()
     after=next(project for project in state(page)['projects'] if project['id']==project_id)
     before['components']=before.get('components',[])
@@ -189,12 +192,16 @@ def run_model_finishes(browser, width):
     save_reload(page)
     reloaded=next(project for project in state(page)['projects'] if project['id']==project_id)
     assert reloaded['pattern']==before and reloaded['design']==after['design']
+    page.get_by_role('button',name='Continuar a bordados',exact=True).click()
     assert page.get_by_role('button',name='Generar patrones',exact=True).is_enabled()
+    page.get_by_text('Más opciones',exact=True).click()
     page.get_by_role('button',name='Ver en modelo',exact=True).click()
     assert page.locator('#simple-model-body').input_value()=='curvas'
     assert page.get_by_role('button',name='Tono de piel 7',exact=True).get_attribute('aria-pressed')=='true'
     assert page.locator('.model-preview-art svg image[href^="blob:"]').count()>0
-    page.get_by_role('button',name='Volver a las piezas',exact=True).click()
+    page.get_by_role('button',name='Volver al diseño',exact=True).click()
+    page.get_by_role('button',name='Telas y colores',exact=True).click()
+    page.get_by_text('Cambiar una parte o bolsillo',exact=True).click()
     page.get_by_role('button',name='Elegir color o tela:',exact=False).first.click()
     page.get_by_role('button',name='Elegir una tela o subir foto',exact=True).click()
     assert page.locator('.fabric-swatch').first.inner_text()=='Tela acabados'

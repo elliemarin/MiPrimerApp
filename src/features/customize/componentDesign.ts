@@ -58,6 +58,8 @@ function visualElements(component: PatternComponent, view: DesignView, old: Map<
     const previous = old.get(id);
     return newElement(view.id, {
       id, name: `${name} · ${label}`, parentId: componentGroupId(componentId),
+      assemblySurfaceId: component.placement?.assemblySurfaceId,
+      assemblySurfaceLabel: component.placement?.assemblySurfaceLabel,
       ...transformed(dx, dy), w: width, h: height, rotation, flipX, flipY,
       kind: 'forma', shape: { type: 'rect' },
       fill: previous?.fill ?? { type: 'color', color: '#D5DECD' },
@@ -132,6 +134,8 @@ function visualElements(component: PatternComponent, view: DesignView, old: Map<
   result.push(newElement(view.id, {
     id: componentGroupId(componentId), name: `${name}${component.quantity > 1 ? ` · ${component.quantity} copias` : ''}`,
     kind: 'grupo', x, y, w, h, rotation, flipX, flipY,
+    assemblySurfaceId: component.placement?.assemblySurfaceId,
+    assemblySurfaceLabel: component.placement?.assemblySurfaceLabel,
     fill: { type: 'ninguno' }, locked: priorGroup?.locked ?? false,
     hidden: priorGroup?.hidden ?? false,
     materialNote: 'Complemento de confección vinculado a su patrón. Ajusta medidas o elimínalo para actualizar el PDF.'
@@ -192,7 +196,7 @@ export function readComponentsFromDesign(project: Project, doc: DesignDoc, fabri
       }
     }
     return [{ ...clone(component), width: body.w, height: body.h, materials,
-      placement: { ...component.placement, viewId: body.viewId, x: body.x, y: body.y, label: component.placement?.label ?? doc.views.find(view => view.id === body.viewId)?.label }
+      placement: { ...component.placement, viewId: body.viewId, x: body.x, y: body.y, assemblySurfaceId: body.assemblySurfaceId ?? component.placement?.assemblySurfaceId, assemblySurfaceLabel: body.assemblySurfaceLabel ?? component.placement?.assemblySurfaceLabel, label: component.placement?.label ?? doc.views.find(view => view.id === body.viewId)?.label }
     }];
   });
 }

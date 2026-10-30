@@ -6,7 +6,7 @@ import os
 import re
 import pymupdf
 from playwright.sync_api import sync_playwright
-from simple_journey_smoke import project_state, assert_pattern, no_overflow, verify_pdf, drag
+from simple_journey_smoke import project_state, assert_pattern, no_overflow, verify_pdf, drag, physical_point
 
 BASE=os.environ.get('HILVANA_TEST_URL','http://localhost:5173').rstrip('/')
 
@@ -30,11 +30,7 @@ def run(browser,width):
     assert bought['kind']=='cinta-comprada'
     assert not any(piece['id'].startswith('componente-') for piece in state['pieces'])
     # Drag on the opaque top band rather than one of the lace holes.
-    point=page.evaluate('''c=>{
-      const svg=document.querySelector('.customize-art svg');
-      const p=new DOMPoint(c.placement.x,c.placement.y-c.height*.46).matrixTransform(svg.getScreenCTM());
-      return {x:p.x,y:p.y};
-    }''',bought)
+    point=physical_point(page,'.customize-art svg',bought['placement'].get('assemblySurfaceId'),bought['placement']['x'],bought['placement']['y']-bought['height']*.46)
     drag(page,context,point,{'x':point['x']+8,'y':point['y']+7},touch=width<500)
     moved=project_state(page,project_id)['project']['pattern']['components'][0]
     assert abs(moved['placement']['x']-bought['placement']['x'])>1
@@ -48,14 +44,18 @@ def run(browser,width):
     assert len(piece['lines'])==18
     no_overflow(page)
     page.screenshot(path=f'/tmp/hilvana-decorations-{width}.png',full_page=True)
-    page.get_by_role('button',name='Elegir telas y bordados',exact=True).click()
+    page.get_by_role('button',name='Elegir telas',exact=True).click()
     page.wait_for_url('**/#/acabados/**')
+    page.get_by_role('heading',name='Telas y colores',exact=True).wait_for()
+    page.get_by_text('Cambiar una parte o bolsillo',exact=True).click()
     page.locator('.finish-material-list>button').first.wait_for()
     assert page.locator('.finish-material-list>button').count()>=3
     page.locator('.finish-material-list>button').first.click()
     page.get_by_text('Usar el mismo material en todo',exact=True).click()
     page.get_by_role('button',name='Todas las partes #24584A',exact=True).click()
     page.get_by_role('button',name='Continuar a bordados',exact=True).click()
+    page.get_by_role('heading',name='Tu diseño y sus bordados',exact=True).wait_for()
+    page.evaluate('async()=>await window.__hilvanaQaApp.getState().saveNow()')
     page.reload()
     page.get_by_role('button',name='Continuar a bordados',exact=True).click()
     page.get_by_role('button',name='Generar patrones',exact=True).wait_for()

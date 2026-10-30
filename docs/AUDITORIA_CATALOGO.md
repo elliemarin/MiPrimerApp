@@ -1,10 +1,10 @@
 # Auditoría de categorías y filtros · 30 de octubre de 2026
 
-Se revisaron los **1,882 registros** del catálogo local: **1,804 recetas con
-patrón** y 78 referencias de estudio/inspiración. Representan **147 diseños**,
-de los que **69 generan patrón**, clasificados en **60 familias precisas**
-(43 familias tienen recetas nativas). Las medidas siguen agrupadas dentro de
-cada diseño. No se cambiaron IDs, parámetros geométricos ni proyectos guardados.
+Se revisaron los **1,923 registros** del catálogo local: **1,846 recetas con
+patrón** y 77 referencias de estudio/inspiración. Representan **187 diseños**,
+de los que **110 generan patrón**, clasificados en **69 familias precisas**
+(53 familias tienen recetas nativas). Las medidas siguen agrupadas dentro de
+cada diseño. La revisión de etiquetas no altera geometría guardada. La ampliación posterior incorpora el pañalero y 40 disfraces originales con IDs estables, documentados por separado.
 
 El inventario completo, una fila por ID, está en
 [auditoria/catalogo.csv](auditoria/catalogo.csv). Incluye diseño, nombre, categoría,
@@ -25,7 +25,7 @@ de la misma selección; ahora la interfaz las presenta en una pestaña separada.
 
 ## Clasificación y búsqueda
 
-`src/data/catalogTaxonomy.ts` asigna explícitamente los 147 IDs de diseño a una
+`src/data/catalogTaxonomy.ts` asigna explícitamente los 187 IDs de diseño a una
 familia. Cada registro de `CATALOG` recibe su etiqueta `family`; la comprobación
 exhaustiva rechaza cualquier diseño sin clasificar. La asignación se basa en
 construcciones, parámetros e IDs, nunca en el parecido de una ilustración.
@@ -74,17 +74,18 @@ rellenar la lista con otros artículos.
 
 ## Bebé y destinatarios
 
-Los registros compatibles con bebé son nueve: pantalón recto, jogger, jogger de
-pañal, short, pantalón de pijama, body, mameluco, babero y gorro. Body y mameluco
-continúan como inspiración. Los otros siete registros se agrupan en **seis diseños
-con patrón**. Los presets de colección con largos adultos no reciben etiqueta de
-bebé. El acceso visible Bebé emplea destinatario, por lo que no oculta pantalones
-compatibles por estar en una categoría general diferente.
+Los registros compatibles con bebé son diez, incluidas dos mangas de body:
+pantalón recto, jogger, jogger de pañal, short, pantalón de pijama, pañalero de
+manga corta/larga, mameluco, babero y gorro. El mameluco continúa como inspiración;
+el pañalero ya tiene motor propio. Las nueve recetas disponibles se agrupan en
+**siete diseños con patrón**. Los presets de largos adultos no reciben etiqueta
+de bebé. El acceso visible Bebé emplea destinatario, por lo que no oculta
+pantalones compatibles por estar en una categoría general diferente.
 
 Baberos y gorros pertenecen ahora a Accesorios y el jogger de pañal a Pantalones;
 la edad se conserva como destinatario. La combinación Bebé + Accesorios devuelve
 babero y gorro. Una sesión antigua con categoría `bebe` se migra a destinatario
-Bebé y categoría general Todos, recuperando los seis diseños y el selector de
+Bebé y categoría general Todos, recuperando los siete diseños y el selector de
 meses.
 
 Unisex admite Mujer y Hombre, igual que el selector de creación. **No se deduce
@@ -131,3 +132,14 @@ búsquedas estrictas y combinadas, destinatarios, disponibilidad, técnicas,
 medidas, agrupación y sesiones anteriores. El CSV se regenera sin red y sin
 leer proyectos o perfiles privados. Al agregar un diseño nuevo hay que
 clasificarlo, comprobar sus destinatarios y actualizar esta auditoría.
+
+
+## Ampliación de disfraces y pañalero
+
+La colección Disfraces contiene 55 recetas agrupadas en 44 diseños. Las nueve
+familias nuevas distinguen tabardos, alas, colas, diademas, cuellos, puños,
+polainas, pecheras y conjuntos; chalecos, faldas y cinturones usan sus familias
+existentes. «Orejas» encuentra solo orejas de gato, conejo y oso, sin incluir
+cuernos o antenas. Pañalero/body/onesie identifica el diseño infantil y conserva
+la elección de manga en su selector. Ver `DISFRACES_AMPLIADOS.md` y
+`PANALERO_BEBE.md` para las construcciones y sus límites de validación.

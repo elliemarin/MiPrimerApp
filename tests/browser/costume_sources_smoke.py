@@ -13,6 +13,7 @@ from simple_journey_smoke import assert_pattern, no_overflow, project_state, ver
 
 BASE = os.environ.get('HILVANA_TEST_URL', 'http://localhost:5173').rstrip('/')
 GENERATORS = {'capa-semicircular', 'corona-textil', 'sombrero-mago', 'orejas-diadema'}
+DESIGN_COUNT = 44
 
 
 def storage_snapshot(page):
@@ -23,10 +24,16 @@ def storage_snapshot(page):
     }''')
 
 
+def expand_costumes(page):
+    page.wait_for_function("document.querySelectorAll('.simple-pattern-card').length===24")
+    page.get_by_role('button', name='Ver más diseños', exact=True).click()
+    page.wait_for_function('count=>document.querySelectorAll(".simple-pattern-card").length===count', arg=DESIGN_COUNT)
+
+
 def costumes(page):
     page.get_by_role('searchbox', name='Buscar prendas y accesorios', exact=True).fill('')
     page.get_by_role('group', name='Tipo de proyecto', exact=True).get_by_role('button', name='Disfraces', exact=True).click()
-    page.wait_for_function("document.querySelectorAll('.simple-pattern-card').length===4")
+    expand_costumes(page)
     return page.evaluate('''async()=>{
       const {findModel}=await import('/src/data/catalog.ts');
       return [...document.querySelectorAll('.simple-pattern-card')].map(a=>{
@@ -113,26 +120,29 @@ def run_layout(browser, width):
     page.goto(BASE)
     page.wait_for_load_state('networkidle')
     cards = costumes(page)
-    assert {card['generatorId'] for card in cards} == GENERATORS, cards
-    assert len({card['group'] for card in cards}) == 4
+    assert {card['generatorId'] for card in cards} >= GENERATORS, cards
+    assert len({card['group'] for card in cards}) == DESIGN_COUNT
     search = page.get_by_role('searchbox', name='Buscar prendas y accesorios', exact=True)
     search.fill('corona')
     page.wait_for_function("document.querySelectorAll('.simple-pattern-card').length===1")
     assert 'Corona' in page.locator('.simple-pattern-caption strong').inner_text()
     search.fill('')
-    page.wait_for_function("document.querySelectorAll('.simple-pattern-card').length===4")
+    expand_costumes(page)
     page.get_by_role('button', name=re.compile('^Filtros')).click()
     page.locator('#search-recipient').select_option('mujer')
     assert page.locator('#search-collection').input_value() == 'Disfraces'
     page.get_by_role('dialog').get_by_role('button', name=re.compile(r'^Ver .+ resultados$')).click()
-    assert page.locator('.simple-pattern-card').count() == 4
+    expand_costumes(page)
+    assert page.locator('.simple-pattern-card').count() == DESIGN_COUNT
     no_overflow(page)
     page.screenshot(path=f'/tmp/hilvana-costume-catalog-{width}.png', full_page=True)
-    for card in cards:
+    # The forty new constructions have their own exhaustive expansion smoke.
+    # Keep this regression focused on the four original dimension groups.
+    for card in (card for card in cards if card['generatorId'] in GENERATORS):
         native_details(page, card['id'])
     check_sources(page, width)
     assert not errors, errors
-    print(f'Disfraces/fuentes {width}px: cuatro diseños, fichas con piezas/materiales/pasos sin guardar, acceso directo, filtros y enlaces seguros PASS')
+    print(f'Disfraces/fuentes {width}px: {DESIGN_COUNT} diseños, fichas de las cuatro bases originales sin guardar, acceso directo, filtros y enlaces seguros PASS')
     context.close()
 
 
@@ -162,8 +172,9 @@ def run_pdf(browser, generator_id):
     assert_pattern(state)
     assert state['project']['pattern']['generatorId'] == generator_id
     assert state['project']['pattern']['params'][chosen_key] == chosen
-    page.get_by_role('button', name='Elegir telas y bordados', exact=True).click()
+    page.get_by_role('button', name='Elegir telas', exact=True).click()
     page.wait_for_url('**/#/acabados/**')
+    page.get_by_text('Cambiar una parte o bolsillo', exact=True).click()
     page.locator('.finish-material-list>button').first.click()
     page.get_by_text('Usar el mismo material en todo', exact=True).click()
     page.get_by_role('button', name='Todas las partes #24584A', exact=True).click()

@@ -42,6 +42,8 @@ def run(browser, width):
     first = page.locator('.finish-material-list>button').first
 
     def open_fabrics(target=first):
+        if not page.locator('.finish-part-details').evaluate('e=>e.open'):
+            page.get_by_text('Cambiar una parte o bolsillo', exact=True).click()
         target.click()
         page.get_by_role('button', name='Elegir una tela o subir foto', exact=True).click()
         dialog = page.get_by_role('dialog', name='Tela para ', exact=False)

@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { blankProject } from '../src/store/projects';
+import { blankProject, projectFromModel } from '../src/store/projects';
 import { newPatternState } from '../src/lib/pattern/engine';
-import { newDesign, newElement, type DesignView } from '../src/features/studio/model';
+import { newDesign, newElement, elementWorldCmds, type DesignView } from '../src/features/studio/model';
 import { componentElementId, syncComponentDesign } from '../src/features/customize/componentDesign';
 import { preparePlacementGuide } from '../src/lib/pdf/placement';
 import { createEmbroideryMotif } from '../src/lib/draw/embroideryMotifs';
+import { findModel } from '../src/data/catalog';
+import { prepareSimpleProject } from '../src/features/simple/workflow';
+import { profileFromSize } from '../src/store/profiles';
+import { quickSize } from '../src/lib/sizes/quickSizes';
+import { assemblyArtworkReflection, buildAssembly } from '../src/features/simple/assembled';
+import { transformCmds } from '../src/lib/draw/paths';
 
 function physicalView(id = 'pieza-vista', pieceId = 'delantero'): DesignView {
   return { id, kind: 'pieza', label: 'Delantero', source: { type: 'pieza', pieceId }, minX: -37, minY: -29, width: 450, height: 650,
@@ -96,5 +102,51 @@ describe('guía de colocación de extras y bordados', () => {
       expect(first.p.x).toBeCloseTo(body.x - 40*Math.cos(Math.PI/6) + 50*Math.sin(Math.PI/6), 8);
       expect(first.p.y).toBeCloseTo(body.y - 40*Math.sin(Math.PI/6) - 50*Math.cos(Math.PI/6), 8);
     }
+  });
+
+  it('separa las guías de dos lados que comparten una misma plantilla de corte', () => {
+    const project = projectWithPocket();
+    const left = project.pattern!.components![0];
+    left.quantity = 1;
+    left.placement = { ...left.placement!, assemblySurfaceId: 'armado-frente-pierna-izq', assemblySurfaceLabel: 'Frente · pierna izquierda' };
+    project.pattern!.components!.push({ ...left, id: 'bolsillo-derecho', placement: { ...left.placement, x: 211.75, assemblySurfaceId: 'armado-frente-pierna-der', assemblySurfaceLabel: 'Frente · pierna derecha' } });
+    const updated = syncComponentDesign(project);
+    const bee = createEmbroideryMotif('abeja', 'pieza-vista', 160, 330, 60);
+    updated.design!.elements.push(...bee.elements.map(element => ({ ...element, assemblySurfaceId: 'armado-frente-pierna-der', assemblySurfaceLabel: 'Frente · pierna derecha' })));
+    const guide = preparePlacementGuide(JSON.parse(JSON.stringify(updated)));
+    expect(guide.drawings).toHaveLength(2);
+    expect(new Set(guide.drawings.map(drawing => drawing.id)).size).toBe(2);
+    const leftGuide = guide.drawings.find(drawing => drawing.title.includes('pierna izquierda'))!;
+    const rightGuide = guide.drawings.find(drawing => drawing.title.includes('pierna derecha'))!;
+    expect(leftGuide.count).toBe(1);
+    expect(rightGuide.count).toBe(2);
+    expect(guide.placements.every(placement => placement.pieceId === 'delantero' && placement.precise)).toBe(true);
+    expect(guide.placements.find(placement => placement.id === 'bolsillo-derecho')).toMatchObject({ x: 211.75, y: 144.5, assemblySurfaceLabel: 'Frente · pierna derecha' });
+    const leftText = leftGuide.drawables[0].labels.map(label => label.text).join(' ');
+    const rightText = rightGuide.drawables[0].labels.map(label => label.text).join(' ');
+    expect(leftText).toContain('pierna izquierda');
+    expect(leftText).not.toContain('pierna derecha');
+    expect(rightText).toContain('pierna derecha');
+    expect(rightText).not.toContain('pierna izquierda');
+    expect(updated.pattern!.components).toHaveLength(2);
+  });
+
+  it('compensa la guía de una copia en espejo sin invertir el bordado independiente', () => {
+    const size = quickSize('mujer', 'mediana');
+    const project = prepareSimpleProject(projectFromModel(findModel('jogger')!, profileFromSize(size.table, size.row)));
+    const surface = buildAssembly(project)[0].surfaces.find(item => assemblyArtworkReflection(item, { x: 0 })[0] < 0)!;
+    const element = newElement(surface.viewId, { id: 'letra-f', name: 'Inicial F', technique: 'bordado', kind: 'trazo', shape: undefined,
+      x: (surface.physicalBounds.minX + surface.physicalBounds.maxX) / 2, y: 240, w: 40, h: 60,
+      path: { pts: [[-.5, .5], [-.5, -.5], [.5, -.5], [.5, -.25], [-.2, -.25], [-.2, 0], [.25, 0], [.25, .25], [-.2, .25], [-.2, .5]], closed: true, smooth: false },
+      assemblySurfaceId: surface.id, assemblySurfaceLabel: surface.label });
+    project.design!.elements.push(element);
+    const original = JSON.stringify(project);
+    const guide = preparePlacementGuide(project);
+    expect(guide.placements[0]).toMatchObject({ id: 'letra-f', x: element.x, y: 240, mirroredOnGuide: true, assemblySurfaceId: surface.id });
+    const printed = guide.drawings[0].drawables[0].paths.find(path => path.style === 'bordado')!.cmds;
+    expect(printed).toEqual(transformCmds(elementWorldCmds(element), assemblyArtworkReflection(surface, element)));
+    expect(printed).not.toEqual(elementWorldCmds(element));
+    expect(guide.drawings[0].note).toContain('transfiere esta guía por el reverso');
+    expect(JSON.stringify(project)).toBe(original);
   });
 });

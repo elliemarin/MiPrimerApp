@@ -2,6 +2,8 @@
 // Cada vista define zonas editables (para máscaras y relaciones), detalles de
 // construcción, una línea de referencia compartida y la posición de los costados.
 import { presetLines } from './panelPresets';
+import { babyBodysuitFlat } from './babyBodysuitFlat';
+import { buildCostumeFlat } from './costumeFlats';
 import { parseSvgPath } from '../lib/draw/svgpath';
 import { cmdsToPolylines } from '../lib/draw/flatten';
 import { bboxOf } from '../lib/geom/vec';
@@ -418,6 +420,7 @@ function dressView(key: FlatViewKey, o: DressOpts): FlatView {
 
 // ---------------------------------------------------------------- Bebé
 function babyBodyView(key: FlatViewKey, o: { legs: 'body' | 'mameluco'; sleeve: TopOpts['sleeve'] }): FlatView {
+  if (o.legs === 'body') return babyBodysuitFlat(key, o.sleeve === 'larga' ? 'larga' : 'corta');
   const back = key === 'espalda';
   const s = 0.42;
   const top = topView(key, { type: 'camiseta', sleeve: o.sleeve, neck: 'redondo', closure: 'ninguno', length: 700, fit: 1 });
@@ -429,20 +432,12 @@ function babyBodyView(key: FlatViewKey, o: { legs: 'body' | 'mameluco'; sleeve: 
   const shY = 42 * s;
   const arm = 235 * s;
   const drop = back ? 10 : 36;
-  let body: string;
-  if (o.legs === 'body') {
-    body = `${M([0, drop])} ${Q([-neck, drop], [-neck, 0])} ${Lp([-sh, shY])} ${Lp([-W, arm])} ${Lp([-W, 230])} ${Q([-W + 4, 300], [-38, 320])} ${Lp([38, 320])} ${Q([W - 4, 300], [W, 230])} ${Lp([W, arm])} ${Lp([sh, shY])} ${Lp([neck, 0])} ${Q([neck, drop], [0, drop])} Z`;
-  } else {
-    body = `${M([0, drop])} ${Q([-neck, drop], [-neck, 0])} ${Lp([-sh, shY])} ${Lp([-W, arm])} ${Lp([-W - 4, 260])} ${Lp([-112, 560])} ${Lp([-28, 560])} ${Lp([-12, 330])} ${Lp([12, 330])} ${Lp([28, 560])} ${Lp([112, 560])} ${Lp([W + 4, 260])} ${Lp([W, arm])} ${Lp([sh, shY])} ${Lp([neck, 0])} ${Q([neck, drop], [0, drop])} Z`;
-  }
+  const body = `${M([0, drop])} ${Q([-neck, drop], [-neck, 0])} ${Lp([-sh, shY])} ${Lp([-W, arm])} ${Lp([-W - 4, 260])} ${Lp([-112, 560])} ${Lp([-28, 560])} ${Lp([-12, 330])} ${Lp([12, 330])} ${Lp([28, 560])} ${Lp([112, 560])} ${Lp([W + 4, 260])} ${Lp([W, arm])} ${Lp([sh, shY])} ${Lp([neck, 0])} ${Q([neck, drop], [0, drop])} Z`;
   zones.unshift(zone(back ? 'espalda' : 'delantero', back ? 'Espalda' : 'Delantero', back ? 'espalda' : 'delantero', body));
   const details: FlatView['details'] = [];
   const dots: FlatView['dots'] = [];
-  if (o.legs === 'body') for (const x of [-20, 0, 20]) dots.push({ x, y: 312, r: 3.5 });
-  else {
-    details.push({ d: line([-12, 330], [-28, 560]), style: 'pespunte' });
-    if (!back) for (let i = 0; i < 6; i++) dots.push({ x: 0, y: 70 + i * 42, r: 3.5 });
-  }
+  details.push({ d: line([-12, 330], [-28, 560]), style: 'pespunte' });
+  if (!back) for (let i = 0; i < 6; i++) dots.push({ x: 0, y: 70 + i * 42, r: 3.5 });
   return finishView(key, zones, details, dots, 0, 'Hombro', { left: -W, right: W, center: 0 });
 }
 
@@ -777,9 +772,12 @@ export interface FlatSpec {
   pinafore?: { skirtLength: number; bibWidth: number; bibHeight: number; fullness: number };
   /** Pijama: conjunto de superior y pantalón. */
   set?: boolean;
+  /** Physical costume assembly with explicit piece bindings. */
+  costume?: string;
 }
 
 export function buildFlat(id: string, spec: FlatSpec): FlatDef {
+  if (spec.costume) return buildCostumeFlat(id, spec.costume);
   const views: FlatView[] = [];
   const keys: FlatViewKey[] = ['frente', 'espalda'];
   if (spec.pinafore) return {id,views:keys.map(k=>pinaforeView(k,spec.pinafore!))};

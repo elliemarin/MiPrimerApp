@@ -3,7 +3,7 @@ import { CATALOG, RECIPIENT_LABEL, TECHNIQUE_LABEL, TYPE_LABEL, type GarmentType
 import { catalogFamilyOptions, FAMILY_LABEL, familyOf, type CatalogFamily } from '../../data/catalogTaxonomy';
 import { Button, Empty, Field, Select, Sheet } from '../../ui/components';
 import { Icon } from '../../ui/Icon';
-import { FlatArt } from '../../ui/FlatArt';
+import { CatalogImage } from '../../ui/CatalogImage';
 import { SIZE_TABLES } from '../../lib/sizes/tables';
 import { INITIAL_FILTERS, matches, modelHasPattern, sanitizeFilters, type Filters } from './filters';
 import { groupCatalog } from './groups';
@@ -134,7 +134,7 @@ export function LibraryPage() {
       {!list.length ? <Empty icon="search" title="No hay diseños con estos filtros" body="Quita uno de los filtros de arriba o prueba otra prenda." action={<Button onClick={reset}>Mostrar todos</Button>}/> : <div className="simple-pattern-grid">{list.slice(0, limit).map(group => {
         const model = group.representative;
         return <a key={group.id} className="simple-pattern-card" data-design-group={group.id} data-family={familyOf(model)} href={`#/biblioteca/${model.id}?para=${filters.recipient}${filters.recipient === 'bebe' ? `&talla=${babySize}` : ''}`}>
-          <div className="simple-pattern-art"><FlatArt id={model.id} spec={model.flat} title={group.name} catalog/></div><div className="simple-pattern-caption"><strong>{group.name}</strong><span>{FAMILY_LABEL[familyOf(model)]} · Elegir medidas</span></div>
+          <div className="simple-pattern-art"><CatalogImage model={model} title={group.name} recipient={filters.recipient === 'todos' ? undefined : filters.recipient}/></div><div className="simple-pattern-caption"><strong>{group.name}</strong><span>{FAMILY_LABEL[familyOf(model)]} · Elegir medidas</span></div>
         </a>;
       })}</div>}
       {limit < list.length && <div className="simple-more"><Button onClick={() => setLimit(value => value + 24)}>Ver más diseños</Button><p className="tiny muted">Mostrando {Math.min(limit, list.length)} de {list.length.toLocaleString('es-MX')}</p></div>}

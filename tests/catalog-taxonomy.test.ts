@@ -10,9 +10,9 @@ const patternSearch = (q: string) => CATALOG.filter(model => matches(model, { ..
 
 describe('Auditoría completa de identidad y destinatario del catálogo', () => {
   it('clasifica cada receta e inspiración mediante una asignación explícita de su diseño', () => {
-    expect(CATALOG).toHaveLength(1882);
+    expect(CATALOG).toHaveLength(1923);
     expect(new Set(CATALOG.map(model => model.id)).size).toBe(CATALOG.length);
-    expect(CATALOG.filter(modelHasPattern)).toHaveLength(1804);
+    expect(CATALOG.filter(modelHasPattern)).toHaveLength(1846);
     const designIds = new Set(CATALOG.map(model => model.designGroup?.id ?? model.id));
     expect(Object.keys(FAMILY_BY_DESIGN).sort()).toEqual([...designIds].sort());
     for (const model of CATALOG) {
@@ -117,11 +117,11 @@ describe('Auditoría completa de identidad y destinatario del catálogo', () => 
     expect(search('capa con capucha').map(model => model.id)).toEqual(['capa-capucha']);
   });
 
-  it('recupera bebé por edad explícita y conserva los seis diseños nativos sin presets adultos', () => {
-    const expectedIds = ['pantalon-recto-elastico', 'jogger', 'pantalon-bebe-panal', 'short-elastico', 'pantalon-pijama', 'babero', 'gorro'];
+  it('recupera bebé por edad explícita y conserva siete diseños nativos sin presets adultos', () => {
+    const expectedIds = ['pantalon-recto-elastico', 'jogger', 'pantalon-bebe-panal', 'short-elastico', 'pantalon-pijama', 'babero', 'gorro', 'body-bebe', 'body-bebe-manga-larga'];
     const baby = CATALOG.filter(model => matches(model, { ...onlyPatterns, recipient: 'bebe' }));
     expect(baby.map(model => model.id).sort()).toEqual(expectedIds.sort());
-    expect(groupCatalog(baby)).toHaveLength(6);
+    expect(groupCatalog(baby)).toHaveLength(7);
     expect(patternSearch('bebé').map(model => model.id)).toEqual(baby.map(model => model.id));
     expect(search('baby').map(model => model.id)).toContain('body-bebe');
     expect(search('baby').map(model => model.id)).toContain('mameluco');
@@ -134,11 +134,39 @@ describe('Auditoría completa de identidad y destinatario del catálogo', () => 
     expect(CATALOG.filter(model => matches(model, { ...onlyPatterns, family: 'hoodie', recipient: 'bebe' }))).toEqual([]);
   });
 
+  it.each(['pañalero', 'panalero', 'body', 'bodies', 'bodysuit', 'onesie'])('%s reúne las dos mangas del pañalero en una base de bebé editable', query => {
+    const found = patternSearch(query);
+    expect(found.map(model => model.id).sort()).toEqual(['body-bebe', 'body-bebe-manga-larga']);
+    expect(groupCatalog(found)).toHaveLength(1);
+    expect(groupCatalog(found)[0].id).toBe('body-bebe');
+    expect(found.every(model => model.generatorId === 'body-bebe-broches' && modelSupportsRecipient(model, 'bebe'))).toBe(true);
+    expect(found.map(model => model.params?.tipoManga).sort()).toEqual(['corta', 'larga']);
+    expect(found.every(model => matches(model, { ...onlyPatterns, recipient: 'bebe', q: query }))).toBe(true);
+  });
+
+  it('ofrece 44 diseños de disfraces y mantiene las medidas dentro de cada construcción', () => {
+    const found = patternSearch('disfraces');
+    const grouped = groupCatalog(found);
+    expect(found).toHaveLength(55);
+    expect(grouped).toHaveLength(44);
+    expect(new Set(grouped.map(group => group.id)).size).toBe(44);
+    expect(found.every(model => model.collection === 'Disfraces' && model.generatorId)).toBe(true);
+    expect(grouped.find(group => group.id === 'tipo-disfraz-corona')?.models).toHaveLength(6);
+    expect(grouped.map(group => group.id)).toEqual(expect.arrayContaining(['disfraz-alas-hada', 'disfraz-alas-mariposa', 'disfraz-cola-dinosaurio', 'disfraz-kit-hada', 'disfraz-tabardo-robot']));
+  });
+
+  it('orejas incluye gato, conejo y oso sin confundir antenas, astas o cuernos', () => {
+    const found = patternSearch('orejas');
+    expect(found).toHaveLength(5);
+    expect(groupCatalog(found).map(group => group.id).sort()).toEqual(['disfraz-orejas-conejo', 'disfraz-orejas-oso', 'tipo-disfraz-orejas']);
+    expect(found.every(model => ['orejas', 'diadema-disfraz'].includes(familyOf(model)))).toBe(true);
+  });
+
   it('pone jaretas y estuches en bolsos, petos en monos y separa los lazos de los cinturones', () => {
     for (const id of ['saquito-joyas', 'bolsa-pan', 'estuche-lapices', 'neceser-plano']) expect(findModel(id)?.type, id).toBe('bolsos');
     expect(findModel('overol')?.type).toBe('monos');
     expect(search('cabello').some(model => ['cinturon-tela', 'pulsera-tela', 'lazo-regalo'].includes(model.id))).toBe(false);
-    expect(search('cinturones').map(model => model.id)).toEqual(['cinturon-tela']);
+    expect(search('cinturones').map(model => model.id)).toEqual(['cinturon-tela', 'disfraz-cinturon-pirata']);
     expect(groupCatalog(patternSearch('scrunchie'))).toHaveLength(1);
     expect(groupCatalog(patternSearch('laptop 13'))).toHaveLength(1);
   });

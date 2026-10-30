@@ -1,0 +1,6 @@
+.catalog-photo { width: 100%; height: 100%; display: grid; place-items: center; container-type: size; overflow: hidden; background: #f7f5eb; }
+.catalog-photo-crop { position: relative; width: min(100cqw, 100cqh); aspect-ratio: 1; overflow: hidden; isolation: isolate; }
+.catalog-photo-atlas { position: absolute; width: 300%; height: 300%; max-width: none; display: block; object-fit: fill; user-select: none; pointer-events: none; }
+.simple-pattern-art:has(.catalog-photo), .simple-model-art:has(.catalog-photo) { padding: 0; overflow: hidden; background: #f7f5eb; }
+.model-variant-preview > .catalog-photo { width: 90px; height: 90px; flex: none; border-radius: 8px; }
+@media(max-width:380px) { .model-variant-preview > .catalog-photo { width: 76px; height: 76px; } }

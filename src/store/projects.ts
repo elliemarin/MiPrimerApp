@@ -47,6 +47,13 @@ export function currentValues(profile: Profile): MeasureValues {
 /** Escala aproximada de la plantilla según las medidas de la persona. */
 export function templateScaleFor(model: CatalogModel, kind: PersonKind | undefined, body: MeasureValues | undefined): { sx: number; sy: number; basis: string } {
   if (model.flat.family === 'bolso' || model.flat.family === 'accesorio') return { sx: 1, sy: 1, basis: 'Tamaño de referencia del modelo' };
+  if (model.flat.family === 'bebe') {
+    // These illustrations are already infant-sized. Applying adult reference
+    // values (920 / 1680) shrank them a second time in legacy baby projects.
+    const sx = body?.pecho ? body.pecho / 450 : 1;
+    const sy = body?.estatura ? body.estatura / 620 : sx;
+    return { sx, sy, basis: 'Referencia infantil de 0–3 meses; proporciones de pecho y estatura aproximadas' };
+  }
   const bottoms = model.flat.family === 'pantalon' || model.flat.family === 'falda';
   if (body) {
     const circ = bottoms ? body.cadera : body.pecho;

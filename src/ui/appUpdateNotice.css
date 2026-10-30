@@ -1,0 +1,4 @@
+.app-update-notice { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--surface); color: var(--ink-2); font-size: 12px; line-height: 1.4; }
+.app-update-notice span { flex: 1; min-width: 0; }
+.app-update-notice .btn { flex: none; }
+@media(max-width:500px) { .app-update-notice { align-items: flex-start; flex-wrap: wrap; } }

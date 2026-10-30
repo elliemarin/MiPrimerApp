@@ -20,7 +20,7 @@ export function ProjectModelPreview({ project, onClose, onPrepareEditorial }: { 
   const current = flat.views.find(view=>view.key===side) ?? flat.views[0];
   const materials = modelMaterials(project,current);
   const change = (values: Partial<typeof options>) => update(project.id,value=>value.design?{...value,design:{...value.design,figurine:{...options,...values}}}:value);
-  return <Sheet title={object?'Vista del accesorio':'Tu diseño en un figurín'} onClose={onClose} wide footer={<div className="row-wrap">{onPrepareEditorial&&<Button onClick={onPrepareEditorial}>Preparar lámina</Button>}<Button className="grow" variant="primary" onClick={onClose}>Volver a las piezas</Button></div>}>
+  return <Sheet title={object?'Vista del accesorio':'Tu diseño en un figurín'} onClose={onClose} wide footer={<div className="row-wrap">{onPrepareEditorial&&<Button onClick={onPrepareEditorial}>Preparar lámina</Button>}<Button className="grow" variant="primary" onClick={onClose}>Volver al diseño</Button></div>}>
     <div className="model-preview-layout">
       <div className="model-preview-art"><ModelIllustration model={model} view={side} body={options.body} skin={options.skin} hair={options.hair} hairColor={options.hairColor} materials={materials.fills} fabrics={fabrics}/></div>
       <div className="stack-lg">
@@ -30,7 +30,7 @@ export function ProjectModelPreview({ project, onClose, onPrepareEditorial }: { 
           <Field label="Silueta" htmlFor="simple-model-body"><Select id="simple-model-body" value={options.body} onChange={body=>change({body:body as FigureBody})} options={Object.entries(FIGURE_BODY_LABEL).map(([value,label])=>({value,label}))}/></Field>
           <Field label="Tono de piel"><div className="model-skin-tones">{SKIN_TONES.map((skin,index)=><button key={skin} type="button" aria-label={`Tono de piel ${index+1}`} aria-pressed={skin===options.skin} style={{background:skin}} onClick={()=>change({skin})}/>)}</div></Field>
         </>}
-        <p className="tiny muted">Composición 2D orientativa. La ubicación de extras y bordados se edita y se imprime desde las piezas; el figurín no calcula caída ni ajuste.</p>
+        <p className="tiny muted">Figurín 2D orientativo de telas y colores. Para colocar bolsillos y bordados, vuelve al diseño completo. Comprueba el ajuste con una muestra de confección.</p>
         {materials.omittedPanels&&<p className="tiny muted">Los paneles de distintos materiales se muestran completos en la vista de piezas.</p>}
       </div>
     </div>
