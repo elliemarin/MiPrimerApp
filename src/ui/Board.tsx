@@ -1,0 +1,272 @@
+import { ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { Pt, BBox } from '../lib/geom/vec';
+import type { Unit } from '../lib/units';
+
+export interface View {
+  /** Píxeles CSS por milímetro. */
+  scale: number;
+  tx: number;
+  ty: number;
+}
+
+export interface BoardPointer {
+  world: Pt;
+  screen: Pt;
+  event: PointerEvent | React.PointerEvent;
+}
+
+export interface BoardHandlers {
+  /** Devuelve true si la herramienta toma el gesto; si no, el lienzo se desplaza. */
+  onDown?: (p: BoardPointer) => boolean;
+  onMove?: (p: BoardPointer) => void;
+  onUp?: (p: BoardPointer) => void;
+  onHover?: (p: BoardPointer) => void;
+  onDoubleTap?: (p: BoardPointer) => void;
+}
+
+export function useViewport(initial: View = { scale: 1, tx: 40, ty: 40 }) {
+  const [view, setView] = useState<View>(initial);
+  const size = useRef({ w: 800, h: 600 });
+  const zoomAt = useCallback((factor: number, at: Pt) => {
+    setView((v) => {
+      const scale = Math.max(0.05, Math.min(80, v.scale * factor));
+      const k = scale / v.scale;
+      return { scale, tx: at.x - (at.x - v.tx) * k, ty: at.y - (at.y - v.ty) * k };
+    });
+  }, []);
+  const fit = useCallback((b: BBox, pad = 40) => {
+    const { w, h } = size.current;
+    const bw = Math.max(1, b.maxX - b.minX);
+    const bh = Math.max(1, b.maxY - b.minY);
+    const scale = Math.max(0.05, Math.min((w - pad * 2) / bw, (h - pad * 2) / bh, 40));
+    setView({ scale, tx: (w - bw * scale) / 2 - b.minX * scale, ty: (h - bh * scale) / 2 - b.minY * scale });
+  }, []);
+  const toWorld = useCallback((s: Pt, v: View): Pt => ({ x: (s.x - v.tx) / v.scale, y: (s.y - v.ty) / v.scale }), []);
+  return { view, setView, zoomAt, fit, toWorld, size };
+}
+
+type VP = ReturnType<typeof useViewport>;
+
+function niceStep(scale: number, unit: Unit): { minor: number; major: number; label: (mm: number) => string } {
+  if (unit === 'in') {
+    const steps = [25.4 / 16, 25.4 / 8, 25.4 / 4, 25.4 / 2, 25.4, 25.4 * 2, 25.4 * 6, 25.4 * 12, 25.4 * 36];
+    const minor = steps.find((s) => s * scale >= 7) ?? steps[steps.length - 1];
+    const major = steps.find((s) => s * scale >= 60 && s >= minor * 2) ?? minor * 4;
+    return { minor, major, label: (mm) => `${Math.round((mm / 25.4) * 100) / 100}` };
+  }
+  const steps = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000];
+  const minor = steps.find((s) => s * scale >= 7) ?? 2000;
+  const major = steps.find((s) => s * scale >= 55 && s >= minor * 2 && s % 10 === 0) ?? minor * 5;
+  return { minor, major, label: (mm) => `${Math.round(mm / 10)}` };
+}
+
+export function Board({
+  vp,
+  handlers,
+  children,
+  overlay,
+  unit,
+  grid = true,
+  rulers = true,
+  cursor
+}: {
+  vp: VP;
+  handlers: BoardHandlers;
+  children: ReactNode;
+  overlay?: ReactNode;
+  unit: Unit;
+  grid?: boolean;
+  rulers?: boolean;
+  cursor?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const pointers = useRef(new Map<number, Pt>());
+  const gesture = useRef<{ mode: 'tool' | 'pan' | 'pinch' | null; last?: Pt; dist?: number; mid?: Pt }>({ mode: null });
+  const lastTap = useRef(0);
+  const { view, setView, zoomAt, size, toWorld } = vp;
+  const [dims, setDims] = useState({ w: 800, h: 600 });
+
+  useLayoutEffect(() => {
+    const el = ref.current!;
+    const ro = new ResizeObserver(() => {
+      const r = el.getBoundingClientRect();
+      size.current = { w: r.width, h: r.height };
+      setDims({ w: r.width, h: r.height });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [size]);
+
+  // Evita el zoom de página de Safari con gestos sobre el lienzo.
+  useEffect(() => {
+    const el = ref.current!;
+    const prevent = (e: Event) => e.preventDefault();
+    el.addEventListener('gesturestart', prevent);
+    el.addEventListener('gesturechange', prevent);
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const r = el.getBoundingClientRect();
+      const at = { x: e.clientX - r.left, y: e.clientY - r.top };
+      if (e.ctrlKey || e.metaKey) zoomAt(Math.exp(-e.deltaY * 0.01), at);
+      else if (e.deltaMode === 1) zoomAt(Math.exp(-e.deltaY * 0.08), at);
+      else setView((v) => ({ ...v, tx: v.tx - e.deltaX, ty: v.ty - e.deltaY }));
+    };
+    el.addEventListener('wheel', wheel, { passive: false });
+    return () => {
+      el.removeEventListener('gesturestart', prevent);
+      el.removeEventListener('gesturechange', prevent);
+      el.removeEventListener('wheel', wheel);
+    };
+  }, [zoomAt, setView]);
+
+  const local = (e: { clientX: number; clientY: number }): Pt => {
+    const r = ref.current!.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+  const bp = (e: React.PointerEvent): BoardPointer => {
+    const s = local(e);
+    return { screen: s, world: toWorld(s, view), event: e };
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.button === 2) return;
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    pointers.current.set(e.pointerId, local(e));
+    if (pointers.current.size === 2) {
+      // Cancela la herramienta y empieza el gesto de pellizco.
+      if (gesture.current.mode === 'tool') handlers.onUp?.(bp(e));
+      const [a, b] = [...pointers.current.values()];
+      gesture.current = { mode: 'pinch', dist: Math.hypot(a.x - b.x, a.y - b.y), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
+      return;
+    }
+    const now = Date.now();
+    const p = bp(e);
+    if (now - lastTap.current < 300 && handlers.onDoubleTap) {
+      handlers.onDoubleTap(p);
+      lastTap.current = 0;
+      return;
+    }
+    lastTap.current = now;
+    const middle = e.button === 1 || (e as React.PointerEvent).altKey;
+    if (!middle && handlers.onDown?.(p)) gesture.current = { mode: 'tool' };
+    else gesture.current = { mode: 'pan', last: local(e) };
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!pointers.current.has(e.pointerId)) {
+      handlers.onHover?.(bp(e));
+      return;
+    }
+    pointers.current.set(e.pointerId, local(e));
+    const g = gesture.current;
+    if (g.mode === 'pinch' && pointers.current.size >= 2) {
+      const [a, b] = [...pointers.current.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const k = d / (g.dist || d);
+      setView((v) => {
+        const scale = Math.max(0.05, Math.min(80, v.scale * k));
+        const kk = scale / v.scale;
+        return { scale, tx: mid.x - (g.mid!.x - v.tx) * kk, ty: mid.y - (g.mid!.y - v.ty) * kk };
+      });
+      gesture.current = { mode: 'pinch', dist: d, mid };
+    } else if (g.mode === 'pan' && g.last) {
+      const s = local(e);
+      const dx = s.x - g.last.x;
+      const dy = s.y - g.last.y;
+      setView((v) => ({ ...v, tx: v.tx + dx, ty: v.ty + dy }));
+      g.last = s;
+    } else if (g.mode === 'tool') handlers.onMove?.(bp(e));
+  };
+  const onPointerUp = (e: React.PointerEvent) => {
+    pointers.current.delete(e.pointerId);
+    if (gesture.current.mode === 'tool') handlers.onUp?.(bp(e));
+    if (pointers.current.size === 0) gesture.current = { mode: null };
+    else if (gesture.current.mode === 'pinch') gesture.current = { mode: null };
+  };
+
+  const st = niceStep(view.scale, unit);
+  const w0 = toWorld({ x: 0, y: 0 }, view);
+  const w1 = toWorld({ x: dims.w, y: dims.h }, view);
+  const gridMinor = unit === 'in' ? 25.4 / 4 : 10;
+  const gridMajor = unit === 'in' ? 25.4 : 50;
+  const showMinor = gridMinor * view.scale >= 6;
+
+  const ticks: { pos: number; major: boolean }[] = [];
+  const rangeTicks = (a: number, b: number) => {
+    const out: { pos: number; major: boolean }[] = [];
+    const start = Math.floor(a / st.minor) * st.minor;
+    for (let x = start; x <= b && out.length < 600; x += st.minor) out.push({ pos: x, major: Math.abs(x / st.major - Math.round(x / st.major)) < 1e-6 });
+    return out;
+  };
+  ticks.push(...rangeTicks(w0.x, w1.x));
+  const vticks = rangeTicks(w0.y, w1.y);
+
+  return (
+    <div
+      ref={ref}
+      className="ed-canvas"
+      style={{ cursor }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      <svg className="board" width={dims.w} height={dims.h}>
+        <defs>
+          <pattern id="g-minor" width={gridMinor} height={gridMinor} patternUnits="userSpaceOnUse">
+            <path d={`M ${gridMinor} 0 L 0 0 0 ${gridMinor}`} fill="none" stroke="var(--grid-minor)" strokeWidth={1 / view.scale} />
+          </pattern>
+          <pattern id="g-major" width={gridMajor} height={gridMajor} patternUnits="userSpaceOnUse">
+            {showMinor && <rect width={gridMajor} height={gridMajor} fill="url(#g-minor)" />}
+            <path d={`M ${gridMajor} 0 L 0 0 0 ${gridMajor}`} fill="none" stroke="var(--grid-major)" strokeWidth={1 / view.scale} />
+          </pattern>
+        </defs>
+        <g transform={`translate(${view.tx} ${view.ty}) scale(${view.scale})`}>
+          {grid && <rect x={w0.x - gridMajor} y={w0.y - gridMajor} width={w1.x - w0.x + gridMajor * 2} height={w1.y - w0.y + gridMajor * 2} fill="url(#g-major)" />}
+          {children}
+        </g>
+        {overlay}
+        {rulers && (
+          <g>
+            <rect x={0} y={0} width={dims.w} height={20} fill="var(--surface)" opacity={0.92} />
+            <rect x={0} y={0} width={20} height={dims.h} fill="var(--surface)" opacity={0.92} />
+            {ticks.map((t) => {
+              const x = t.pos * view.scale + view.tx;
+              return (
+                <g key={`x${t.pos}`}>
+                  <line x1={x} x2={x} y1={t.major ? 6 : 14} y2={20} stroke="var(--ink-3)" strokeWidth={1} />
+                  {t.major && (
+                    <text x={x + 3} y={11} className="ruler-text">
+                      {st.label(t.pos)}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+            {vticks.map((t) => {
+              const y = t.pos * view.scale + view.ty;
+              return (
+                <g key={`y${t.pos}`}>
+                  <line y1={y} y2={y} x1={t.major ? 6 : 14} x2={20} stroke="var(--ink-3)" strokeWidth={1} />
+                  {t.major && (
+                    <text x={3} y={y - 3} className="ruler-text" transform={`rotate(-90 3 ${y - 3})`}>
+                      {st.label(t.pos)}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+            <rect x={0} y={0} width={20} height={20} fill="var(--tape)" />
+            <text x={10} y={14} textAnchor="middle" className="ruler-text" style={{ fill: 'var(--tape-ink)', fontWeight: 700 }}>
+              {unit}
+            </text>
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
+/** Tamaño constante en pantalla para un valor en píxeles. */
+export const px = (v: number, view: View) => v / view.scale;

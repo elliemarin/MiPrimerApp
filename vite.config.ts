@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 // La app se publica en GitHub Pages bajo /MiPrimerApp/.
-const base = process.env.BASE_PATH ?? '/MiPrimerApp/';
+// El flujo de despliegue pasa BASE_PATH con el nombre real del repositorio.
+const base = process.env.BASE_PATH ?? '/';
 
 export default defineConfig({
   base,
@@ -13,9 +14,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Estudio de Diseño',
-        short_name: 'Estudio',
-        description: 'Diseño de prendas, patronaje y proyectos de confección.',
+        name: 'Hilvana',
+        short_name: 'Hilvana',
+        description: 'Diseña, patrona y confecciona: patrones a medida, intervención textil y proyectos de costura.',
         lang: 'es',
         start_url: '.',
         scope: '.',

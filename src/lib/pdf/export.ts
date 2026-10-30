@@ -94,7 +94,6 @@ export function unionBBox(ds: Drawable[]): BBox {
 export function arrangeForTiles(ds: Drawable[], s: TileSettings, gap = 15): Drawable[] {
   const c = contentBox(s);
   const stepX = c.w - s.overlap;
-  const stepY = c.h - s.overlap;
   let best: { pages: number; out: Drawable[] } | null = null;
   const maxW = Math.max(...ds.map((d) => d.bbox.maxX - d.bbox.minX));
   for (let cols = 1; cols <= 8; cols++) {
@@ -262,8 +261,8 @@ function drawMap(cv: PdfCanvas, grid: TileGrid, ds: Drawable[], included: Set<st
 async function finish(doc: PDFDocument, info: ExportInfo) {
   doc.setTitle(info.title);
   doc.setSubject('Patrón a escala real 1:1 en hojas carta (215.9 × 279.4 mm)');
-  doc.setProducer('Estudio de Diseño');
-  doc.setCreator('Estudio de Diseño');
+  doc.setProducer('Hilvana');
+  doc.setCreator('Hilvana');
   doc.setKeywords(['escala 1:1', 'carta', 'imprimir al 100 %']);
   doc.catalog.getOrCreateViewerPreferences().setPrintScaling(PrintScaling.None);
   const json = new TextEncoder().encode(JSON.stringify(info.json, null, 2));

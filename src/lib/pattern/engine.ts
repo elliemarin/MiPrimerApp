@@ -28,7 +28,33 @@ export interface PatternState {
   layout: Record<string, PieceLayout>;
   customPieces: Piece[];
   hidden: string[];
+  /** Imágenes de referencia colocadas bajo las piezas (no afectan la geometría). */
+  refLayers?: RefLayer[];
+  /** Contornos superpuestos para comparar versiones o tallas. */
+  overlays?: Overlay[];
+  /** Piezas excluidas de la exportación. */
+  noExport?: string[];
 }
+
+export interface RefLayer {
+  id: string;
+  refId: string;
+  fileId: string;
+  name: string;
+  x: number;
+  y: number;
+  rotation: number;
+  mmPerPx: number;
+  pxW: number;
+  pxH: number;
+  opacity: number;
+  visible: boolean;
+  locked: boolean;
+  calibrated: boolean;
+  scaleNote?: string;
+}
+
+export type Overlay = { id: string; type: 'version'; versionId: string; label: string } | { id: string; type: 'talla'; tableId: string; code: string; label: string };
 
 export interface ReviewItem {
   pieceId: string;
