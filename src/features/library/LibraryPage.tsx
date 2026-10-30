@@ -1,64 +1,46 @@
-import { useMemo, useState } from 'react';
-import { CATALOG, CatalogModel, GarmentType, Recipient, RECIPIENT_LABEL, STATUS_INFO, TYPE_LABEL, TECHNIQUE_LABEL, Technique } from '../../data/catalog';
+import { useEffect, useMemo, useState } from 'react';
+import { CATALOG, CatalogModel, GarmentType, RECIPIENT_LABEL, STATUS_INFO, TYPE_LABEL, TECHNIQUE_LABEL } from '../../data/catalog';
 import { Chip, Empty, PageHead, Segmented, Sheet, Button, Field, Select } from '../../ui/components';
 import { Icon } from '../../ui/Icon';
 import { FlatArt } from '../../ui/FlatArt';
 import { SIZE_TABLES } from '../../lib/sizes/tables';
 import { navigate } from '../../ui/router';
 
-type Filters = {
-  q: string;
-  recipient: Recipient | 'todos';
-  type: GarmentType | 'todos';
-  onlyAvailable: boolean;
-  difficulty: number | 0;
-  fabric: 'todos' | 'plano' | 'punto';
-  stretch: 'todos' | 'ninguna' | 'baja' | 'media' | 'alta';
-  fit: 'todos' | 'ajustado' | 'regular' | 'holgado' | 'oversize';
-  technique: Technique | 'todas';
-  size: 'todas' | 'infantil' | 'adulto';
-};
+import { Filters, INITIAL_FILTERS, matches, modelHasPattern, modelAvailability } from './filters';
+import { PatternSourcesPanel } from './PatternSourcesPanel';
+import { ModelIllustration } from './ModelIllustration';
+import './library.css';
+export { matches } from './filters';
 
-const INITIAL: Filters = { q: '', recipient: 'todos', type: 'todos', onlyAvailable: false, difficulty: 0, fabric: 'todos', stretch: 'todos', fit: 'todos', technique: 'todas', size: 'todas' };
-
-function norm(s: string) {
-  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const INITIAL = INITIAL_FILTERS;
+function restoreChoice<T extends string>(key:string,allowed:readonly T[],fallback:T):T {
+  try {const saved=sessionStorage.getItem(key);return allowed.includes(saved as T)?saved as T:fallback;} catch{return fallback;}
 }
-
-export function matches(m: CatalogModel, f: Filters): boolean {
-  if (f.q) {
-    const hay = norm(`${m.name} ${m.sub} ${m.description} ${TYPE_LABEL[m.type]} ${m.recommendedFabrics.join(' ')}`);
-    if (!norm(f.q).split(/\s+/).every((w) => hay.includes(w))) return false;
-  }
-  if (f.recipient !== 'todos' && !m.recipients.includes(f.recipient)) return false;
-  if (f.type !== 'todos' && m.type !== f.type) return false;
-  if (f.onlyAvailable && m.status === 'pendiente') return false;
-  if (f.difficulty && m.difficulty !== f.difficulty) return false;
-  if (f.fabric !== 'todos' && !m.fabrics.includes(f.fabric)) return false;
-  if (f.stretch !== 'todos' && m.stretch !== f.stretch) return false;
-  if (f.fit !== 'todos' && !m.fits.includes(f.fit)) return false;
-  if (f.technique !== 'todas' && !m.techniques.includes(f.technique)) return false;
-  if (f.size === 'infantil' && !m.recipients.some((r) => r === 'bebe' || r === 'toddler' || r === 'infantil')) return false;
-  if (f.size === 'adulto' && !m.recipients.some((r) => r === 'mujer' || r === 'hombre' || r === 'unisex')) return false;
-  return true;
+function restoreFilters(): Filters {
+  try { const saved=JSON.parse(sessionStorage.getItem('hilvana-library-filters')??'null'); return saved&&typeof saved==='object'?{...INITIAL,...saved,type:saved.type==='todos'||saved.type in TYPE_LABEL?saved.type:'todos'}:INITIAL; } catch {return INITIAL;}
 }
 
 export function LibraryPage() {
-  const [f, setF] = useState<Filters>(INITIAL);
-  const [babySize, setBabySize] = useState('B0-3');
+  const [f, setF] = useState<Filters>(restoreFilters);
+  const [babySize, setBabySize] = useState(()=>restoreChoice('hilvana-library-baby-size',SIZE_TABLES.find(t=>t.id==='ref-bebe-meses')!.rows.map(r=>r.code),'B0-3'));
+  const [art, setArt] = useState<'dibujo'|'ilustracion'>(()=>restoreChoice('hilvana-library-art',['dibujo','ilustracion'],'dibujo'));
+  useEffect(()=>{try{sessionStorage.setItem('hilvana-library-filters',JSON.stringify(f));sessionStorage.setItem('hilvana-library-baby-size',babySize);sessionStorage.setItem('hilvana-library-art',art);}catch{/* browsing can continue without session storage */}},[f,babySize,art]);
   const [showFilters, setShowFilters] = useState(false);
   const list = useMemo(() => CATALOG.filter((m) => matches(m, f)), [f]);
-  const extra = [f.difficulty, f.fabric !== 'todos', f.stretch !== 'todos', f.fit !== 'todos', f.technique !== 'todas', f.size !== 'todas', f.type !== 'todos'].filter(Boolean).length;
+  const extra = [f.difficulty, f.fabric !== 'todos', f.stretch !== 'todos', f.fit !== 'todos', f.technique !== 'todas', f.size !== 'todas', f.type !== 'todos',f.availability!=='todos',f.subcategory&&f.subcategory!=='todas'].filter(Boolean).length;
   const groups = useMemo(() => {
     const m = new Map<GarmentType, CatalogModel[]>();
     for (const x of list) m.set(x.type, [...(m.get(x.type) ?? []), x]);
     return [...m.entries()];
   }, [list]);
-  const available = CATALOG.filter((m) => m.status !== 'pendiente').length;
+  const patterns = CATALOG.filter(modelHasPattern).length;
+  const designs = CATALOG.filter(m=>m.studioOnly).length;
+  const active = f.q || f.recipient!=='todos' || extra>0 || f.onlyAvailable;
+  const reset = ()=>setF(INITIAL);
 
   return (
     <div className="page page-wide">
-      <PageHead title="Biblioteca" sub={`${CATALOG.length} modelos. ${available} generan patrón o tienen flujo completo; el resto son inspiración con dibujo técnico.`} />
+      <PageHead title="Biblioteca" sub={`${CATALOG.length} modelos: ${patterns} con patrón de costura y ${designs} para diseñar en el estudio. Explora prendas, accesorios y nuevas ideas.`} />
       <div className="stack">
         <div className="row">
           <div className="grow" style={{ position: 'relative' }}>
@@ -68,7 +50,7 @@ export function LibraryPage() {
             <input
               className="input"
               type="search"
-              placeholder="Buscar: jogger, bebé, collage…"
+              placeholder="Buscar: chamarra, jumper, bolso…"
               value={f.q}
               onChange={(e) => setF({ ...f, q: e.target.value })}
               style={{ paddingLeft: 40 }}
@@ -89,15 +71,29 @@ export function LibraryPage() {
         {f.recipient === 'bebe' && <Field label="Talla de bebé" htmlFor="library-baby-size" hint="Se llevará al proyecto. La edad orienta; verifica las medidas antes de cortar.">
           <Select id="library-baby-size" value={babySize} onChange={setBabySize} options={SIZE_TABLES.find(t => t.id === 'ref-bebe-meses')!.rows.map(r => ({ value: r.code, label: `${r.label} · hasta ${r.values.estatura! / 10} cm` }))} />
         </Field>}
-        <Segmented
-          label="Disponibilidad"
-          value={f.onlyAvailable ? 'si' : 'no'}
-          onChange={(v) => setF({ ...f, onlyAvailable: v === 'si' })}
-          options={[
-            { value: 'no', label: 'Todo el catálogo' },
-            { value: 'si', label: 'Listos para trabajar' }
-          ]}
-        />
+        <div className="scroll-x library-quick" role="group" aria-label="Colección">
+          {(['todos','abrigo','monos','accesorios','bolsos','superiores','inferiores','faldas-vestidos','bebe'] as const).map(type=><button key={type} className="filter-chip" aria-pressed={f.type===type} onClick={()=>setF({...f,type,subcategory:'todas'})}>{({todos:'Todo',abrigo:'Chaquetas y abrigos',monos:'Jumpers y monos',accesorios:'Accesorios',bolsos:'Bolsos',superiores:'Superiores',inferiores:'Pantalones','faldas-vestidos':'Faldas y vestidos',bebe:'Prendas bebé'})[type]}</button>)}
+          <button className="filter-chip" aria-pressed={f.fit==='holgado'} onClick={()=>setF({...f,fit:f.fit==='holgado'?'todos':'holgado'})}>Holgados</button>
+          <button className="filter-chip" aria-pressed={f.fit==='oversize'} onClick={()=>setF({...f,fit:f.fit==='oversize'?'todos':'oversize'})}>Oversize</button>
+        </div>
+        {(f.type==='accesorios'||f.type==='bolsos')&&<Field label={f.type==='accesorios'?'Tipo de accesorio':'Tipo de bolso o funda'} htmlFor="library-subcategory">
+          <Select id="library-subcategory" value={f.subcategory??'todas'} onChange={subcategory=>setF({...f,subcategory})} options={[{value:'todas',label:'Todos los tipos'},...[...new Set(CATALOG.filter(m=>m.type===f.type).map(m=>m.sub))].sort((a,b)=>a.localeCompare(b,'es')).map(sub=>({value:sub,label:sub}))]} />
+        </Field>}
+        <Field label="Qué quieres hacer" htmlFor="library-availability">
+          <Select id="library-availability" value={f.availability??'todos'} onChange={availability=>setF({...f,availability,onlyAvailable:false})} options={[{value:'todos',label:'Explorar todo'}, {value:'patron',label:'Coser: modelos con patrón generado'}, {value:'estudio',label:'Diseñar: plantillas del estudio'}, {value:'inspiracion',label:'Inspiración: patrón aún pendiente'}]} />
+        </Field>
+        <div className="spread" style={{gap:12,flexWrap:'wrap'}}>
+          <span className="library-result-count" role="status">{list.length} {list.length===1?'modelo':'modelos'}{active?' con tus filtros':''}</span>
+          <div className="library-art-toggle"><Segmented label="Mostrar modelos" value={art} onChange={setArt} options={[{value:'dibujo',label:'Dibujo'},{value:'ilustracion',label:'Ilustración'}]}/></div>
+        </div>
+        {active&&<div className="library-active-filters">
+          {f.recipient!=='todos'&&<Chip>{RECIPIENT_LABEL[f.recipient]}</Chip>}
+          {f.type!=='todos'&&<Chip>{TYPE_LABEL[f.type]}</Chip>}
+          {f.subcategory&&f.subcategory!=='todas'&&<Chip>{f.subcategory}</Chip>}
+          {f.fit!=='todos'&&<Chip>{f.fit==='oversize'?'Oversize':f.fit==='holgado'?'Holgado':f.fit==='ajustado'?'Ajustado':'Regular'}</Chip>}
+          <Button size="sm" variant="ghost" onClick={reset}>Quitar todos los filtros</Button>
+        </div>}
+
       </div>
 
       {list.length === 0 ? (
@@ -112,13 +108,13 @@ export function LibraryPage() {
               {models.map((m) => (
                 <a key={m.id} className="card" href={`#/biblioteca/${m.id}?para=${f.recipient}${f.recipient === 'bebe' ? `&talla=${babySize}` : ''}`}>
                   <div className="art">
-                    <FlatArt id={m.id} spec={m.flat} title={`Dibujo técnico de ${m.name}`} />
+                    {art==='dibujo'?<FlatArt id={m.id} spec={m.flat} title={`Dibujo técnico de ${m.name}`} />:<ModelIllustration model={m} skin={['#bc8055','#80503b','#edc1a1','#603d2f'][models.indexOf(m)%4]} title={`Ilustración de ${m.name}`} />}
                   </div>
                   <div className="meta">
                     <span className="name">{m.name}</span>
                     <span className="sub">{m.recipients.map((r) => RECIPIENT_LABEL[r]).slice(0, 3).join(', ')}{m.recipients.length > 3 ? '…' : ''}</span>
                     <span>
-                      <Chip tone={STATUS_INFO[m.status].tone}>{m.studioOnly ? 'Diseño editable' : STATUS_INFO[m.status].label}</Chip>
+                      <Chip tone={STATUS_INFO[m.status].tone}>{modelAvailability(m)==='estudio'?'Diseño en estudio':modelAvailability(m)==='inspiracion'?'Solo inspiración':m.status==='experimental'?'Patrón experimental':'Patrón de costura'}</Chip>
                     </span>
                   </div>
                 </a>
@@ -128,19 +124,13 @@ export function LibraryPage() {
         ))
       )}
 
-      <details className="panel panel-pad small" style={{marginTop:24}}>
-        <summary>Explorar más patrones a medida</summary>
-        <div className="stack" style={{marginTop:10}}>
-          <p>FreeSewing ofrece diseños paramétricos con tus medidas. Su catálogo se abre en otra web; todavía no se importa como piezas editables de Hilvana.</p>
-          <a href="https://freesewing.eu/" target="_blank" rel="noreferrer">Explorar el catálogo de FreeSewing</a>
-          <p className="muted">Si traes un PDF propio o con permiso, crea un proyecto desde «Patrón en imagen», calibra y traza sus piezas. Una imagen o un PDF no se vuelve un patrón paramétrico automáticamente.</p>
-        </div>
-      </details>
+      <PatternSourcesPanel />
 
       {showFilters && (
         <Sheet title="Filtros" onClose={() => setShowFilters(false)} footer={<div className="spread"><Button variant="ghost" onClick={() => setF({ ...INITIAL, q: f.q, recipient: f.recipient })}>Restablecer</Button><Button variant="primary" onClick={() => setShowFilters(false)}>Ver {list.length} modelos</Button></div>}>
           <div className="stack-lg">
-            <FilterGroup label="Tipo de prenda" value={f.type} onChange={(v) => setF({ ...f, type: v as Filters['type'] })} options={[['todos', 'Todos'], ...Object.entries(TYPE_LABEL)]} />
+            <FilterGroup label="Tipo de prenda" value={f.type} onChange={(v) => setF({ ...f, type: v as Filters['type'], subcategory:'todas' })} options={[['todos', 'Todos'], ...Object.entries(TYPE_LABEL)]} />
+            <FilterGroup label="Disponibilidad" value={f.availability??'todos'} onChange={availability=>setF({...f,availability:availability as Filters['availability'],onlyAvailable:false})} options={[["todos","Todo"],["patron","Patrón de costura"],["estudio","Diseño en estudio"],["inspiracion","Solo inspiración"]]} />
             <FilterGroup label="Dificultad" value={String(f.difficulty)} onChange={(v) => setF({ ...f, difficulty: Number(v) })} options={[['0', 'Cualquiera'], ['1', 'Fácil'], ['2', 'Intermedia'], ['3', 'Avanzada']]} />
             <FilterGroup label="Talla" value={f.size} onChange={(v) => setF({ ...f, size: v as Filters['size'] })} options={[['todas', 'Todas'], ['infantil', 'Bebé e infantil (por estatura)'], ['adulto', 'Adulto (por busto o pecho)']]} />
             <FilterGroup label="Tejido" value={f.fabric} onChange={(v) => setF({ ...f, fabric: v as Filters['fabric'] })} options={[['todos', 'Cualquiera'], ['plano', 'Tejido plano'], ['punto', 'Tejido de punto']]} />

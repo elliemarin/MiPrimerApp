@@ -5,7 +5,7 @@ import { Icon } from '../../ui/Icon';
 import { uid, nowIso } from '../../lib/ids';
 import type { Fabric, Material, MaterialCategory } from '../../store/types';
 import { navigate } from '../../ui/router';
-import { loadBitmap } from '../../lib/image';
+import { importFabricPhoto } from '../../lib/fabricPhoto';
 import { FabricLibrary, NotionsLibrary } from './FabricLibrary';
 
 export const CATEGORY_LABEL: Record<MaterialCategory, string> = {
@@ -36,31 +36,19 @@ function FabricCard({ f }: { f: Fabric }) {
 export function FabricsPage() {
   const fabrics = useApp((s) => Object.values(s.fabrics).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
   const materials = useApp((s) => Object.values(s.materials));
-  const put = useApp((s) => s.put);
-  const addFile = useApp((s) => s.addFile);
+  const toast = useApp((s) => s.toast);
+  const [importing, setImporting] = useState(false);
   const [tab, setTab] = useState<'catalogo' | 'telas' | 'materiales'>('catalogo');
   const [editing, setEditing] = useState<Material | null>(null);
   const addFabric = async (files: File[]) => {
-    for (const file of files) {
-      const img = await loadBitmap(file);
-      const fileId = await addFile(file, file.name);
-      const t = nowIso();
-      const f: Fabric = {
-        id: uid('tela'),
-        name: file.name.replace(/\.[^.]+$/, '').slice(0, 40) || 'Tela nueva',
-        kind: 'plano',
-        composition: '',
-        color: '#cccccc',
-        photo: { originalFileId: fileId, adjust: { brightness: 0, contrast: 0, saturation: 0, warmth: 0 }, pxW: img.naturalWidth, pxH: img.naturalHeight },
-        visualRepeatMm: 150,
-        grainAngle: 0,
-        nap: 'sin-pelo',
-        createdAt: t,
-        updatedAt: t
-      };
-      put('fabric', f);
-      if (files.length === 1) navigate(`/telas/${f.id}`);
-    }
+    setImporting(true);
+    try {
+      let first: Fabric | undefined;
+      for (const file of files) { const fabric = await importFabricPhoto(file); first ??= fabric; }
+      if (first && files.length === 1) navigate(`/telas/${first.id}`);
+      else setTab('telas');
+    } catch (e) { toast(e instanceof Error ? e.message : 'No se pudo importar la foto.', 'error'); }
+    finally { setImporting(false); }
   };
   return (
     <div className="page page-wide">
@@ -69,9 +57,14 @@ export function FabricsPage() {
         sub="Explora telas para tus diseños, guarda tus muestras y organiza materiales."
         actions={
           tab !== 'materiales' ? (
-            <FilePick accept="image/*" multiple onFiles={(f) => void addFabric(f)}>
-              {(open) => <Button variant="primary" icon="camera" onClick={open}>Agregar tela</Button>}
-            </FilePick>
+            <div className="row-wrap">
+              <FilePick accept="image/*" capture onFiles={(f) => void addFabric(f)}>
+                {(open) => <Button variant="primary" icon="camera" onClick={open} disabled={importing}>Fotografiar tela</Button>}
+              </FilePick>
+              <FilePick accept="image/*" multiple onFiles={(f) => void addFabric(f)}>
+                {(open) => <Button icon="upload" onClick={open} disabled={importing}>{importing ? 'Preparando…' : 'Subir imagen'}</Button>}
+              </FilePick>
+            </div>
           ) : (
             <Button variant="primary" icon="plus" onClick={() => setEditing({ id: uid('mat'), category: 'hilo', name: '', quantity: 1, unit: 'unidades', createdAt: nowIso(), updatedAt: nowIso() })}>Agregar</Button>
           )

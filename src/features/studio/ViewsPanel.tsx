@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { pathBounds } from './fabricFit';
+import { useEffect, useState } from 'react';
 import { useApp } from '../../store/app';
 import { Button, Field, FilePick, Notice, Segmented, Select, Sheet, TextInput, LengthInput, Chip } from '../../ui/components';
 import { Icon } from '../../ui/Icon';
@@ -21,9 +22,10 @@ const PATCH_SHAPES: Record<string, (w: number, h: number) => string> = {
   escudo: (w, h) => `M ${-w / 2} ${-h / 2} L ${w / 2} ${-h / 2} L ${w / 2} ${h * 0.05} C ${w / 2} ${h * 0.3} ${w * 0.2} ${h * 0.42} 0 ${h / 2} C ${-w * 0.2} ${h * 0.42} ${-w / 2} ${h * 0.3} ${-w / 2} ${h * 0.05} Z`
 };
 
-export function ViewsPanel({ doc, view, commit, setViewId, onAdd, setTool }: { doc: DesignDoc; view: DesignView; commit: (d: DesignDoc) => void; setViewId: (id: string) => void; onAdd: () => void; setTool: (t: string) => void }) {
+export function ViewsPanel({ doc, view, commit, setViewId, onAdd, setTool, focusZoneId }: { focusZoneId?: string; doc: DesignDoc; view: DesignView; commit: (d: DesignDoc) => void; setViewId: (id: string) => void; onAdd: () => void; setTool: (t: string) => void }) {
   const fabrics = useApp((s) => s.fabrics);
   const [zoneFill, setZoneFill] = useState(view.zones[0]?.id ?? '');
+  useEffect(()=>{setZoneFill(focusZoneId && view.zones.some(z=>z.id===focusZoneId) ? focusZoneId : view.zones[0]?.id??'');},[view.id,focusZoneId]);
   const setView = (patch: Partial<DesignView>) => commit(touch({ ...doc, views: doc.views.map((v) => (v.id === view.id ? { ...v, ...patch } : v)) }));
   const fill = view.zoneFills?.[zoneFill];
   const setFill = (f: Fill | undefined) => {
@@ -100,7 +102,7 @@ export function ViewsPanel({ doc, view, commit, setViewId, onAdd, setTool }: { d
             options={[{ value: 'ninguno', label: 'Original' }, { value: 'color', label: 'Color' }, ...(Object.keys(fabrics).length ? [{ value: 'tela' as const, label: 'Tela' }] : [])]}
           />
           {fill?.type === 'color' && <input type="color" value={fill.color} onChange={(e) => setFill({ type: 'color', color: e.target.value })} aria-label="Color de la zona" />}
-          {fill?.type === 'tela' && <FabricFill fill={fill} onChange={setFill} />}
+          {fill?.type === 'tela' && <FabricFill fill={fill} bounds={view.zones.find(z=>z.id===zoneFill) ? pathBounds(view.zones.find(z=>z.id===zoneFill)!.d) : undefined} onChange={setFill} />}
         </section>
       )}
 

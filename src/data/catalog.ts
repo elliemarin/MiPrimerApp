@@ -1,3 +1,4 @@
+import { EXPANDED_CATALOG } from './catalogExpansion';
 import type { FlatSpec } from './flats';
 import type { Params } from '../lib/pattern/generator';
 
@@ -12,7 +13,7 @@ export const RECIPIENT_LABEL: Record<Recipient, string> = {
   unisex: 'Unisex'
 };
 
-export type GarmentType = 'superiores' | 'inferiores' | 'faldas-vestidos' | 'abrigo' | 'pijamas' | 'bebe' | 'bolsos' | 'reparacion' | 'aplicaciones';
+export type GarmentType = 'superiores' | 'inferiores' | 'faldas-vestidos' | 'abrigo' | 'pijamas' | 'bebe' | 'bolsos' | 'reparacion' | 'aplicaciones' | 'monos' | 'accesorios';
 
 export const TYPE_LABEL: Record<GarmentType, string> = {
   superiores: 'Camisas, blusas y camisetas',
@@ -21,7 +22,9 @@ export const TYPE_LABEL: Record<GarmentType, string> = {
   abrigo: 'Sudaderas, chalecos, chaquetas y abrigos',
   pijamas: 'Pijamas',
   bebe: 'Prendas y accesorios de bebé',
-  bolsos: 'Bolsos y accesorios textiles',
+  bolsos: 'Bolsos y bolsas',
+  accesorios: 'Accesorios y hogar textil',
+  monos: 'Monos, petos y jumpers',
   reparacion: 'Reparación y transformación',
   aplicaciones: 'Aplicaciones, parches y collage'
 };
@@ -79,7 +82,7 @@ export interface CatalogModel {
 
 const kidsToAdult: Recipient[] = ['bebe', 'toddler', 'infantil', 'mujer', 'hombre'];
 
-export const CATALOG: CatalogModel[] = [
+const BASE_CATALOG: CatalogModel[] = [
   // ---------- Inferiores (implementados)
   {
     id: 'pantalon-recto-elastico',
@@ -723,8 +726,15 @@ export const CATALOG: CatalogModel[] = [
     variants: [],
     recommendedFabrics: ['Retazos de algodón', 'Lino', 'Pana fina'],
     materials: ['Entretela termoadhesiva', 'Hilo']
-  }
+  },
+  ...EXPANDED_CATALOG
 ];
+const ACCESSORY_IDS=new Set(['cojin','funda-cheve','funda-vaso','dona-cabello','bandana-reversible','individual-reversible','posavasos-textil','servilleta-reversible','marcapaginas-textil','tapete-maquina','delantal-estudio','antifaz-estudio','banderin-estudio']);
+const UPGRADED_ACCESSORY:Record<string,string>={'delantal-estudio':'delantal-peto','antifaz-estudio':'antifaz-forrado','banderin-estudio':'banderin-jareta'};
+export const CATALOG:CatalogModel[]=BASE_CATALOG.map(m=>{
+  const gen=UPGRADED_ACCESSORY[m.id];
+  return {...m,type:ACCESSORY_IDS.has(m.id)?'accesorios':m.type,...(gen?{generatorId:gen,status:'experimental' as const,studioOnly:false,description:'Plantilla de diseño y patrón paramétrico con medidas editables del objeto, márgenes y pasos de confección. Nueva construcción experimental: prueba una muestra.'}:{})};
+});
 
 export function findModel(id: string) {
   return CATALOG.find((m) => m.id === id);

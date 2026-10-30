@@ -29,21 +29,26 @@ export function FabricDetail({ id }: { id: string }) {
 
   useEffect(() => {
     if (!fabric?.photo) return;
+    let cancelled = false;
+    let url: string | undefined;
     void (async () => {
-      const f = await getFile(fabric.photo!.originalFileId);
-      if (!f) return;
-      const im = await loadBitmap(f.blob);
-      setImg(im);
-      setSrcUrl(URL.createObjectURL(f.blob));
-      const W = im.naturalWidth;
-      const H = im.naturalHeight;
-      setQuad(fabric.photo!.corners?.map(([x, y]) => ({ x: x * W, y: y * H })) ?? [
-        { x: W * 0.1, y: H * 0.1 },
-        { x: W * 0.9, y: H * 0.1 },
-        { x: W * 0.9, y: H * 0.9 },
-        { x: W * 0.1, y: H * 0.9 }
-      ]);
+      try {
+        const f = await getFile(fabric.photo!.originalFileId);
+        if (!f) return;
+        const im = await loadBitmap(f.blob);
+        if (cancelled) return;
+        url = URL.createObjectURL(f.blob);
+        setImg(im); setSrcUrl(url);
+        const W = im.naturalWidth, H = im.naturalHeight;
+        setQuad(fabric.photo!.corners?.map(([x, y]) => ({ x: x * W, y: y * H })) ?? [
+          { x: W * 0.1, y: H * 0.1 }, { x: W * 0.9, y: H * 0.1 },
+          { x: W * 0.9, y: H * 0.9 }, { x: W * 0.1, y: H * 0.9 }
+        ]);
+      } catch {
+        if (!cancelled) toast('No se pudo abrir la foto original. Prueba otra imagen.', 'error');
+      }
     })();
+    return () => { cancelled = true; if (url) URL.revokeObjectURL(url); };
   }, [fabric?.photo?.originalFileId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!fabric) return <div className="page"><Empty icon="telas" title="Tela no encontrada" action={<Button onClick={() => navigate('/telas')}>Volver</Button>} /></div>;

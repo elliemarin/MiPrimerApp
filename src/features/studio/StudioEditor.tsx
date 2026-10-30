@@ -76,6 +76,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
   const [activeFabric, setActiveFabric] = useState<string | null>(null);
   const [showColors, setShowColors] = useState(false);
   const [showFigurine, setShowFigurine] = useState(false);
+  const [painted, setPainted] = useState<(Surface & {viewId:string}) | undefined>();
   const [paintTarget, setPaintTarget] = useState<Surface | undefined>();
   const [organicId, setOrganicId] = useState('montana');
   const [showShapes, setShowShapes] = useState(false);
@@ -201,6 +202,9 @@ export function StudioEditor({ projectId }: { projectId: string }) {
     if (!target) { setReadout('Suelta la tela dentro de una zona o un recorte.'); return; }
     commit(fillSurface(doc, view.id, target, { type: 'tela', fabricId, rotation: 0, offsetX: 0, offsetY: 0, scale: 1 }));
     updateProject(projectId, p => ({...p, fabricIds: [...new Set([...p.fabricIds, fabricId])]}));
+    setPainted({...target,viewId:view.id});
+    setPanel(target.kind==='zona'?'vistas':'elemento');
+    setSel(target.kind==='elemento'?[target.id]:[]);
     setReadout(`Tela aplicada a ${target.label}`);
     setMode('apariencia');
   };
@@ -220,6 +224,9 @@ export function StudioEditor({ projectId }: { projectId: string }) {
       if (latest && latestView && target) {
         histRef.current.commit(touch(fillSurface(latest,latestView.id,target,{type:'tela',fabricId:fabric.id,rotation:0,offsetX:0,offsetY:0,scale:1})));
         updateProject(projectId,p=>({...p,fabricIds:[...new Set([...p.fabricIds,fabric.id])]}));
+        setPainted({...target,viewId:latestView.id});
+        setPanel(target.kind==='zona'?'vistas':'elemento');
+        setSel(target.kind==='elemento'?[target.id]:[]);
         setReadout(`Tela aplicada a ${target.label}`); setMode('apariencia');
       }
     } catch(e) { useApp.getState().toast(e instanceof Error ? e.message : 'No se pudo cargar la tela.', 'error'); }
@@ -540,7 +547,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
   const panelBody = (p: Panel) => {
     if (p === 'elemento') return <Inspector doc={doc} view={view} selected={selected} commit={commit} setSel={setSel} setTool={(t) => setTool(t as Tool)} projectId={projectId} />;
     if (p === 'capas') return <LayersPanel doc={doc} view={view} sel={sel} setSel={setSel} commit={commit} />;
-    return <ViewsPanel doc={doc} view={view} commit={commit} setViewId={setViewId} onAdd={() => setAddView(true)} setTool={(t) => setTool(t as Tool)} />;
+    return <ViewsPanel key={view.id} focusZoneId={painted?.viewId===view.id && painted.kind==='zona'?painted.id:undefined} doc={doc} view={view} commit={commit} setViewId={setViewId} onAdd={() => setAddView(true)} setTool={(t) => setTool(t as Tool)} />;
   };
   const toolInfo = tool==='tela' ? {hint:'Arrastra una muestra sobre la prenda o toca una zona para aplicar la tela elegida.'} : TOOLS.find((t) => t.key === tool)!;
   const visibleTools = TOOLS.filter((t) => (t.key === 'calibrar' ? view.source.type === 'foto' : true));
@@ -653,6 +660,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
               {live?.kind === 'measure' && <line x1={live.start.x} y1={live.start.y} x2={live.cur.x} y2={live.cur.y} stroke="var(--tape)" strokeWidth={3} vectorEffect="non-scaling-stroke" />}
               {calibPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={hs * 0.7} fill="var(--tape)" stroke="var(--ink)" vectorEffect="non-scaling-stroke" />)}
             </Board>
+            {painted?.viewId===view.id && <div className="float-bar" style={{left:28,top:26}}><Button size="sm" icon="telas" onClick={()=>setMobilePanel(painted.kind==='zona'?'vistas':'elemento')}>Ajustar tela de {painted.label}</Button></div>}
             {readout && <div className="readout">{readout}</div>}
             {(tool === 'pluma' || tool === 'recorte' || tool === 'zona') && (
               <div className="float-bar" style={{ left: '50%', transform: 'translateX(-50%)', top: 10, gap: 6, padding: '4px 8px', alignItems: 'center' }}>

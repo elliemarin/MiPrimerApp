@@ -9,7 +9,7 @@ import type { MeasureValues } from '../lib/sizes/measurements';
 import type { PersonKind } from '../lib/sizes/tables';
 import { newPatternState, PatternState } from '../lib/pattern/engine';
 import { getGenerator } from '../lib/pattern/generators';
-import type { Params } from '../lib/pattern/generator';
+import { num, type Params } from '../lib/pattern/generator';
 import type { Profile, Project, ProjectOrigin, VersionRecord } from './types';
 
 export function blankProject(name: string, origin: ProjectOrigin): Project {
@@ -97,7 +97,21 @@ export function patternFor(model: CatalogModel, profile: Profile | undefined, fa
   const params: Params = { ...(model.params ?? {}) };
   if (params.largoRelativo === 'short') {
     delete params.largoRelativo;
-    if (body.tiro && body.entrepierna) params.largo = Math.round(body.tiro + body.entrepierna * 0.22);
+    if (body.tiro && body.entrepierna) {
+      const resolved = { ...gen.defaults({ body, ...ctx }), ...params };
+      const diaper = num(resolved, 'panal');
+      const rise = body.tiro + num(resolved, 'holguraTiro') + diaper;
+      // A short starts BELOW the finished crotch, including rise ease and diaper.
+      // The pants solver can lower the back crotch by at most 60% of its
+      // extension; leave room beyond that point for the folded hem + seam.
+      const finishedHip = (body.cadera ?? 0) + num(resolved, 'holguraCadera') + diaper * 1.2;
+      const backExtension = finishedHip / 10 + diaper * 0.3;
+      // A short ends at the upper thigh: keep its hem as wide as the two
+      // crotch-level leg panels instead of inheriting an ankle-sized taper.
+      if (params.bajo === undefined) params.bajo = finishedHip * (0.5 + 1 / 16 + 1 / 10) + diaper * 0.3;
+      const hemClearance = backExtension * 0.6 + num(resolved, 'dobladillo') + num(resolved, 'margen');
+      params.largo = Math.round(rise + Math.max(body.entrepierna * 0.22, hemClearance));
+    }
   }
   state.params = params;
   if (profile) state.measurementRef = { profileId: profile.id, versionId: profile.currentVersionId };

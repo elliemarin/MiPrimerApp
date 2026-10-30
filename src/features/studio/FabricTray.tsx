@@ -5,7 +5,9 @@ import { Fabric } from '../../store/types';
 import { FABRIC_LIBRARY, recommendFabrics, searchLibraryFabric, swatchUrl } from '../../data/materialLibrary';
 import { findModel } from '../../data/catalog';
 import { addLibraryFabric } from '../../lib/fabricLibrary';
-import { Button, IconButton, TextInput, Thumb } from '../../ui/components';
+import { importFabricPhoto } from '../../lib/fabricPhoto';
+import { navigate } from '../../ui/router';
+import { Button, FilePick, IconButton, TextInput, Thumb } from '../../ui/components';
 
 export type FabricChoice = { source: 'propia' | 'catalogo'; id: string };
 const pending = new Map<string, Promise<Fabric>>();
@@ -44,6 +46,17 @@ export function FabricTray({modelId,activeId,onChoose,onDrop,onClose}:{modelId?:
     catch(e){useApp.getState().toast(e instanceof Error?e.message:'No se pudo cargar la tela.','error');}
     finally{setBusy(false);}
   };
+  const addPhotos = async (files: File[]) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      let first: Fabric | undefined;
+      for (const file of files) { const fabric = await importFabricPhoto(file); first ??= fabric; }
+      if (first) { setOwn(true); setQ(''); onChoose(first.id); useApp.getState().toast('Foto lista. Toca una zona; ajusta escala y giro en Vistas o Propiedades.', 'ok'); }
+    } catch (e) { useApp.getState().toast(e instanceof Error ? e.message : 'No se pudo importar la foto.', 'error'); }
+    finally { setBusy(false); }
+  };
+  const active = activeId ? fabrics[activeId] : undefined;
   const attrs=(choice:FabricChoice)=>({
     draggable:true,
     onDragStart:(e:React.DragEvent)=>{e.dataTransfer.setData('application/x-hilvana-fabric',JSON.stringify(choice));e.dataTransfer.effectAllowed='copy';},
@@ -71,6 +84,11 @@ export function FabricTray({modelId,activeId,onChoose,onDrop,onClose}:{modelId?:
       <div className="grow"><TextInput value={q} onChange={setQ} placeholder="Buscar tela…" aria-label="Buscar tela para el estudio" /></div>
       <IconButton icon="close" label="Cerrar telas" onClick={onClose}/>
     </div>
+    <div className="row-wrap" style={{gap:6,marginTop:6}}>
+      <FilePick accept="image/*" capture onFiles={files=>void addPhotos(files)}>{open=><Button size="sm" icon="camera" disabled={busy} onClick={open}>Fotografiar tela</Button>}</FilePick>
+      <FilePick accept="image/*" onFiles={files=>void addPhotos(files)}>{open=><Button size="sm" icon="upload" disabled={busy} onClick={open}>Subir imagen</Button>}</FilePick>
+      {active?.photo && <Button size="sm" variant="ghost" onClick={()=>navigate(`/telas/${active.id}`)}>Recortar y calibrar</Button>}
+    </div>
     <div className="fabric-swatches">
       {own?Object.values(fabrics).filter(f=>!q||f.name.toLocaleLowerCase().includes(q.toLocaleLowerCase())).map(f=><button key={f.id} className="fabric-swatch" aria-pressed={activeId===f.id} {...attrs({source:'propia',id:f.id})}>
         <div style={{background:f.color}}>{f.photo&&<Thumb fileId={f.photo.processedFileId??f.photo.originalFileId} alt="" />}</div><span>{f.name}</span>
@@ -81,7 +99,7 @@ export function FabricTray({modelId,activeId,onChoose,onDrop,onClose}:{modelId?:
       {!own&&!list.length&&<p className="small muted">No hay telas con ese nombre.</p>}
     </div>
     {!own&&recommendations.length>0&&<button className="tiny" onClick={()=>setAll(!all)} style={{background:'none',border:0,padding:'2px 0',color:'var(--mat)',textDecoration:'underline'}}>{all?'Ver sugeridas para el proyecto':`Ver las ${FABRIC_LIBRARY.length} telas`}</button>}
-    <p className="tiny muted" role="status" style={{margin:0}}>{busy?'Preparando muestra…':q?'Arrastra al lienzo o elige la tela y toca una zona.':'Sugerencias para tu proyecto. Arrastra o elige y toca la zona; las muestras son ilustrativas.'}</p>
+    <p className="tiny muted" role="status" style={{margin:0}}>{busy?'Preparando muestra…':q?'Arrastra al lienzo o elige la tela y toca una zona.':active?.photo ? `${active.name}: elige una zona. Ajusta escala y giro en sus propiedades${active.calibration ? '.' : '; foto sin calibrar.'}` : 'Sugerencias para tu proyecto. Arrastra o elige y toca la zona; las muestras son ilustrativas.'}</p>
     {ghost&&<div aria-hidden="true" style={{position:'fixed',left:ghost.x-22,top:ghost.y-22,width:44,height:44,borderRadius:6,background:'var(--mat)',border:'3px solid var(--tape)',pointerEvents:'none',zIndex:999}}/>}
   </section>;
 }

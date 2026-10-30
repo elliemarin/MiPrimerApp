@@ -12,12 +12,121 @@ Actualízalo al terminar cada tarea.
 
 ```bash
 npm install
-npm test            # 86 pruebas: geometría, patrones, PDF, DST, guardado, ZIP, materiales y diseño
+npm test            # 310 pruebas: geometría, catálogo completo, patrones, PDF, materiales y diseño
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
+
+## Segunda ampliación · prendas, accesorios y fotos de tela (2026-10-30)
+
+Esta sección es el relevo más reciente. Conserva las notas de la primera entrega
+más abajo como historial; las cifras actuales son las de esta sección.
+
+### Resultado actual
+
+- **155 modelos** (antes 57): **77 generan patrón**, 5 son flujos de estudio
+  sin patrón de confección y 73 son inspiración claramente identificada.
+  Hay **58 accesorios**, **36 chaquetas/abrigos** y **12 monos/petos/jumpers**.
+  Los enlaces a otras bibliotecas no se suman a estos contadores.
+- **21 motores** en total. Once nuevos: chaqueta abierta/chaleco de hombro
+  caído; top cerrado/blusón de escote cuadrado; poncho/ruana rectangular;
+  jumper de peto con falda fruncida; funda con solapa; bolsa con jareta;
+  estuche plano con cierre/forro; delantal con bolsillo/tiras; banda para anudar;
+  banderín triangular con jareta; antifaz curvo forrado.
+- Los motores construyen piezas paramétricas reales con IDs estables, costuras,
+  medidas terminadas, márgenes, materiales y pasos de confección. Se mantienen
+  **experimentales** hasta imprimir y coser muestras. Las variantes complejas
+  (bomber, cazadora denim entallada, trench, acolchada, biker, monos con pantalón)
+  tienen dibujos diferentes y zonas editables, pero **no un patrón anunciado
+  falsamente como listo**. No se reutiliza el motor de haori para simularlos.
+- Presets utilizables: haoris cortos/largos, cárdigans geométricos, chaqueta
+  caja, chaleco abierto, ponchos/ruanas, jumpers mini/midi/maxi, blusones;
+  fundas de laptop/tablet/teléfono/libro/lentes/consola, saquitos, bolsas de
+  viaje/regalo/zapatos/pan, estuches/monederos, delantales, bandas y banderines.
+  Los tamaños en pulgadas de fundas son orientativos: pide medir el objeto.
+- **Filtros:** colecciones de Accesorios y Jumpers/monos separadas de Bolsos,
+  subtipos de accesorio, chaquetas, holgados/oversize, destinatario y atributos
+  combinables. La disponibilidad separa patrón real, diseño de estudio e
+  inspiración. Búsqueda por sinónimos (chamarra/chaqueta, jumper/jumppers,
+  mezclilla/denim), sin acentos, contador y restablecimiento. Conserva filtros,
+  vista de ilustración y talla de bebé al regresar desde una ficha.
+- **Ilustraciones:** biblioteca y fichas alternan dibujo técnico/ilustración;
+  las prendas se muestran sobre figurín con cuerpo y piel seleccionables;
+  los accesorios como objetos. Los monos/petos alinean torso/falda o pantalón
+  en cintura. Es composición plana, no simulación de caída ni verificación
+  de talla. Se conserva el estudio/figurín exportable de la entrega anterior.
+- **Fotos como tela desde el estudio:** Telas → Fotografiar tela / Subir imagen.
+  El importador conserva el original y un PNG ligero (máximo 1600 px de lado),
+  estima un color de muestra y selecciona la tela automáticamente. Tocar o
+  arrastrar a una zona la recorta al contorno real de esa zona. Persiste local,
+  en ZIP y en el figurín mediante el modelo Fabric existente.
+- **Ajustar foto:** tras aplicar, «Ajustar tela de…» lleva a la zona/elemento
+  correcto. «Ajustar imagen a esta parte» cubre sus límites sin deformar la
+  proporción de la foto; «Repetir muestra» restaura el mosaico. Se puede girar,
+  desplazar y cambiar escala, y abrir Recortar/calibrar. Ampliar la vista de
+  la foto no cambia las medidas del patrón ni inventa calibración física.
+- **12 bibliotecas externas** investigadas, buscables por tipo de proyecto en
+  un directorio plegable de Biblioteca. Incluye fuentes paramétricas, PDF y
+  tutoriales, con condiciones y límites visibles. Investigación detallada en
+  [FUENTES_PATRONES_AMPLIADAS.md](docs/FUENTES_PATRONES_AMPLIADAS.md).
+  No se copiaron catálogos comerciales ni se finge importación editable/API.
+- **Defecto previo corregido:** el preset short calculaba el largo antes de
+  holgura de tiro/pañal, y usaba un bajo de pantalón largo muy estrecho; en bebé
+  cruzaba el corte trasero y descuadraba costuras. Ahora parte del tiro terminado,
+  reserva la bajada posible del tiro trasero y el dobladillo, y calcula el bajo
+  desde el muslo. Respeta un bajo explícito. Sin aflojar tolerancias ni probar
+  largos al azar. Los IDs de todos los modelos previos se mantienen; delantal,
+  antifaz y banderín previos pasan de plantilla visual a motor experimental.
+
+### Verificación de esta ampliación
+
+- Base antes de editar: **86/86** y build correctos.
+- Entrega: **310/310 pruebas**, TypeScript y build de producción
+  `BASE_PATH=/MiPrimerApp/ npm run build` correctos.
+- **77 presets completos**: crear proyecto desde su modelo/talla, generar,
+  comprobar contornos de corte, costuras y medidas. No se prueba únicamente
+  el motor con sus parámetros por defecto.
+- 42 pruebas de prendas holgadas en nueve cuerpos; 26 de los nuevos accesorios;
+  59 regresiones de shorts (ocho tallas bebé, once mujer y diez hombre, en
+  plano/punto, más comprobación de bajo explícito).
+- Fotos: conservación original/PNG, archivo válido, tamaño, ajuste de imagen,
+  escala/calibración sin mutación del patrón. Los 155 dibujos tienen contornos
+  finitos e IDs de zona únicos; estilos representativos revisados visualmente.
+- Chromium **390 × 844**: filtros y subtipos, disponibilidad de patrones,
+  búsqueda, ilustraciones con piel/cuerpo, volver sin perder 0–6 meses,
+  directorio de fuentes, cámara/carga, aplicar foto a zona, ajustar cobertura,
+  guardar/recargar, ver textura en figurín y abrir recorte/calibración.
+  Sin errores del navegador ni desbordamiento horizontal.
+- Scripts repetibles nuevos, con servidor de desarrollo y Python Playwright:
+  `tests/browser/library_expansion_smoke.py` y `fabric_photo_smoke.py`.
+- Creación desde la ficha de un haori M92 y descarga PDF: 20 páginas,
+  cuadrado de 50 mm y barra de 100 mm verificados en el PDF con PyMuPDF.
+  Script `tests/browser/garment_pattern_smoke.py`; aún falta imprimir/coser.
+
+### Pendientes y límites para retomar
+
+1. Imprimir y coser muestras de estos once motores; revisar movilidad de
+   chaqueta/top, paso de cabeza, unión de mangas, largo de tirantes y fundas
+   con el objeto real. Son construcciones geométricas holgadas: no sustituyen
+   patronaje entallado, mangas sastre, copa de manga montada o forros de abrigo.
+2. Desarrollar motores específicos de bomber/denim/trench/acolchados y mono
+   con pantalón; verificar tiro+torso+apertura, nunca unir dos dibujos y
+   anunciarlo como patrón listo. Cuellos de suéter/rib siguen pendientes.
+3. Las fundas no incluyen acolchado ni protección certificada; estuche plano
+   sin base en caja; delantal de sisas rectas sin pinzas; antifaz sencillo sin
+   copas moldeadas. Adaptar dimensiones no equivale a talla comercial.
+4. FreeSewing es el candidato paramétrico para adaptar; el directorio externo
+   no es una integración terminada. Cada diseño necesita revisión de licencia,
+   atribución, versión, conversión a IDs/costuras y pruebas. Otras fuentes son
+   PDF/tutorial y varias prohíben redistribuir el patrón.
+5. Probar cámara/HEIC y gestos en Safari de un iPhone físico. Si el navegador
+   no decodifica HEIC, la app pide JPG. Fotos: luz plana, recorte sin pliegues y
+   calibración con regla si se desea repetición a escala real. Se proyecta
+   textura plana recortada, no se simulan sombras o caída tridimensional.
+6. Heredados: muestras de babero/gorro, CREATIVATE y sincronización real,
+   bolsillos, acomodo manual de corte, PDF anidado y digitalización profesional.
 
 ## Relevo de Codex · biblioteca y estudio (2026-10-30)
 
@@ -170,7 +279,7 @@ el intento inicial; esta bitácora del repositorio es el estado más reciente.
   y vuelta del formato).
 
 ### Interfaz (src/features)
-- Biblioteca: 57 modelos con filtros (destinatario, prenda, dificultad, talla,
+- Biblioteca: 155 modelos con filtros (destinatario, prenda, dificultad, talla,
   tejido, elasticidad, ajuste, técnica), dibujos técnicos paramétricos de
   frente, espalda y costados, tablas de tallas explícitas, fotos de referencia
   con permiso de uso, estado honesto (implementado / experimental / pendiente).

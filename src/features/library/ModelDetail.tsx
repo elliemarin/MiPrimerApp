@@ -9,6 +9,9 @@ import { MEASURE_BY_KEY } from '../../lib/sizes/measurements';
 import { formatLength } from '../../lib/units';
 import { getGenerator } from '../../lib/pattern/generators';
 import { LICENSE_LABEL, License } from '../../store/types';
+import { ModelIllustration } from './ModelIllustration';
+import { FIGURE_BODY_LABEL, FigureBody, SKIN_TONES } from '../../lib/draw/figurine';
+import './library.css';
 import { NewProjectSheet } from '../projects/NewProjectSheet';
 
 const DIFF = ['', 'Fácil', 'Intermedia', 'Avanzada'];
@@ -28,6 +31,9 @@ export function ModelDetail({ id }: { id: string }) {
   const recipient = model?.recipients.find(r => r === para);
   const babyCode = queryParam('talla') ?? undefined;
   const [view, setView] = useState('frente');
+  const [art,setArt]=useState<'dibujo'|'ilustracion'>('ilustracion');
+  const [body,setBody]=useState<FigureBody>('recto');
+  const [skin,setSkin]=useState(SKIN_TONES[3]);
   const [creating, setCreating] = useState(false);
   if (!model) return <div className="page"><Empty icon="biblioteca" title="Modelo no encontrado" action={<Button onClick={() => goBack('/biblioteca')}>Volver</Button>} /></div>;
   const flat = getFlat(model.id, model.flat);
@@ -38,12 +44,18 @@ export function ModelDetail({ id }: { id: string }) {
   return (
     <div className="page page-wide">
       <PageHead title={model.name} back={{ label: 'Biblioteca', onClick: () => goBack('/biblioteca') }} sub={model.description} />
-      <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', alignItems: 'start' }}>
         <div className="stack">
+          <Segmented label="Vista del modelo" value={art} onChange={setArt} options={[{value:'ilustracion',label:'Ilustración'},{value:'dibujo',label:'Dibujo técnico'}]} />
           <div className="art-box" style={{ aspectRatio: '1 / 1.08' }}>
-            <FlatViewSvg view={v} title={`${model.name}, vista ${VIEW_NAME[v.key]}`} />
+            {art==='dibujo'?<FlatViewSvg view={v} title={`${model.name}, vista ${VIEW_NAME[v.key]}`} />:<ModelIllustration model={model} view={v.key} body={body} skin={skin} /> }
           </div>
           {flat.views.length > 1 && <Segmented value={view} onChange={setView} options={flat.views.map((x) => ({ value: x.key, label: VIEW_NAME[x.key] }))} label="Vista del dibujo técnico" />}
+          {art==='ilustracion'&&model.flat.family!=='accesorio'&&model.flat.family!=='bolso'&&<div className="library-preview-controls">
+            <Field label="Figurín" htmlFor="library-figure-body"><Select id="library-figure-body" value={body} onChange={setBody} options={Object.entries(FIGURE_BODY_LABEL).map(([value,label])=>({value:value as FigureBody,label}))}/></Field>
+            <div role="group" aria-label="Tono de piel" className="row-wrap">{SKIN_TONES.map(tone=><button key={tone} type="button" aria-label={`Piel ${tone}`} aria-pressed={tone===skin} onClick={()=>setSkin(tone)} style={{width:28,height:28,borderRadius:'50%',background:tone,border:tone===skin?'3px solid var(--mat)':'1px solid var(--line)'}}/>)}</div>
+          </div>}
+          {art==='ilustracion'&&<p className="tiny faint">Composición ilustrativa en plano; no predice talla, ajuste ni caída. En el estudio puedes probar tus telas.</p>}
           <p className="tiny faint">Dibujo técnico de referencia. Izquierda y derecha se nombran desde quien viste la prenda.</p>
         </div>
 

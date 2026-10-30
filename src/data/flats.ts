@@ -68,6 +68,8 @@ export interface PantsOpts {
   length: 'largo' | 'tobillo' | 'capri' | 'short' | 'bermuda';
   waist: 'elastica' | 'pretina';
   bib?: boolean;
+  torso?: 'camisa' | 'envolvente' | 'smock';
+  torsoSleeve?: 'sin' | 'corta' | 'larga';
   pockets?: 'ninguno' | 'laterales' | 'cargo' | 'parche';
 }
 
@@ -200,10 +202,12 @@ function pantsSide(key: 'costado-der' | 'costado-izq', o: PantsOpts): FlatView {
 
 // ---------------------------------------------------------------- Prendas superiores
 export type TopType = 'camiseta' | 'camisa' | 'blusa' | 'sudadera' | 'hoodie' | 'chaleco' | 'chaqueta' | 'abrigo' | 'pijama';
+export type JacketStyle = 'bomber' | 'denim' | 'trench' | 'acolchada' | 'biker' | 'safari' | 'varsity' | 'anoraq' | 'haori' | 'cardigan' | 'poncho' | 'capa' | 'bolero' | 'shacket' | 'parka' | 'bluson';
 export interface TopOpts {
+  style?: JacketStyle;
   type: TopType;
   sleeve: 'sin' | 'corta' | 'tres-cuartos' | 'larga';
-  neck: 'redondo' | 'v' | 'camisa' | 'capucha' | 'solapa' | 'alto';
+  neck: 'redondo' | 'v' | 'camisa' | 'capucha' | 'solapa' | 'alto' | 'cuadrado';
   closure: 'ninguno' | 'botones' | 'cierre';
   length: number;
   cuffs?: boolean;
@@ -213,6 +217,8 @@ export interface TopOpts {
 }
 
 function topView(key: FlatViewKey, o: TopOpts): FlatView {
+  if (o.style === 'poncho' || o.style === 'capa') return capeView(key,o);
+  if (o.style === 'haori' || o.style === 'cardigan' || o.style === 'bluson') return relaxedView(key,o);
   const back = key === 'espalda';
   const fit = o.fit ?? 1;
   const neckHalf = 82;
@@ -324,10 +330,13 @@ function topView(key: FlatViewKey, o: TopOpts): FlatView {
   if (o.hemBand || o.type === 'sudadera' || o.type === 'hoodie') zones.push(zone('pretina', 'Pretina inferior', 'pretina', rect(-hemHalf + 6, hemY - 70, (hemHalf - 6) * 2, 70)));
   else details.push({ d: line([-hemHalf + 2, hemY - 24], [hemHalf - 2, hemY - 24]), style: 'pespunte' });
   if (o.type === 'camisa' && back) zones.push(zone('canesu', 'Canesú', 'canesu', `${M([-shoulderX, shoulderY])} ${Lp([shoulderX, shoulderY])} ${Lp([chestHalf - 25, 130])} ${Lp([-chestHalf + 25, 130])} Z`));
+  jacketDetails(o,back,zones,details,dots,chestHalf);
   return finishView(key, zones, details, dots, 0, 'Hombro', { left: -chestHalf, right: chestHalf, center: 0 });
 }
 
 function topSide(key: 'costado-der' | 'costado-izq', o: TopOpts): FlatView {
+  if (o.style==='poncho'||o.style==='capa') return capeView(key,o);
+  if (o.style==='haori'||o.style==='cardigan'||o.style==='bluson') return relaxedView(key,o);
   const s = key === 'costado-der' ? 1 : -1;
   const P2 = (x: number, y: number): P => [s * x, y];
   const depthF = 135;
@@ -450,9 +459,15 @@ function bagView(key: FlatViewKey, kind: 'tote' | 'neceser' | 'bandolera'): Flat
   return finishView(key, zones, details, [], 0, 'Boca', { center: 0 });
 }
 
-function accessoryView(key: FlatViewKey, kind: 'babero' | 'gorro' | 'parche' | 'cojin' | 'funda-bebida' | 'dona' | 'bandana' | 'rectangulo' | 'delantal' | 'antifaz' | 'banderin', object?: { width: number; height: number; label: string }): FlatView {
+export type AccessoryKind = 'babero' | 'gorro' | 'parche' | 'cojin' | 'funda-bebida' | 'dona' | 'bandana' | 'rectangulo' | 'delantal' | 'antifaz' | 'banderin' | 'funda-solapa' | 'bolsa-jareta' | 'estuche-plano' | 'banda-lazo' | 'organizador' | 'sombrero' | 'corbata' | 'pajarita' | 'mitones' | 'zapatillas' | 'portacubiertos' | 'fundasilla' | 'cesto';
+
+function accessoryView(key: FlatViewKey, kind: AccessoryKind, object?: { width: number; height: number; label: string }): FlatView {
   const zones: Zone[] = [];
   const details: FlatView['details'] = [];
+  const w=object?.width??260, h=object?.height??190;
+  if (['funda-solapa','bolsa-jareta','estuche-plano','banda-lazo','organizador','sombrero','corbata','pajarita','mitones','zapatillas','portacubiertos','fundasilla','cesto'].includes(kind)) {
+    return extraAccessoryView(key,kind,w,h,object?.label);
+  }
   if (kind === 'babero') {
     zones.push(zone('base', 'Babero', 'base', `${M([-40, 0])} ${Q([-40, 50], [0, 52])} ${Q([40, 50], [40, 0])} ${Lp([70, -10])} ${Q([120, 40], [120, 130])} ${Q([110, 240], [0, 250])} ${Q([-110, 240], [-120, 130])} ${Q([-120, 40], [-70, -10])} Z`));
     details.push({ d: `${M([-100, 140])} ${Q([-90, 220], [0, 228])} ${Q([90, 220], [100, 140])}`, style: 'pespunte' });
@@ -495,6 +510,154 @@ function accessoryView(key: FlatViewKey, kind: 'babero' | 'gorro' | 'parche' | '
   return finishView(key, zones, details, [], 0, 'Borde superior', { center: 0 });
 }
 
+// ---------------------------------------------------------------- Nuevas siluetas: ilustración, no geometría de corte.
+function jacketDetails(o: TopOpts, back: boolean, zones: Zone[], details: FlatView['details'], dots: FlatView['dots'], half: number) {
+  const L=o.length, style=o.style;
+  if(!style) return;
+  if(style==='denim'||style==='shacket'||style==='safari') {
+    zones.push(zone('canesu-estilo','Canesú','canesu',poly([[-half+20,110],[half-20,110],[half,190],[-half,190]])));
+    if(!back) for(const sign of [-1,1]) {
+      const x=sign*half*.55-55;
+      zones.push(zone(`pecho-${sign}`,'Bolsillo con tapa','bolsillo',rect(x,210,110,130)));
+      zones.push(zone(`tapa-${sign}`,'Tapa del bolsillo','bolsillo',poly([[x-3,210],[x+113,210],[x+110,250],[x+55,265],[x,250]])));
+      dots.push({x:x+55,y:244,r:5});
+    }
+    if(style==='denim') for(const sign of [-1,1]) details.push({d:line([sign*half*.3,190],[sign*half*.38,L-40]),style:'pespunte'});
+  }
+  if(style==='trench') {
+    zones.push(zone('cinturon','Cinturón','pretina',rect(-half-18,L*.49,half*2+36,42)));
+    zones.push(zone('hebilla','Hebilla de referencia','otra',rect(-30,L*.49-3,60,48)));
+    if(back) zones.push(zone('tormenta','Canesú de tormenta','canesu',poly([[-half+15,120],[half-15,120],[half,260],[0,300],[-half,260]])));
+    else zones.splice(2,0,zone('tormenta','Pieza de tormenta delantera','canesu',poly([[-185,70],[-90,75],[-45,245],[-half+12,250]])));
+    if(!back) for(const x of [-55,55]) for(let i=0;i<4;i++) dots.push({x,y:280+i*130,r:8});
+    for(const sign of [-1,1]) zones.push(zone(`charretera-${sign}`,'Charretera','otra',rect(sign<0?-200:100,35,100,25)));
+  }
+  if(style==='acolchada') for(let y=170;y<L-30;y+=95) details.push({d:line([-half+8,y],[half-8,y]),style:'costura'});
+  if(style==='biker'&&!back) {
+    zones.push(zone('solapa-cruzada','Solapa asimétrica','cuello',poly([[-95,0],[75,70],[-70,330],[-170,155]])));
+    details.push({d:line([-80,190],[100,L]),style:'costura'},{d:line([-half+60,L-240],[-half+125,L-150]),style:'pespunte'});
+  }
+  if(style==='varsity') {
+    zones.push(zone('insignia','Zona para insignia','otra',poly([[-170,210],[-110,210],[-120,290],[-155,310],[-185,280]])));
+    for(const y of [L-45,L-30]) details.push({d:line([-half+8,y],[half-8,y]),style:'pespunte'});
+  }
+  if(style==='bomber') {
+    if(!back) for(const sign of [-1,1]) details.push({d:line([sign*(half-65),L-230],[sign*(half-115),L-100]),style:'costura'});
+    if(back) details.push({d:line([0,60],[0,L-70]),style:'costura'});
+  }
+  if(style==='anoraq'&&!back) {
+    zones.push(zone('tapeta-media','Tapeta de medio cierre','otra',rect(-16,70,32,230)));
+    zones.push(zone('bolsillo-canguro','Bolsillo canguro con tapa','bolsillo',poly([[-170,L-280],[170,L-280],[195,L-70],[-195,L-70]])));
+    details.push({d:line([-170,L-245],[170,L-245]),style:'costura'});
+  }
+  if(style==='parka') {
+    zones.push(zone('jareta-cintura','Jareta de cintura','pretina',rect(-half,L*.52,half*2,26)));
+    details.push({d:line([-half+10,L-30],[half-10,L-30]),style:'doblez'});
+    if(!back) for(const sign of [-1,1]) { zones.push(zone(`tapa-baja-${sign}`,'Tapa de bolsillo','bolsillo',rect(sign*half*.57-65,L-260,130,45)));dots.push({x:sign*half*.57,y:L*.52+15,r:5}); }
+  }
+}
+
+function relaxedView(key: FlatViewKey,o:TopOpts):FlatView {
+  const back=key==='espalda', W=300*(o.fit??1), L=o.length, arm=240, neck=85;
+  const zones:Zone[]=[], details:FlatView['details']=[];
+  if(o.style==='bluson'&&!back) zones.push(zone('delantero','Delantero de escote cuadrado','delantero',`M${-W} 0 L${-neck} 0 L${-neck} 90 L${neck} 90 L${neck} 0 L${W} 0 L${W} ${L} L${-W} ${L} Z`));
+  else if(back) zones.push(zone('espalda','Espalda de hombro caído','espalda',`M${-W} 0 L${-neck} 0 Q0 45 ${neck} 0 L${W} 0 L${W} ${L} L${-W} ${L} Z`));
+  else for(const sign of [-1,1]) zones.push(zone(`delantero-${sign}`,sign<0?'Delantero derecho':'Delantero izquierdo','delantero',poly([[sign*neck,0],[sign*W,0],[sign*W,L],[sign*14,L],[sign*14,120]])));
+  if(o.sleeve!=='sin') for(const sign of [-1,1]) {
+    const ext=o.sleeve==='corta'?190:o.sleeve==='tres-cuartos'?330:450;
+    zones.push(zone(`manga-${sign}`,'Manga de hombro caído','manga',poly([[sign*W,0],[sign*(W+ext),20],[sign*(W+ext),arm-20],[sign*W,arm]])));
+    details.push({d:line([sign*(W+ext-22),20],[sign*(W+ext-22),arm-20]),style:'pespunte'});
+  }
+  if(!back&&o.style!=='bluson') for(const sign of [-1,1]) zones.push(zone(`bies-${sign}`,'Remate de abertura','otra',poly([[sign*neck,0],[sign*(neck+12),0],[sign*26,125],[sign*26,L],[sign*14,L],[sign*14,120]])));
+  details.push({d:line([-W+10,L-25],[W-10,L-25]),style:'pespunte'});
+  return finishView(key,zones,details,[],0,'Hombro',{left:-W,right:W,center:0});
+}
+
+function capeView(key:FlatViewKey,o:TopOpts):FlatView {
+  const back=key==='espalda', W=480*(o.fit??1), L=o.length;
+  const body=o.style==='capa'?`M-85 0 Q${-W} 70 ${-W} ${L*.7} Q0 ${L+100} ${W} ${L*.7} Q${W} 70 85 0 L85 60 Q0 105 -85 60 Z`:`M${-W} 0 L-85 0 L-85 65 Q0 105 85 65 L85 0 L${W} 0 L${W} ${L} L${-W} ${L} Z`;
+  const zones=[zone(back?'espalda':'delantero',back?'Espalda':'Frente del poncho','base',body)];
+  const details:FlatView['details']=[];
+  if(o.closure!=='ninguno'&&!back) details.push({d:line([0,80],[0,L]),style:'costura'});
+  if(o.neck==='capucha') zones.push(zone('capucha','Capucha','capucha','M-105 40 C-165 -210 165 -210 105 40 Q0 90 -105 40 Z'));
+  if(!back&&o.pocket==='parche') for(const sign of [-1,1]) zones.push(zone(`bolsillo-${sign}`,'Bolsillo','bolsillo',rect(sign*200-65,L*.55,130,150)));
+  if(o.style==='poncho') details.push({d:line([-W+12,L-28],[W-12,L-28]),style:'pespunte'});
+  return finishView(key,zones,details,[],0,'Hombro',{center:0});
+}
+
+function pinaforeView(key:FlatViewKey,o:NonNullable<FlatSpec['pinafore']>):FlatView {
+  const back=key==='espalda', waist=320, skirtHalf=270*o.fullness, bib=o.bibWidth/2, bibH=o.bibHeight;
+  const zones:Zone[]=[zone('falda',back?'Falda trasera':'Falda delantera',back?'espalda':'delantero',`M-245 ${waist} L245 ${waist} L${skirtHalf} ${waist+o.skirtLength} L${-skirtHalf} ${waist+o.skirtLength} Z`),zone('pretina','Pretina elástica','pretina',rect(-245,waist-38,490,38))];
+  zones.push(zone('peto',back?'Peto trasero':'Peto delantero',back?'espalda':'delantero',rect(-bib,waist-bibH,bib*2,bibH-38)));
+  for(const sign of [-1,1]) zones.push(zone(`tirante-${sign}`,'Tirante','otra',rect(sign*(bib-35)-22,-120,44,waist-bibH+145)));
+  const details:FlatView['details']=[];
+  for(let i=-2;i<=2;i++) details.push({d:line([i*80,waist+8],[i*skirtHalf*.27,waist+o.skirtLength-30]),style:'pliegue'});
+  details.push({d:line([-skirtHalf+8,waist+o.skirtLength-25],[skirtHalf-8,waist+o.skirtLength-25]),style:'pespunte'});
+  return finishView(key,zones,details,[],waist,'Cintura',{center:0});
+}
+
+function jumpsuitView(key:FlatViewKey,o:PantsOpts):FlatView {
+  const base=pantsView(key,o), back=key==='espalda';
+  const zones=[...base.zones], details=[...base.details], dots=[...base.dots];
+  const W=245, top=-570, shoulder=-535, arm=-350;
+  zones.push(zone('torso',back?'Torso trasero':'Torso delantero',back?'espalda':'delantero',`M-78 ${top} L-190 ${shoulder} Q-235 ${arm-65} -245 ${arm} L-245 40 L245 40 L245 ${arm} Q235 ${arm-65} 190 ${shoulder} L78 ${top} Q0 ${top+(back?35:95)} -78 ${top} Z`));
+  if(o.torso==='envolvente'&&!back) zones.push(zone('cruce','Cruce del torso','delantero',poly([[-78,top],[150,-130],[-245,30],[-245,arm],[-190,shoulder]])));
+  if(o.torso==='camisa'&&!back) { zones.push(zone('cuello','Cuello camisero','cuello',poly([[-78,top-10],[78,top-10],[100,top+80],[0,top+55],[-100,top+80]]))); for(let y=-420;y<-40;y+=85)dots.push({x:0,y,r:7});details.push({d:line([0,-470],[0,20]),style:'costura'}); }
+  if(o.torso==='smock') for(let x=-190;x<=190;x+=38)details.push({d:line([x,-100],[x,20]),style:'pliegue'});
+  if(o.torsoSleeve!=='sin') for(const sign of [-1,1]) { const len=o.torsoSleeve==='larga'?520:170;zones.push(zone(`manga-${sign}`,'Manga','manga',poly([[sign*190,shoulder],[sign*(W+len*.42),shoulder+len],[sign*(W+len*.42-100),shoulder+len+25],[sign*245,arm]]))); }
+  return finishView(key,zones,details,dots,0,'Cintura',{left:-245,right:245,center:0});
+}
+
+function extraAccessoryView(key:FlatViewKey,kind:AccessoryKind,w:number,h:number,label?:string):FlatView {
+  const zones:Zone[]=[],details:FlatView['details']=[];
+  if(kind==='funda-solapa') {
+    zones.push(zone('base',label??'Cuerpo de la funda','base',rect(-w/2,0,w,h)));
+    zones.push(zone('solapa','Solapa de cierre','otra',poly([[-w/2,0],[w/2,0],[w/2,h*.18],[0,h*.42],[-w/2,h*.18]])));
+    details.push({d:rect(-w/2+6,6,w-12,h-12),style:'pespunte'});
+  } else if(kind==='bolsa-jareta') {
+    zones.push(zone('base',label??'Cuerpo de bolsa','base',`M${-w/2} 0 Q0 25 ${w/2} 0 L${w/2} ${h-15} Q0 ${h+10} ${-w/2} ${h-15} Z`));
+    zones.push(zone('jareta','Canal de la jareta','otra',rect(-w/2,10,w,28)));
+    for(const sign of [-1,1]) details.push({d:`M${sign*w/2} 20 Q${sign*(w/2+45)} 45 ${sign*(w/2+25)} 110`,style:'costura'});
+  } else if(kind==='estuche-plano') {
+    zones.push(zone('base',label??'Cara del estuche','base',rect(-w/2,0,w,h)));
+    zones.push(zone('cierre','Cierre superior','otra',rect(-w/2,0,w,16)));
+    zones.push(zone('tirador','Tirador','otra',rect(w/2-20,-12,38,12)));
+    details.push({d:line([-w/2+5,22],[w/2-5,22]),style:'pespunte'});
+  } else if(kind==='banda-lazo') {
+    zones.push(zone('banda',label??'Banda de tela','base',`M${-w/2} 0 L${w/2-30} 0 L${w/2} ${h/2} L${w/2-30} ${h} L${-w/2+30} ${h} L${-w/2} ${h/2} Z`));
+    details.push({d:line([-w/2+35,h*.2],[w/2-35,h*.2]),style:'pespunte'});
+  } else if(kind==='organizador') {
+    zones.push(zone('base','Panel del organizador','base',rect(-w/2,0,w,h)));
+    for(let row=0;row<3;row++) for(let col=0;col<3;col++)zones.push(zone(`bolsillo-${row}-${col}`,'Bolsillo de organización','bolsillo',rect(-w/2+15+col*(w-20)/3,30+row*(h-30)/3,(w-50)/3,(h-90)/3)));
+  } else if(kind==='sombrero') {
+    zones.push(zone('copa','Copa','base','M-100 0 Q-90 -150 0 -150 Q90 -150 100 0 Z'));
+    zones.push(zone('ala','Ala','base','M-100 -10 Q-200 50 -145 80 Q0 115 145 80 Q200 50 100 -10 Q0 20 -100 -10 Z'));
+    zones.push(zone('cinta','Cinta','otra',rect(-94,-28,188,28)));
+  } else if(kind==='corbata') {
+    zones.push(zone('base','Corbata','base',poly([[-20,0],[20,0],[28,h*.75],[50,h-50],[0,h],[-50,h-50],[-28,h*.75]])));
+    details.push({d:line([0,20],[0,h-25]),style:'doblez'});
+  } else if(kind==='pajarita') {
+    for(const sign of [-1,1])zones.push(zone(`ala-${sign}`,'Ala del moño','base',poly([[sign*12,20],[sign*80,-15],[sign*80,75],[sign*12,40]])));
+    zones.push(zone('nudo','Nudo central','otra',rect(-15,10,30,45)));
+  } else if(kind==='mitones') {
+    for(const sign of [-1,1]) zones.push(zone(`miton-${sign}`,'Mitón','base',`M${sign*20} 150 L${sign*20} 40 Q${sign*20} -40 ${sign*80} -40 Q${sign*140} -40 ${sign*140} 40 L${sign*140} 150 Z`));
+  } else if(kind==='zapatillas') {
+    for(const sign of [-1,1]) zones.push(zone(`pantufla-${sign}`,'Pantufla','base',`M${sign*35} 0 C${sign*35} -100 ${sign*140} -100 ${sign*140} 0 L${sign*140} 160 Q${sign*90} 200 ${sign*35} 160 Z`));
+  } else if(kind==='portacubiertos') {
+    zones.push(zone('base','Base enrollable','base',rect(-w/2,0,w,h)));
+    zones.push(zone('bolsillo','Bolsillo para cubiertos','bolsillo',rect(-w/2,h*.48,w,h*.52)));
+    for(let i=1;i<4;i++) details.push({d:line([-w/2+w*i/4,h*.48],[-w/2+w*i/4,h]),style:'pespunte'});
+  } else if(kind==='fundasilla') {
+    zones.push(zone('respaldo','Respaldo','base',`M${-w/2} 0 Q0 -50 ${w/2} 0 L${w/2} ${h*.55} L${-w/2} ${h*.55} Z`));
+    zones.push(zone('asiento','Asiento','base',rect(-w/2,h*.55,w,h*.45)));
+    details.push({d:line([-w/2,h*.55],[w/2,h*.55]),style:'doblez'});
+  } else {
+    zones.push(zone('cuerpo','Cuerpo del cesto','base',poly([[-w/2,0],[w/2,0],[w*.4,h],[-w*.4,h]])));
+    zones.push(zone('borde','Borde doblado','otra',rect(-w/2,-20,w,55)));
+  }
+  return finishView(key,zones,details,[],0,'Borde superior',{center:0});
+}
+
 // ---------------------------------------------------------------- Registro
 export interface FlatSpec {
   family: 'pantalon' | 'top' | 'falda' | 'vestido' | 'bebe' | 'bolso' | 'accesorio';
@@ -504,8 +667,9 @@ export interface FlatSpec {
   dress?: DressOpts;
   baby?: { legs: 'body' | 'mameluco'; sleeve: TopOpts['sleeve'] };
   bag?: 'tote' | 'neceser' | 'bandolera';
-  accessory?: 'babero' | 'gorro' | 'parche' | 'cojin' | 'funda-bebida' | 'dona' | 'bandana' | 'rectangulo' | 'delantal' | 'antifaz' | 'banderin';
+  accessory?: AccessoryKind;
   object?: { width: number; height: number; label: string };
+  pinafore?: { skirtLength: number; bibWidth: number; bibHeight: number; fullness: number };
   /** Pijama: conjunto de superior y pantalón. */
   set?: boolean;
 }
@@ -513,6 +677,8 @@ export interface FlatSpec {
 export function buildFlat(id: string, spec: FlatSpec): FlatDef {
   const views: FlatView[] = [];
   const keys: FlatViewKey[] = ['frente', 'espalda'];
+  if (spec.pinafore) return {id,views:keys.map(k=>pinaforeView(k,spec.pinafore!))};
+  if(spec.family==='pantalon'&&spec.pants?.torso) return {id,views:keys.map(k=>jumpsuitView(k,spec.pants!))};
   switch (spec.family) {
     case 'pantalon':
       for (const k of keys) views.push(pantsView(k, spec.pants!));

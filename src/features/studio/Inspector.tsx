@@ -1,3 +1,5 @@
+import type { BBox } from '../../lib/geom/vec';
+import { coverFabric } from './fabricFit';
 import { useState } from 'react';
 import { useApp } from '../../store/app';
 import { Button, Chip, Field, LengthInput, Notice, NumberInput, Segmented, Select, TextInput } from '../../ui/components';
@@ -121,7 +123,7 @@ export function Inspector({ doc, view, selected, commit, setSel, setTool, projec
           />
           {!fabricList.length && <p className="tiny muted">Agrega fotos de tus telas en Telas y materiales para usarlas aquí.</p>}
           {el.fill.type === 'color' && <ColorRow value={el.fill.color} onChange={(c) => set({ fill: { type: 'color', color: c } })} />}
-          {el.fill.type === 'tela' && <FabricFill fill={el.fill} onChange={(f) => set({ fill: f })} />}
+          {el.fill.type === 'tela' && <FabricFill fill={el.fill} bounds={{minX:-el.w/2,minY:-el.h/2,maxX:el.w/2,maxY:el.h/2}} onChange={(f) => set({ fill: f })} />}
           {(el.kind === 'trazo' || el.stroke) && (
             <>
               <div className="field-label">Trazo o puntada</div>
@@ -238,13 +240,14 @@ function ColorRow({ value, onChange }: { value: string; onChange: (c: string) =>
   );
 }
 
-export function FabricFill({ fill, onChange }: { fill: Extract<Fill, { type: 'tela' }>; onChange: (f: Extract<Fill, { type: 'tela' }>) => void }) {
+export function FabricFill({ fill, onChange, bounds }: { bounds?: BBox; fill: Extract<Fill, { type: 'tela' }>; onChange: (f: Extract<Fill, { type: 'tela' }>) => void }) {
   const fabrics = useApp((s) => s.fabrics);
   const f = fabrics[fill.fabricId];
   return (
     <div className="stack">
       <Select value={fill.fabricId} onChange={(id) => onChange({ ...fill, fabricId: id })} options={Object.values(fabrics).map((x) => ({ value: x.id, label: `${x.name}${x.calibration ? '' : ' (sin calibrar)'}` }))} />
-      {f && <Chip tone={f.calibration ? 'ok' : 'warn'}>{f.calibration ? 'Muestra calibrada: escala real' : 'Textura visual: escala aproximada'}</Chip>}
+      {f && <Chip tone={f.calibration && fill.scale===1 ? 'ok' : 'warn'}>{f.calibration && fill.scale===1 ? 'Muestra calibrada: escala real' : 'Composición visual: escala aproximada'}</Chip>}
+      {f && bounds && <div className="row-wrap"><Button size="sm" onClick={()=>onChange(coverFabric(fill,f,bounds))}>Ajustar imagen a esta parte</Button><Button size="sm" variant="ghost" onClick={()=>onChange({...fill,scale:1,offsetX:0,offsetY:0,rotation:0})}>Repetir muestra</Button></div>}
       <Field label={`Rotación del estampado ${Math.round(fill.rotation)}°`} hint="El hilo de la tela gira con el estampado.">
         <input type="range" min={-180} max={180} step={1} value={fill.rotation} onChange={(e) => onChange({ ...fill, rotation: Number(e.target.value) })} />
       </Field>
@@ -256,9 +259,9 @@ export function FabricFill({ fill, onChange }: { fill: Extract<Fill, { type: 'te
           <LengthInput mm={fill.offsetY} min={-2000} max={2000} onChange={(v) => v !== undefined && onChange({ ...fill, offsetY: v })} />
         </Field>
       </div>
-      {!f?.calibration && (
-        <Field label="Escala del estampado">
-          <NumberInput value={fill.scale} min={0.05} max={20} onChange={(v) => onChange({ ...fill, scale: v })} suffix="×" />
+      {(
+        <Field label="Escala visual del estampado" hint="Ampliar cambia la vista de la tela, no las medidas del patrón.">
+          <NumberInput value={fill.scale} min={0.01} max={1000} onChange={(v) => onChange({ ...fill, scale: v })} suffix="×" />
         </Field>
       )}
     </div>

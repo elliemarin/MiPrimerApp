@@ -1,4 +1,6 @@
 import { memo } from 'react';
+import { fabricRepeat } from './fabricFit';
+export { fabricRepeat } from './fabricFit';
 import type { Fabric } from '../../store/types';
 import { useFileUrl } from '../../ui/components';
 import { cmdsToSvg } from '../../lib/draw/paths';
@@ -15,14 +17,6 @@ const STITCH: Record<StitchStyle, { dash?: string; cap?: 'round' | 'butt'; k?: n
   satin: { k: 2.6 },
   'punto-atras': { dash: '2.4 0.35' }
 };
-
-export function fabricRepeat(f: Fabric): { w: number; h: number } {
-  const pxW = f.photo?.pxW ?? 1000;
-  const pxH = f.photo?.pxH ?? 1000;
-  if (f.calibration) return { w: pxW * f.calibration.mmPerPx, h: pxH * f.calibration.mmPerPx };
-  const k = f.visualRepeatMm / Math.max(pxW, pxH);
-  return { w: pxW * k, h: pxH * k };
-}
 
 function FabricPattern({ id, fabric, fill }: { id: string; fabric?: Fabric; fill: Extract<Fill, { type: 'tela' }> }) {
   const url = useFileUrl(fabric?.photo?.processedFileId ?? fabric?.photo?.originalFileId);

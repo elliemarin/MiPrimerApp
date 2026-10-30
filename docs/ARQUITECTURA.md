@@ -142,3 +142,38 @@ PDF). Ejecuta `npm test` antes de cada commit.
 Verificación: `npm test` (86 casos) y `npm run build`; pruebas visuales en
 Chromium 390×844 y escritorio. Detalles de fuentes y pruebas físicas pendientes
 en `FUENTES_Y_MAQUINA.md` y la bitácora principal.
+
+
+## 10. Más prendas y accesorios; material desde fotografía
+
+- `data/catalogExpansion.ts` separa los nuevos presets/dibujos del catálogo
+  original. `catalog.ts` agrega `accesorios` y `monos`; los IDs antiguos se
+  conservan. `flats.ts` incorpora estilos y zonas diferentes de chaquetas,
+  petos/enterizos y objetos textiles. Ningún dibujo genera piezas de costura
+  por el hecho de existir.
+- `generators/relaxed.ts`: cuatro motores (chaqueta abierta, top cerrado,
+  poncho y jumper de falda). `accessoriesPlus.ts`: siete motores de accesorios.
+  Se registran en `generators/index.ts`: 21 motores totales, 77 presets de catálogo.
+- `projects.ts/patternFor`: el short resuelve largo desde tiro+holgura+pañal;
+  mínimo geométrico incluye descenso del tiro trasero y espacio de dobladillo.
+  El bajo por defecto deriva del muslo, con respeto de bajo explícito.
+- `features/library/filters.ts` contiene las reglas puras combinables,
+  clasificación de disponibilidad y sinónimos. Filtros/vista/talla por meses
+  se conservan en sessionStorage; no alteran medidas de proyectos existentes.
+- `ModelIllustration.tsx`: ilustración vectorial original sobre croquis, con
+  grupos alineados en cintura en enterizos; no usa geometría de costura.
+- `data/patternSources.ts` y `PatternSourcesPanel.tsx`: directorio de doce
+  fuentes externas con formatos, condiciones y búsqueda; no hay descarga o
+  copia automática de sus catálogos ni suma al contador de patrones internos.
+- `lib/fabricPhoto.ts`: importador compartido de cámara/fototeca para FabricsPage
+  y FabricTray. Preserva original+PNG, reduce a1600px, valida y libera URLs;
+  mantiene escala visual hasta calibrar. FabricDetail protege cargas antiguas
+  y libera sus URLs también.
+- `studio/fabricFit.ts`: `fabricRepeat`, `pathBounds`, `coverFabric` ajustan
+  solo el relleno de la zona/elemento, conservando relación de aspecto y
+  milímetros del patrón. Inspector/ViewsPanel ofrecen cubrir/repetir, escala,
+  giro y posición; StudioEditor lleva a la última zona pintada.
+
+Pruebas actuales:310 unitarias/integración, más scripts móviles de biblioteca y
+foto en `tests/browser`. Límites y fuentes en la bitácora y
+`FUENTES_PATRONES_AMPLIADAS.md`. Muestras físicas y Safari real siguen pendientes.
