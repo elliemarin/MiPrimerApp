@@ -149,3 +149,25 @@ describe('márgenes en esquinas', () => {
     expect(b.issues.filter((i) => i.level === 'error')).toHaveLength(0);
   });
 });
+
+describe('patrones experimentales de bebé', () => {
+  for (const code of ['E56', 'E80', 'E104']) {
+    it(`babero ${code} sin errores y con el cuello correcto`, () => {
+      const row = findSize('ref-infantil-estatura', code)!;
+      for (const acabado of ['vuelta', 'bies']) {
+        const s = newPatternState('babero', row.values, { kind: row.kind, fabric: 'plano', stretch: 0, fit: 'regular' });
+        s.params = { acabado };
+        const b = buildPattern(s);
+        expect(b.issues.filter((i) => i.level === 'error'), JSON.stringify(b.issues)).toHaveLength(0);
+        const c = b.result!.checks[0];
+        expect(Math.abs(c.measured - c.target)).toBeLessThan(0.5);
+      }
+    });
+    it(`gorro ${code} sin errores`, () => {
+      const row = findSize('ref-infantil-estatura', code)!;
+      const b = buildPattern(newPatternState('gorro', row.values, { kind: row.kind, fabric: 'punto', stretch: 40, fit: 'ajustado' }));
+      expect(b.issues.filter((i) => i.level === 'error'), JSON.stringify(b.issues)).toHaveLength(0);
+      for (const r of b.seamResults) expect(r.ok).toBe(true);
+    });
+  }
+});

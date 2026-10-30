@@ -17,6 +17,9 @@ import { navigate } from '../../ui/router';
 import { uid } from '../../lib/ids';
 import { importImageFiles } from '../../lib/image';
 import { OVERLAY_COLORS } from './Overlays';
+import { SeamWalk } from './SeamWalk';
+import type { SeamResult } from '../../lib/pattern/validate';
+import { Sheet } from '../../ui/components';
 
 const FINISH_LABEL: Record<EdgeFinish, string> = { costura: 'Costura', dobladillo: 'Dobladillo', jareta: 'Jareta', doblez: 'Al doblez', orillo: 'Orillo', 'sin-margen': 'Sin margen' };
 
@@ -329,6 +332,7 @@ export function ReviewPanel({ project, state, built, commit, onShowSeam }: { pro
   const updateProject = useApp((s) => s.updateProject);
   const [fabricW, setFabricW] = useState<number | undefined>(1400);
   const [label, setLabel] = useState('');
+  const [walk, setWalk] = useState<SeamResult | null>(null);
   if (!built) return null;
   const errors = built.issues.filter((i) => i.level === 'error');
   const warns = built.issues.filter((i) => i.level === 'aviso');
@@ -383,6 +387,7 @@ export function ReviewPanel({ project, state, built, commit, onShowSeam }: { pro
                   </span>
                 </span>
                 <span className="small" style={{ color: 'var(--mat)' }}>Ver</span>
+                <span className="small" role="button" tabIndex={0} style={{ color: 'var(--mat)', marginLeft: 10 }} onClick={(e) => { e.stopPropagation(); setWalk(r); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); setWalk(r); } }}>Desenrollar</span>
               </button>
             ))}
           </div>
@@ -431,6 +436,11 @@ export function ReviewPanel({ project, state, built, commit, onShowSeam }: { pro
         </div>
         <p className="tiny faint">{dirty ? 'Hay cambios desde la última versión guardada.' : `Coincide con la versión ${last?.n}.`} Compara, aprueba o restaura en la pestaña Versiones del proyecto.</p>
       </section>
+      {walk && (
+        <Sheet title={walk.relation.label} onClose={() => setWalk(null)} wide>
+          <SeamWalk result={walk} pieces={built.pieces} unit={unit} />
+        </Sheet>
+      )}
       {built.pieces.length > 0 && (
         <Button size="sm" variant="ghost" icon="grid" onClick={() => commit({ ...state, layout: autoLayout(built.pieces, built.cuts, 1500, 40) })}>
           Reacomodar piezas en el lienzo
