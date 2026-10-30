@@ -7,6 +7,8 @@ import { SIZE_TABLES, rowsForKinds, type SizeTable } from '../../lib/sizes/table
 import { getGenerator } from '../../lib/pattern/generators';
 import { ModelStartSheet } from './ModelStartSheet';
 import { modelHasPattern } from './filters';
+import { ModelIllustration } from './ModelIllustration';
+import { supportsModelIllustration } from '../../lib/draw/garmentComposition';
 import './simpleLibrary.css';
 
 export function tablesFor(model: CatalogModel, recipient?: Recipient): SizeTable[] {
@@ -21,16 +23,21 @@ export function ModelDetail({ id }: { id: string }) {
   const model = findModel(id);
   const [intent,setIntent] = useState<'pattern'|'customize'>();
   const [view,setView] = useState('frente');
+  const [presentation,setPresentation] = useState<'prenda'|'figurin'>('prenda');
   if (!model) return <div className="page"><Empty icon="biblioteca" title="No encontramos esta base" action={<Button onClick={()=>goBack('/biblioteca')}>Ver prendas y accesorios</Button>}/></div>;
   const available = modelHasPattern(model);
   const experimental = model.status === 'experimental' || (model.generatorId && getGenerator(model.generatorId)?.status === 'experimental');
   const flat = getFlat(model.id,model.flat);
   const recipient = model.recipients.find(value=>value===queryParam('para'));
+  const wearable = model.flat.family !== 'bolso' && model.flat.family !== 'accesorio' && supportsModelIllustration(model.flat);
+  const visibleViews = presentation === 'figurin' ? flat.views.filter(item=>item.key==='frente'||item.key==='espalda') : flat.views;
   return <div className="page page-wide">
     <button className="back-link" onClick={()=>goBack('/biblioteca')}>‹ Elegir otra base</button>
     <div className="simple-model-layout" style={{marginTop:12}}>
-      <div><div className="simple-model-art"><FlatArt id={model.id} spec={model.flat} view={view} title={model.name}/></div>
-        {flat.views.length>1&&<div className="scroll-x" style={{marginTop:12}} role="group" aria-label="Vista de la base">{flat.views.map(item=><button className="filter-chip" key={item.key} aria-pressed={view===item.key} onClick={()=>setView(item.key)}>{({frente:'Frente',espalda:'Espalda','costado-izq':'Costado izquierdo','costado-der':'Costado derecho'} as Record<string,string>)[item.key]??item.key}</button>)}</div>}
+      <div>{wearable&&<div className="model-presentation-switch" role="group" aria-label="Presentación de la prenda"><button className="filter-chip" aria-pressed={presentation==='prenda'} onClick={()=>setPresentation('prenda')}>Prenda</button><button className="filter-chip" aria-pressed={presentation==='figurin'} onClick={()=>{setPresentation('figurin');if(view!=='frente'&&view!=='espalda')setView('frente');}}>En figurín</button></div>}
+        <div className={`simple-model-art${presentation==='figurin'?' is-figurine':''}`}>{presentation==='figurin'?<ModelIllustration model={model} view={view}/>:<FlatArt id={model.id} spec={model.flat} view={view} title={model.name}/>}</div>
+        {visibleViews.length>1&&<div className="scroll-x" style={{marginTop:12}} role="group" aria-label="Vista de la base">{visibleViews.map(item=><button className="filter-chip" key={item.key} aria-pressed={view===item.key} onClick={()=>setView(item.key)}>{({frente:'Frente',espalda:'Espalda','costado-izq':'Costado izquierdo','costado-der':'Costado derecho'} as Record<string,string>)[item.key]??item.key}</button>)}</div>}
+        {presentation==='figurin'&&<p className="tiny muted model-illustration-note">Ilustración de la silueta. El ajuste se comprueba con las medidas del patrón.</p>}
       </div>
       <div className="simple-model-copy stack-lg">
         <div><h1>{model.name}</h1><p className="muted" style={{marginTop:12}}>{model.description}</p></div>

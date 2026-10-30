@@ -311,8 +311,10 @@ function topView(key: FlatViewKey, o: TopOpts): FlatView {
       zones.push(zone('capucha', 'Capucha', 'capucha', `${M([-neckHalf - 45, 45])} ${C([-180, -100], [-125, -225], [0, -228])} ${C([125, -225], [180, -100], [neckHalf + 45, 45])} ${Lp([0, neckDrop])} Z`));
       // Abertura de la cara y cordón.
       details.push({ d: `${M([0, neckDrop])} ${C([-70, 40], [-115, -60], [-78, -150])} ${C([-50, -200], [50, -200], [78, -150])} ${C([115, -60], [70, 40], [0, neckDrop])}`, style: 'costura' });
-      details.push({ d: `${M([-14, neckDrop - 10])} ${Lp([-22, neckDrop + 70])} M14 ${f(neckDrop - 10)} ${Lp([22, neckDrop + 70])}`, style: 'costura' });
-      dots.push({ x: -16, y: neckDrop - 6, r: 4 }, { x: 16, y: neckDrop - 6, r: 4 });
+      if (!o.plainHem) {
+        details.push({ d: `${M([-14, neckDrop - 10])} ${Lp([-22, neckDrop + 70])} M14 ${f(neckDrop - 10)} ${Lp([22, neckDrop + 70])}`, style: 'costura' });
+        dots.push({ x: -16, y: neckDrop - 6, r: 4 }, { x: 16, y: neckDrop - 6, r: 4 });
+      }
     }
   } else if (o.neck === 'solapa' && !back) {
     zones.push(zone('solapa-a', 'Solapa derecha', 'cuello', poly([[-neckHalf, 0], [-neckHalf - 30, -10], [-150, 160], [-60, 230], [0, neckDrop]])));
@@ -502,9 +504,13 @@ function accessoryView(key: FlatViewKey, kind: AccessoryKind, object?: { width: 
     zones.push(zone('base', 'Banderín', 'base', poly([[-w / 2, 0], [w / 2, 0], [0, h]])));
     details.push({ d: line([-w / 2, 15], [w / 2, 15]), style: 'doblez' });
   } else if (kind === 'funda-bebida') {
-    zones.push(zone('base', 'Exterior de la funda abierta', 'base', rect(-120, 0, 240, 110)));
-    zones.push(zone('cierre', 'Traslape de velcro', 'base', rect(95, 0, 25, 110)));
-    details.push({ d: rect(-115, 5, 230, 100), style: 'pespunte' });
+    // Assembled illustration, not the rectangular cutting template. The width
+    // is a visual diameter; the generator still uses the measured circumference.
+    const W = object?.width ?? 76, H = object?.height ?? 110, rim = Math.min(18, H * .13);
+    zones.push(zone('base', 'Exterior de la funda', 'base', `M${-W / 2} 0 Q0 ${rim * 2} ${W / 2} 0 L${W / 2} ${H} Q0 ${H + rim * 2} ${-W / 2} ${H} Z`));
+    zones.push(zone('cierre', 'Traslape de velcro', 'base', `M${W * .36} ${rim * .45} L${W / 2} 0 L${W / 2} ${H} L${W * .36} ${H + rim * .45} Z`));
+    details.push({ d: `M${-W / 2} 0 Q0 ${-rim * 2} ${W / 2} 0`, style: 'costura' });
+    details.push({ d: `M${-W * .46} 5 Q0 ${rim * 2 + 5} ${W * .46} 5 M${-W * .46} ${H - 5} Q0 ${H + rim * 2 - 5} ${W * .46} ${H - 5}`, style: 'pespunte' });
   } else if (kind === 'bandana') {
     zones.push(zone('base', 'Cara de la bandana', 'base', poly([[-350, 0], [350, 0], [0, 300]])));
     details.push({ d: poly([[-330, 7], [330, 7], [0, 287]]), style: 'pespunte' });
@@ -513,7 +519,15 @@ function accessoryView(key: FlatViewKey, kind: AccessoryKind, object?: { width: 
     zones.push(zone('base', 'Dona de tela', 'base', 'M-85 0 C-85 -48 -48 -85 0 -85 C48 -85 85 -48 85 0 C85 48 48 85 0 85 C-48 85 -85 48 -85 0 Z M-25 0 C-25 14 -14 25 0 25 C14 25 25 14 25 0 C25 -14 14 -25 0 -25 C-14 -25 -25 -14 -25 0 Z'));
     for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8; details.push({ d: line([Math.cos(a) * 32, Math.sin(a) * 32], [Math.cos(a + 0.08) * 78, Math.sin(a + 0.08) * 78]), style: 'pliegue' }); }
   } else if (kind === 'cojin') {
-    zones.push(zone('base', 'Funda', 'base', rect(-200, -200, 400, 400)));
+    const W = object?.width ?? 400, H = object?.height ?? 400;
+    // A softly filled cushion makes the finished object recognisable. The
+    // independent parametric generator keeps its straight cutting/sewing lines.
+    const cushion = (inset: number) => {
+      const x = W / 2 - inset, y = H - inset, t = inset;
+      return `M${-x} ${t} C${-x * .64} ${t + H * .035} ${x * .64} ${t + H * .035} ${x} ${t} C${x * .94} ${H * .26} ${x * 1.055} ${H * .74} ${x} ${y} C${x * .5} ${y - H * .035} ${-x * .5} ${y - H * .035} ${-x} ${y} C${-x * 1.055} ${H * .74} ${-x * .94} ${H * .26} ${-x} ${t} Z`;
+    };
+    zones.push(zone('base', 'Funda', 'base', cushion(0)));
+    details.push({ d: cushion(Math.min(W, H) * .018), style: 'costura' });
   } else {
     zones.push(zone('base', 'Base del parche', 'base', `${M([0, -50])} ${C([28, -50], [50, -28], [50, 0])} ${C([50, 28], [28, 50], [0, 50])} ${C([-28, 50], [-50, 28], [-50, 0])} ${C([-50, -28], [-28, -50], [0, -50])} Z`));
     details.push({ d: `${M([0, -44])} ${C([24, -44], [44, -24], [44, 0])} ${C([44, 24], [24, 44], [0, 44])} ${C([-24, 44], [-44, 24], [-44, 0])} ${C([-44, -24], [-24, -44], [0, -44])} Z`, style: 'pespunte' });

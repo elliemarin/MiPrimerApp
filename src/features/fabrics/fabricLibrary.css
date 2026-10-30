@@ -11,4 +11,11 @@
 .fabric-library-properties { display:grid; grid-template-columns:1fr 1.1fr; gap:10px 16px; font-size:14px; margin:0; }
 .fabric-library-properties dt { color:var(--ink-2); }
 .fabric-library-properties dd { margin:0; }
+.fabrics-page .page-head .title-row { flex-wrap: wrap; align-items: flex-start; }
+.fabrics-page .page-head .title-row > * { min-width: 0; }
+.fabrics-page .page-head .row-wrap { max-width: 100%; }
+@media (max-width: 600px) {
+  .fabrics-page .page-head .title-row { flex-direction: column; align-items: stretch; }
+  .fabrics-page .page-head .title-row > .row { flex-wrap: wrap; }
+}
 @media(max-width:400px) { .fabric-library-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; } .fabric-library-card-body { padding:10px; } .fabric-library-intro { gap:16px; } .fabric-swatch-fan { width:62px; height:76px; } }

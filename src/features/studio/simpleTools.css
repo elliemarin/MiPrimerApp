@@ -1,0 +1,8 @@
+.ed-bottom.studio-simple-tools { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; overflow: visible; }
+.studio-simple-tools .tool { min-width: 0; width: 100%; font-size: 11px; }
+.studio-simple-tools .tool:focus-visible { outline: 2px solid var(--mat); outline-offset: -2px; }
+.studio-option-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.studio-option-grid .btn { justify-content: flex-start; text-align: left; white-space: normal; min-height: 46px; }
+.studio-more-options details { border-top: 1px solid var(--line); padding-top: 14px; }
+.studio-more-options summary { cursor: pointer; min-height: 40px; font-weight: 600; }
+@media (min-width: 900px) { .ed-bottom.studio-simple-tools { display: none; } }

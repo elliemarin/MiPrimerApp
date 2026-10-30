@@ -3,6 +3,14 @@
 Documento técnico de referencia. Explica cómo funciona cada parte y cómo
 verificarla. Mantenlo al día cuando cambies una pieza clave.
 
+La entrega visual más reciente se describe en
+[`ILUSTRACIONES_Y_TELAS.md`](ILUSTRACIONES_Y_TELAS.md): `FlatArtwork` y `FigureArt`
+comparten dibujo vectorial; `garmentComposition` transforma únicamente la
+ilustración; `modelMaterials` relaciona materiales de piezas sin mutar patrones.
+`fabricOrder` comparte el orden de muestras recientes y `fabricSave` espera la
+persistencia antes de confirmar una importación. La barra del estudio tiene
+cinco controles y sus funciones avanzadas viven en Más.
+
 ## 1. Pila
 
 - React 18 + TypeScript estricto + Vite. Estado global con zustand.

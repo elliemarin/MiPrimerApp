@@ -16,11 +16,11 @@ with sync_playwright() as p:
  pid=page.evaluate('''async()=>{const {useApp}=await import('/src/store/app.ts');const {projectFromModel}=await import('/src/store/projects.ts');const {findModel}=await import('/src/data/catalog.ts');const p=projectFromModel(findModel('camiseta-basica'));useApp.getState().put('project',p);await useApp.getState().saveNow();location.hash='/estudio/'+p.id;return p.id;}''')
  page.get_by_role('button',name='Telas',exact=True).last.click()
  with page.expect_file_chooser() as fc:
-  page.get_by_role('button',name='Subir imagen',exact=True).click()
+  page.get_by_role('button',name='Elegir del carrete',exact=True).click()
  fc.value.set_files({'name':'Mi tela rayada.png','mimeType':'image/png','buffer':png(400,300)})
  page.get_by_role('button',name='Mi tela rayada',exact=True).wait_for()
  assert page.get_by_role('button',name='Mi tela rayada',exact=True).get_attribute('aria-pressed')=='true'
- assert page.get_by_role('button',name='Fotografiar tela',exact=True).is_visible()
+ assert page.get_by_role('button',name='Tomar foto',exact=True).is_visible()
  assert page.locator('input[capture=environment]').count()==1
  fabric=page.evaluate('''async()=>{const {useApp}=await import('/src/store/app.ts');return Object.values(useApp.getState().fabrics).find(f=>f.name==='Mi tela rayada');}''')
  assert fabric['photo']['originalFileId']!=fabric['photo']['processedFileId']
@@ -38,9 +38,17 @@ with sync_playwright() as p:
  state=page.evaluate('''async()=>{const {useApp}=await import('/src/store/app.ts');await useApp.getState().saveNow();const p=Object.values(useApp.getState().projects)[0];return p.design.views[0].zoneFills;}''')
  assert state and any(f.get('fabricId')==fabric['id'] for f in state.values())
  page.reload();page.wait_for_load_state('networkidle')
- page.get_by_role('button',name='Figurín',exact=True).last.click()
+ page.locator('[role=toolbar][aria-label=Herramientas]:visible').get_by_role('button',name='Más',exact=True).click()
+ page.get_by_role('button',name='Ver en figurín',exact=True).click()
  assert page.locator('svg image[href^="blob:"]').count()>0
  page.screenshot(path='/tmp/photos-fabric-mobile-figurin.png')
+ with page.expect_download() as download:
+  page.get_by_role('button',name='Descargar ilustración',exact=True).click()
+ download.value.save_as('/tmp/hilvana-foto-figurin.svg')
+ from pathlib import Path
+ svg=Path('/tmp/hilvana-foto-figurin.svg').read_text()
+ assert 'href="blob:' not in svg and 'data:image/png;base64,' in svg, 'El SVG debe incluir la foto sin depender del navegador'
+ assert 'viewBox="0 0 400 680"' in svg
  page.get_by_role('button',name='Cerrar',exact=True).last.click()
  page.get_by_role('button',name='Telas',exact=True).last.click()
  page.get_by_role('button',name='Mis telas',exact=True).click()

@@ -4,8 +4,9 @@ import { Button, Chip, Empty, Field, FilePick, NumberInput, PageHead, Segmented,
 import { Icon } from '../../ui/Icon';
 import { uid, nowIso } from '../../lib/ids';
 import type { Fabric, Material, MaterialCategory } from '../../store/types';
-import { navigate } from '../../ui/router';
 import { importFabricPhoto } from '../../lib/fabricPhoto';
+import { newestFabrics } from '../../lib/fabricOrder';
+import { saveFabricSamples } from '../../lib/fabricSave';
 import { FabricLibrary, NotionsLibrary } from './FabricLibrary';
 
 export const CATEGORY_LABEL: Record<MaterialCategory, string> = {
@@ -34,35 +35,36 @@ function FabricCard({ f }: { f: Fabric }) {
 }
 
 export function FabricsPage() {
-  const fabrics = useApp((s) => Object.values(s.fabrics).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
+  const fabrics = useApp((s) => newestFabrics(s.fabrics));
   const materials = useApp((s) => Object.values(s.materials));
   const toast = useApp((s) => s.toast);
   const [importing, setImporting] = useState(false);
-  const [tab, setTab] = useState<'catalogo' | 'telas' | 'materiales'>('catalogo');
+  const [tab, setTab] = useState<'catalogo' | 'telas' | 'materiales'>(()=>Object.keys(useApp.getState().fabrics).length?'telas':'catalogo');
   const [editing, setEditing] = useState<Material | null>(null);
   const addFabric = async (files: File[]) => {
     setImporting(true);
+    let latest: Fabric | undefined;
     try {
-      let first: Fabric | undefined;
-      for (const file of files) { const fabric = await importFabricPhoto(file); first ??= fabric; }
-      if (first && files.length === 1) navigate(`/telas/${first.id}`);
-      else setTab('telas');
+      for (const file of files) latest = await importFabricPhoto(file);
     } catch (e) { toast(e instanceof Error ? e.message : 'No se pudo importar la foto.', 'error'); }
-    finally { setImporting(false); }
+    finally {
+      if(latest){setTab('telas');if(await saveFabricSamples())toast('Tela guardada. La encontrarás al principio de Mis telas.', 'ok');}
+      setImporting(false);
+    }
   };
   return (
-    <div className="page page-wide">
+    <div className="page page-wide fabrics-page">
       <PageHead
         title="Telas y materiales"
-        sub="Explora telas para tus diseños, guarda tus muestras y organiza materiales."
+        sub="Guarda una foto de tu tela y úsala en tus diseños."
         actions={
           tab !== 'materiales' ? (
             <div className="row-wrap">
               <FilePick accept="image/*" capture onFiles={(f) => void addFabric(f)}>
-                {(open) => <Button variant="primary" icon="camera" onClick={open} disabled={importing}>Fotografiar tela</Button>}
+                {(open) => <Button variant="primary" icon="camera" onClick={open} disabled={importing}>Tomar foto</Button>}
               </FilePick>
               <FilePick accept="image/*" multiple onFiles={(f) => void addFabric(f)}>
-                {(open) => <Button icon="upload" onClick={open} disabled={importing}>{importing ? 'Preparando…' : 'Subir imagen'}</Button>}
+                {(open) => <Button icon="image" onClick={open} disabled={importing}>{importing ? 'Preparando…' : 'Elegir del carrete'}</Button>}
               </FilePick>
             </div>
           ) : (
@@ -71,9 +73,9 @@ export function FabricsPage() {
         }
       />
       <div style={{ marginBottom: 18 }}>
-        <Segmented value={tab} onChange={setTab} options={[{ value: 'catalogo', label: 'Catálogo' }, { value: 'telas', label: `Mis telas (${fabrics.length})` }, { value: 'materiales', label: 'Materiales' }]} />
+        <Segmented value={tab} onChange={setTab} options={[{ value: 'telas', label: `Mis telas (${fabrics.length})` }, { value: 'catalogo', label: 'Catálogo' }, { value: 'materiales', label: 'Materiales' }]} />
       </div>
-      {tab === 'catalogo' ? <FabricLibrary /> : tab === 'telas' ? (
+      {tab === 'catalogo' ? <FabricLibrary onUse={()=>{setTab('telas');toast('Muestra guardada al principio de Mis telas.', 'ok');}} /> : tab === 'telas' ? (
         fabrics.length === 0 ? (
           <Empty icon="telas" title="Fotografía tus telas" body="Toma la foto de frente sobre una superficie plana, con una regla o una hoja carta al lado para calibrar el tamaño del estampado." />
         ) : (

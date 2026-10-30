@@ -3,7 +3,7 @@ import { useApp } from '../../store/app';
 import { Board, BoardPointer, BoardPinch, useViewport } from '../../ui/Board';
 import { useHistory } from '../../ui/useHistory';
 import { Icon } from '../../ui/Icon';
-import { Button, Empty, FilePick, IconButton, SaveIndicator, Segmented, Sheet, Field, LengthInput, TextInput, Select } from '../../ui/components';
+import { Button, Empty, IconButton, SaveIndicator, Segmented, Sheet, Field, LengthInput, TextInput, Select } from '../../ui/components';
 import { goBack, navigate, queryParam } from '../../ui/router';
 import { ProjectJourney } from '../../ui/ProjectJourney';
 import { componentGroupId, componentIdForElement, normalizeComponentDesign, reconcileComponentDesign } from '../customize/componentDesign';
@@ -29,6 +29,10 @@ import { PanelPatternsSheet } from './PanelPatternsSheet';
 import { panelPieceForView, panelPatternFromDesign, syncPanelZones, applyPanelPattern } from './panelWorkflow';
 import { pieceGeometryHash } from '../../lib/pattern/panels';
 import { CATALOG } from '../../data/catalog';
+import { EmbroideryPicker, type EmbroideryChoice } from '../simple/EmbroideryPicker';
+import { createEmbroideryMotif } from '../../lib/draw/embroideryMotifs';
+import { createLettering } from '../../lib/draw/lettering';
+import './simpleTools.css';
 import { viewsFromModel, templateScaleFor, currentValues } from '../../store/projects';
 
 type Tool = 'corte-panel' | 'tela' | 'seleccionar' | 'forma' | 'organica' | 'lapiz' | 'pincel' | 'linea' | 'pluma' | 'texto' | 'recorte' | 'zona' | 'medir' | 'calibrar' | 'referencia' | 'guia';
@@ -65,7 +69,6 @@ export function StudioEditor({ projectId }: { projectId: string }) {
   const project = useApp((s) => s.projects[projectId]);
   const fabrics = useApp((s) => s.fabrics);
   const updateProject = useApp((s) => s.updateProject);
-  const addFile = useApp((s) => s.addFile);
   const unit = useApp((s) => s.settings.unit);
   const onCommit = useCallback((d: DesignDoc | undefined) => d && updateProject(projectId, (p) => reconcileComponentDesign({ ...p, design: d }, useApp.getState().fabrics)), [projectId, updateProject]);
   const hist = useHistory<DesignDoc | undefined>(project?.design, onCommit);
@@ -90,6 +93,8 @@ export function StudioEditor({ projectId }: { projectId: string }) {
   const [paintTarget, setPaintTarget] = useState<Surface | undefined>();
   const [organicId, setOrganicId] = useState('montana');
   const [showShapes, setShowShapes] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+  const [showEmbroidery, setShowEmbroidery] = useState(false);
   const [pen, setPen] = useState<Pt[]>([]);
   const [readout, setReadout] = useState<string | null>(null);
   const [calibPts, setCalibPts] = useState<Pt[]>([]);
@@ -574,13 +579,16 @@ export function StudioEditor({ projectId }: { projectId: string }) {
     );
   }
 
-  const insertImage = async (files: File[]) => {
-    for (const f of files) {
-      const img = await loadBitmap(f);
-      const fileId = await addFile(f, f.name);
-      const W = 100;
-      const H = (W * img.naturalHeight) / img.naturalWidth;
-      createAt(newElement(view.id, { kind: 'imagen', name: f.name.replace(/\.[^.]+$/, ''), image: { fileId, naturalW: img.naturalWidth, naturalH: img.naturalHeight }, x: view.minX + view.width / 2, y: view.minY + view.height / 2, w: W, h: H, fill: { type: 'ninguno' }, technique: 'vinil' }));
+  const insertEmbroidery = (choice: EmbroideryChoice) => {
+    try {
+      const x = view.minX + view.width / 2, y = view.minY + view.height / 2;
+      const result = choice.kind === 'motif'
+        ? createEmbroideryMotif(choice.id, view.id, x, y, choice.widthMm)
+        : createLettering(choice.text, choice.fontId, view.id, x, y, choice.heightMm, choice.color);
+      commit({ ...doc, elements: [...doc.elements, ...result.elements] });
+      setSel([result.groupId]); setTool('seleccionar'); setShowEmbroidery(false);
+    } catch (cause) {
+      useApp.getState().toast(cause instanceof Error ? cause.message : 'No se pudo añadir el bordado.', 'error');
     }
   };
 
@@ -594,7 +602,20 @@ export function StudioEditor({ projectId }: { projectId: string }) {
     return <ViewsPanel key={view.id} focusZoneId={painted?.viewId===view.id && painted.kind==='zona'?painted.id:undefined} doc={doc} view={view} commit={commit} setViewId={setViewId} onAdd={() => setAddView(true)} setTool={(t) => setTool(t as Tool)} />;
   };
   const toolInfo = tool==='tela' ? {hint:'Arrastra una muestra sobre la prenda o toca una zona para aplicar la tela elegida.'} : TOOLS.find((t) => t.key === tool)!;
-  const visibleTools = TOOLS.filter((t) => t.key!=='corte-panel'&&(t.key === 'calibrar' ? view.source.type === 'foto' : true));
+  const extraTools = TOOLS.filter(t => !['seleccionar', 'lapiz', 'corte-panel'].includes(t.key) && (t.key !== 'calibrar' || view.source.type === 'foto'));
+  const activateTool = (next: Tool) => {
+    setPen([]); setShowMore(false); setShowFabrics(false);
+    if (next === 'organica') setShowShapes(true);
+    if (next === 'corte-panel' && !panelPieceForView(project, view)) { setPanelSheet(true); return; }
+    setTool(next);
+  };
+  const primaryTools = <>
+    <button className="tool" aria-pressed={tool === 'seleccionar' && !showFabrics} onClick={() => activateTool('seleccionar')}><Icon name="move" />Mover</button>
+    <button className="tool" aria-pressed={tool === 'lapiz'} onClick={() => activateTool('lapiz')}><Icon name="pencil" />Dibujar</button>
+    <button className="tool" onClick={() => { setShowFabrics(false); setShowEmbroidery(true); }}><Icon name="needle" />Bordados</button>
+    <button className="tool" aria-pressed={showFabrics} onClick={() => { setShowFabrics(!showFabrics); setTool(showFabrics ? 'seleccionar' : 'tela'); }}><Icon name="telas" />Telas</button>
+    <button className="tool" aria-pressed={showMore} onClick={() => setShowMore(true)}><Icon name="mas" />Más</button>
+  </>;
 
   return (
     <div className="editor">
@@ -617,27 +638,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
       </div>
       <ProjectJourney projectId={projectId} step="estudio" />
       <div className="ed-body">
-        <div className="ed-rail" role="toolbar" aria-label="Herramientas">
-          <button className="tool" aria-pressed={showFabrics} onClick={()=>{setShowFabrics(!showFabrics);setTool('tela');}}><Icon name="telas" />Telas</button>
-          <button className="tool" onClick={()=>setShowColors(true)}><Icon name="palette" />Tonos</button>
-          <button className="tool" onClick={()=>setShowFigurine(true)}><Icon name="hanger" />Figurín</button>
-          <button className="tool" onClick={()=>setPanelSheet(true)}><Icon name="patronaje" />Generar patrones</button>
-        <button className="tool" aria-pressed={tool==='corte-panel'} onClick={()=>{setPen([]);if(!panelPieceForView(project,view)){setPanelSheet(true);}else setTool('corte-panel');}}><Icon name="scissors" />Cortar paneles</button>
-          {visibleTools.map((t) => (
-            <button key={t.key} className="tool" aria-pressed={tool === t.key} onClick={() => {setPen([]);if(t.key==='corte-panel'&&!panelPieceForView(project,view)){setPanelSheet(true);return;}if(t.key==='organica'){setTool('organica');setShowShapes(true);}else setTool(t.key);}} title={t.hint}>
-              <Icon name={t.icon} />
-              {t.label}
-            </button>
-          ))}
-          <FilePick accept="image/png,image/jpeg" multiple onFiles={(f) => void insertImage(f)}>
-            {(open) => (
-              <button className="tool" onClick={open} title="Importar imagen o gráfico">
-                <Icon name="image" />
-                Imagen
-              </button>
-            )}
-          </FilePick>
-        </div>
+        <div className="ed-rail studio-simple-tools" role="toolbar" aria-label="Herramientas">{primaryTools}</div>
         <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <div className="scroll-x" style={{ margin: 0, padding: '8px 10px', background: 'var(--surface)', borderBottom: '1px solid var(--line)' }}>
             {doc.views.map((v) => (
@@ -779,40 +780,27 @@ export function StudioEditor({ projectId }: { projectId: string }) {
           <div className="side-body">{panelBody(panel)}</div>
         </aside>
       </div>
-      <div className="ed-bottom" role="toolbar" aria-label="Herramientas">
-        <button className="tool" aria-pressed={showFabrics} onClick={()=>{setShowFabrics(!showFabrics);setTool('tela');}}><Icon name="telas" />Telas</button>
-        <button className="tool" onClick={()=>setShowColors(true)}><Icon name="palette" />Tonos</button>
-        <button className="tool" onClick={()=>setShowFigurine(true)}><Icon name="hanger" />Figurín</button>
-        <button className="tool" onClick={()=>setPanelSheet(true)}><Icon name="patronaje" />Generar patrones</button>
-        <button className="tool" aria-pressed={tool==='corte-panel'} onClick={()=>{setPen([]);if(!panelPieceForView(project,view)){setPanelSheet(true);}else setTool('corte-panel');}}><Icon name="scissors" />Cortar paneles</button>
-        <button className="tool" onClick={() => setMobilePanel('elemento')} aria-pressed={false}>
-          <Icon name="palette" />
-          Propiedades
-        </button>
-        <button className="tool" onClick={() => setMobilePanel('capas')}>
-          <Icon name="layers" />
-          Capas
-        </button>
-        <button className="tool" onClick={() => setMobilePanel('vistas')}>
-          <Icon name="grid" />
-          Vistas
-        </button>
-        <span style={{ width: 1, background: 'var(--line)', margin: '8px 4px', flex: 'none' }} />
-        {visibleTools.map((t) => (
-          <button key={t.key} className="tool" aria-pressed={tool === t.key} onClick={() => {setPen([]);if(t.key==='corte-panel'&&!panelPieceForView(project,view)){setPanelSheet(true);return;}if(t.key==='organica'){setTool('organica');setShowShapes(true);}else setTool(t.key);}}>
-            <Icon name={t.icon} />
-            {t.label}
-          </button>
-        ))}
-        <FilePick accept="image/png,image/jpeg" multiple onFiles={(f) => void insertImage(f)}>
-          {(open) => (
-            <button className="tool" onClick={open}>
-              <Icon name="image" />
-              Imagen
-            </button>
-          )}
-        </FilePick>
-      </div>
+      <div className="ed-bottom studio-simple-tools" role="toolbar" aria-label="Herramientas">{primaryTools}</div>
+      {showMore && <Sheet title="Más opciones" onClose={() => setShowMore(false)}>
+        <div className="stack-lg studio-more-options">
+          <section><h3 className="section-title">Ver tu diseño</h3><div className="studio-option-grid">
+            <Button icon="hanger" onClick={() => { setShowMore(false); setShowFigurine(true); }}>Ver en figurín</Button>
+            <Button icon="palette" onClick={() => { setShowMore(false); setShowColors(true); }}>Combinar tonos</Button>
+            <Button icon="palette" onClick={() => { setShowMore(false); setMobilePanel('elemento'); }}>Propiedades</Button>
+            <Button icon="layers" onClick={() => { setShowMore(false); setMobilePanel('capas'); }}>Capas</Button>
+            <Button icon="grid" onClick={() => { setShowMore(false); setMobilePanel('vistas'); }}>Vistas y zonas</Button>
+          </div></section>
+          <details><summary>Dibujo y ajustes</summary><div className="studio-option-grid" style={{ marginTop: 12 }}>
+            {extraTools.map(t => <Button key={t.key} icon={t.icon} onClick={() => activateTool(t.key)}>{t.label}</Button>)}
+          </div></details>
+          <details><summary>Patrones y cortes</summary><div className="studio-option-grid" style={{ marginTop: 12 }}>
+            <Button icon="scissors" onClick={() => activateTool('corte-panel')}>Cortar paneles</Button>
+            <Button icon="patronaje" onClick={() => { setShowMore(false); setPanelSheet(true); }}>Generar patrones de paneles</Button>
+          </div></details>
+          <p className="tiny muted">Para usar una foto como tela, abre Telas y elige Tomar foto o Elegir del carrete.</p>
+        </div>
+      </Sheet>}
+      {showEmbroidery && <EmbroideryPicker onClose={() => setShowEmbroidery(false)} onPick={insertEmbroidery} />}
       {mobilePanel && (
         <Sheet title={{ elemento: single ? single.name : 'Propiedades', capas: 'Capas', vistas: 'Vistas y zonas' }[mobilePanel]} onClose={() => setMobilePanel(null)}>
           {panelBody(mobilePanel)}

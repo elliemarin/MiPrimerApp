@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { FABRIC_LIBRARY, FABRIC_FAMILY_LABEL, MATERIAL_LIBRARY, SWATCH_MOTIF_LABEL, recommendFabrics, searchLibraryFabric, swatchUrl, type FabricFamily, type LibraryFabric, type SwatchMotif } from '../../data/materialLibrary';
 import { findModel } from '../../data/catalog';
 import { addLibraryFabric, addLibraryMaterial } from '../../lib/fabricLibrary';
+import { saveFabricSamples } from '../../lib/fabricSave';
 import { Button, Chip, Empty, Field, Notice, Segmented, Select, Sheet } from '../../ui/components';
 import { useApp } from '../../store/app';
 import type { Fabric } from '../../store/types';
@@ -56,7 +57,10 @@ export function FabricLibraryDetail({ entry, reason, onClose, onUse }: { entry: 
   const [error, setError] = useState('');
   return <Sheet title={entry.name} onClose={onClose} footer={<Button variant="primary" block disabled={busy} onClick={() => {
     setBusy(true); setError('');
-    void addLibraryFabric(entry.id, color, motif).then(onUse).catch((e: unknown) => setError(e instanceof Error ? e.message : 'No se pudo crear la muestra.')).finally(() => setBusy(false));
+    void addLibraryFabric(entry.id, color, motif).then(async fabric=>{
+      if(await saveFabricSamples())onUse(fabric);
+      else setError('La muestra está en Mis telas, pendiente de guardado. Cierra esta ficha y pulsa Reintentar en el aviso.');
+    }).catch((e: unknown) => setError(e instanceof Error ? e.message : 'No se pudo crear la muestra.')).finally(() => setBusy(false));
   }}>{busy ? 'Creando muestra…' : 'Agregar muestra a Mis telas'}</Button>}>
     <div className="stack-lg">
       <div className="fabric-library-preview" style={{ backgroundImage: `url("${swatchUrl(entry, color, motif)}")` }}><Chip>Muestra ilustrativa</Chip></div>

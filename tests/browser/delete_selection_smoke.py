@@ -28,7 +28,9 @@ with sync_playwright() as p:
         window.__deleteQA = {store:useApp, projectId:project.id};
         location.hash = '/estudio/' + project.id;
     }''')
-    page.get_by_role('button', name='Figuras', exact=True).last.tap()
+    page.locator('.ed-bottom').get_by_role('button', name='Más', exact=True).tap()
+    page.get_by_text('Dibujo y ajustes', exact=True).tap()
+    page.get_by_role('button', name='Figuras', exact=True).tap()
     page.get_by_role('textbox', name='Buscar figuras').fill('estrella')
     page.get_by_role('button', name='Estrella', exact=True).tap()
     board = page.locator('.ed-canvas')
@@ -72,7 +74,7 @@ with sync_playwright() as p:
     page.evaluate('''async()=>{await window.__deleteQA.store.getState().saveNow();}''')
     page.reload()
     page.wait_for_load_state('networkidle')
-    page.get_by_role('button', name='Figuras', exact=True).last.wait_for(state='visible')
+    page.locator('.ed-bottom').get_by_role('button', name='Mover', exact=True).wait_for(state='visible')
     persisted = page.evaluate('''async()=>{
         const {useApp}=await import('/src/store/app.ts');
         return Object.values(useApp.getState().projects)[0].design.elements.map(e=>e.id);

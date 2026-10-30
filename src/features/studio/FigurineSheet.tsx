@@ -1,28 +1,56 @@
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { CATALOG } from '../../data/catalog';
+import type { FlatView } from '../../data/flats';
 import { saveBlob } from '../../lib/download';
-import { defaultFigurine, FIGURE_BODY_LABEL, figureGeometry, FigurineOptions, SKIN_TONES } from '../../lib/draw/figurine';
+import { defaultFigurine, FIGURE_BODY_LABEL, figureGeometry, type FigurineOptions, SKIN_TONES } from '../../lib/draw/figurine';
+import { garmentComposition, garmentIllustrationView, supportsModelIllustration } from '../../lib/draw/garmentComposition';
 import { useApp } from '../../store/app';
 import { Button, Field, Notice, Select, Sheet } from '../../ui/components';
-import { DesignDoc, DesignView } from './model';
-import { StudioDefs, ViewBase, ElementSvg } from './render';
+import { FigureArt } from '../../ui/FigureArt';
+import { FlatArtwork } from '../../ui/FlatArt';
+import { elementCorners, type DesignDoc, type DesignView } from './model';
+import { StudioDefs, ViewBase, ElementSvg, fillAttr } from './render';
+import { surfaceAt } from './surfaces';
 import './designTools.css';
 
 export function FigurineSheet({ onClose, doc, view, value, onChange }: { onClose: () => void; doc: DesignDoc; view: DesignView; value?: FigurineOptions; onChange?: (options: FigurineOptions) => void }) {
-  const model = view.source.type === 'plantilla' ? CATALOG.find((m) => m.id === (view.source as { flatId: string }).flatId) : undefined;
-  const [options, setOptions] = useState<FigurineOptions>(value ?? defaultFigurine(model?.flat.family));
-  const [viewId, setViewId] = useState(view.id);
+  const garmentViews = doc.views.filter(candidate => candidate.source.type === 'plantilla' && (candidate.kind === 'frente' || candidate.kind === 'espalda'));
+  const views = garmentViews.length ? garmentViews : doc.views;
+  const initial = views.find(candidate => candidate.id === view.id) ?? views.find(candidate => candidate.kind === 'frente') ?? views[0] ?? view;
+  const initialModel = initial.source.type === 'plantilla' ? CATALOG.find(model => model.id === (initial.source as {flatId: string}).flatId) : undefined;
+  const [options, setOptions] = useState<FigurineOptions>(value ?? {...defaultFigurine(initialModel?.flat.family), age: initialModel?.recipients.every(recipient => ['bebe', 'toddler', 'infantil'].includes(recipient)) ? 'infantil' : 'adulto'});
+  const [viewId, setViewId] = useState(initial.id);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const svgRef = useRef<SVGSVGElement>(null);
-  const fabrics = useApp((s) => s.fabrics);
-  const active = doc.views.find((v) => v.id === viewId) ?? view;
-  const g = figureGeometry(options.body, options.age);
-  const head = g.head;
+  const instance = useId().replace(/:/g, '');
+  const prefix = `fig-${instance}-`;
+  const fabrics = useApp(state => state.fabrics);
+  const active = views.find(candidate => candidate.id === viewId) ?? initial;
+  const model = active.source.type === 'plantilla' ? CATALOG.find(candidate => candidate.id === (active.source as {flatId: string}).flatId) : undefined;
+  const geometry = figureGeometry(options.body, options.age);
+  const flatView: FlatView = {...active, key: active.kind === 'espalda' ? 'espalda' : 'frente', seams: active.seams ?? {}, dots: active.dots ?? [], details: active.details ?? []};
+  const projected = model ? garmentIllustrationView(flatView, model.flat) : flatView;
+  const changedZones = new Set(projected.zones.filter(zone => zone.d !== flatView.zones.find(original => original.id === zone.id)?.d).map(zone => zone.id));
+  // A sleeve/hood projection is presentation-only. Keep artwork in its original
+  // drawing instead of letting a photograph, patch or embroidery float off it.
+  const projectedArtwork = changedZones.size > 0 && doc.elements.some(element => element.viewId === active.id && !element.hidden && (
+    changedZones.has(element.zoneId ?? '') || changedZones.has(element.maskZoneId ?? '') || [element, ...elementCorners(element)].some(point => {
+      const surface = surfaceAt({...doc, elements: []}, active, point);
+      return surface?.kind === 'zona' && changedZones.has(surface.id);
+    })
+  ));
+  const showFigure = active.source.type !== 'pieza' && model?.flat.family !== 'accesorio' && model?.flat.family !== 'bolso' && (!model || supportsModelIllustration(model.flat)) && !projectedArtwork;
+  const illustration = showFigure ? projected : flatView;
+  const displayView: DesignView = {...active, zones: illustration.zones, details: illustration.details, dots: illustration.dots};
+  const automatic = model ? garmentComposition(model.flat, illustration, options.body, options.age) : undefined;
+  const manual = options.placement === 'manual' || !!value && !options.placement;
   const scale = options.garmentWidth / Math.max(1, active.width);
-  const prefix = 'fig-';
+  const objectScale = Math.min(300 / active.width, 450 / active.height);
+  const segments = !showFigure ? [{transform: `translate(${200 - (active.minX + active.width / 2) * objectScale} ${335 - (active.minY + active.height / 2) * objectScale}) scale(${objectScale})`, clip: 'all' as const, splitY: 0}]
+    : !manual && automatic ? automatic.segments : [{transform: `translate(${200 + options.garmentX - options.garmentWidth / 2} ${options.garmentY}) scale(${scale}) translate(${-active.minX} ${-active.minY})`, clip: 'all' as const, splitY: 0}];
   const update = (partial: Partial<FigurineOptions>) => {
-    const next = { ...options, ...partial };
+    const next = {...options, ...partial};
     setOptions(next); onChange?.(next);
   };
   const exportPreview = async () => {
@@ -33,57 +61,57 @@ export function FigurineSheet({ onClose, doc, view, value, onChange }: { onClose
       svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
       svg.setAttribute('width', '800'); svg.setAttribute('height', '1360');
       svg.style.cssText = '--ink:#1d2420;--mat:#24584a;--surface:#fff;--sans:sans-serif;--display:serif;';
-      await Promise.all(Array.from(svg.querySelectorAll('image')).map(async (img) => {
-        const href = img.getAttribute('href');
-        if (!href || !href.startsWith('blob:')) return;
+      await Promise.all(Array.from(svg.querySelectorAll('image')).map(async image => {
+        const href = image.getAttribute('href');
+        if (!href?.startsWith('blob:')) return;
         const blob = await (await fetch(href)).blob();
-        const data = await new Promise<string>((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result)); r.onerror = reject; r.readAsDataURL(blob); });
-        img.setAttribute('href', data);
+        const data = await new Promise<string>((resolve, reject) => {const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(blob);});
+        image.setAttribute('href', data);
       }));
-      await saveBlob(new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' }), 'hilvana-figurin.svg');
-    } catch { setError('No se pudo descargar la ilustración. Vuelve a intentarlo.'); }
-    finally { setBusy(false); }
+      await saveBlob(new Blob([new XMLSerializer().serializeToString(svg)], {type: 'image/svg+xml'}), 'hilvana-figurin.svg');
+    } catch {setError('No se pudo descargar la ilustración. Vuelve a intentarlo.');}
+    finally {setBusy(false);}
   };
-  return <Sheet title="Diseño en un figurín" onClose={onClose} wide footer={<Button variant="primary" block onClick={() => void exportPreview()} disabled={busy}>{busy ? 'Preparando ilustración…' : 'Descargar figurín SVG'}</Button>}>
+  return <Sheet title="Ver en figurín" onClose={onClose} wide footer={<Button variant="primary" block onClick={() => void exportPreview()} disabled={busy}>{busy ? 'Preparando ilustración…' : 'Descargar ilustración'}</Button>}>
     <div className="figurine-layout">
       <div className="stack figurine-preview">
-        <div style={{ background: '#fff', border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden' }}>
-          <svg ref={svgRef} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 680" role="img" aria-label={`Figurín ${FIGURE_BODY_LABEL[options.body].toLowerCase()} con el diseño de ${active.label}`}>
-            <title>Hilvana · {active.label} sobre figurín</title>
-            <desc>Ilustración plana para explorar color y composición. No representa ajuste, talla ni caída de la tela.</desc>
-            <rect width={400} height={680} fill="#fff" />
-            <ellipse cx={200} cy={g.ankle + 16} rx={70} ry={5} fill="#edf0eb" />
-            <g fill={options.skin} stroke="#5b463c" strokeWidth={0.65} strokeLinejoin="round">
-              {g.legs.map((d, i) => <path key={`leg-${i}`} d={d} />)}
-              {g.arms.map((d, i) => <path key={`arm-${i}`} d={d} />)}
-              <path d={g.torso} /><path d={g.neck} />
-            </g>
-            {options.hair !== 'sin' && <path d={`M${head.cx - head.rx - 3} ${head.cy + 4} C${head.cx - head.rx - 20} ${head.cy - head.ry - 32} ${head.cx + head.rx + 20} ${head.cy - head.ry - 32} ${head.cx + head.rx + 3} ${head.cy + 4} L${head.cx + head.rx + (options.hair === 'largo' ? 15 : 3)} ${head.cy + head.ry + (options.hair === 'largo' ? 90 : 0)} L${head.cx - head.rx - (options.hair === 'largo' ? 15 : 3)} ${head.cy + head.ry + (options.hair === 'largo' ? 90 : 0)} Z`} fill={options.hairColor} />}
-            <ellipse cx={head.cx} cy={head.cy} rx={head.rx} ry={head.ry} fill={options.skin} stroke="#5b463c" strokeWidth={0.65} />
-            {options.hair === 'corto' && <path d={`M${head.cx - head.rx} ${head.cy} Q${head.cx - head.rx - 8} ${head.cy - head.ry - 18} ${head.cx + 8} ${head.cy - head.ry - 9} Q${head.cx + head.rx + 15} ${head.cy - head.ry - 5} ${head.cx + head.rx} ${head.cy + 3} Q${head.cx + head.rx - 8} ${head.cy - 21} ${head.cx + 6} ${head.cy - 17} Q${head.cx - 12} ${head.cy - 9} ${head.cx - head.rx} ${head.cy} Z`} fill={options.hairColor} />}
-            {options.hair === 'largo' && <path d={`M${head.cx - head.rx} ${head.cy + 4} Q${head.cx - head.rx - 8} ${head.cy - head.ry - 12} ${head.cx} ${head.cy - head.ry - 10} Q${head.cx + head.rx + 12} ${head.cy - head.ry - 10} ${head.cx + head.rx} ${head.cy + 8} Q${head.cx + 13} ${head.cy - 8} ${head.cx + 6} ${head.cy - 23} Q${head.cx - 8} ${head.cy - 3} ${head.cx - head.rx} ${head.cy + 4} Z`} fill={options.hairColor} />}
-            {options.hair === 'rizado' && <g fill={options.hairColor}>{Array.from({ length: 9 }, (_, i) => { const a = Math.PI + i * Math.PI / 8; return <circle key={i} cx={head.cx + Math.cos(a) * head.rx} cy={head.cy + Math.sin(a) * head.ry - 9} r={head.rx * 0.42} />; })}</g>}
-            {active.kind !== 'espalda' && <g stroke="#5b463c" strokeWidth={0.8} fill="none" strokeLinecap="round"><path d={`M${head.cx - 13} ${head.cy + 2}h5 M${head.cx + 8} ${head.cy + 2}h5 M${head.cx} ${head.cy + 9}l-2 7h4 M${head.cx - 5} ${head.cy + 24}q5 3 10 0`} /></g>}
-            <g transform={`translate(${200 + options.garmentX - options.garmentWidth / 2} ${options.garmentY}) scale(${scale}) translate(${-active.minX} ${-active.minY})`}>
-              <StudioDefs doc={doc} view={active} fabrics={fabrics} prefix={prefix} />
-              <ViewBase view={active} mode="apariencia" prefix={prefix} fabrics={fabrics} />
-              {doc.elements.filter((e) => e.viewId === active.id).map((el) => <ElementSvg key={el.id} el={el} mode="apariencia" prefix={prefix} doc={doc} fabrics={fabrics} />)}
-            </g>
-            <text x={200} y={669} textAnchor="middle" fontFamily="sans-serif" fontSize={9} fill="#6b706b">Hilvana · Ilustración de composición</text>
+        <div className="figurine-paper">
+          <svg ref={svgRef} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 680" role="img" aria-label={showFigure ? `Figurín ${FIGURE_BODY_LABEL[options.body].toLowerCase()} con el diseño de ${active.label}` : `Ilustración de ${active.label}`}>
+            <title>Hilvana · {active.label}</title>
+            <desc>Ilustración para explorar color y composición. No representa ajuste, talla ni caída de la tela.</desc>
+            <rect width="400" height="680" fill="#fbfcf9"/>
+            <ellipse cx="200" cy={showFigure ? geometry.ankle + 20 : 600} rx={showFigure ? 62 : 100} ry="3.5" fill="#dfe5dc" opacity=".65"/>
+            {showFigure && <FigureArt body={options.body} age={options.age} skin={options.skin} hair={options.hair} hairColor={options.hairColor} back={active.kind === 'espalda'} base={automatic?.lower || automatic?.fullBody ? 'shorts' : 'leggings'} idPrefix={prefix}/>}
+            {segments.map((segment, index) => <g key={index} transform={segment.transform}>
+              {segment.clip !== 'all' && <defs><clipPath id={`${prefix}segment-${index}`}><rect x="-10000" y={segment.clip === 'upper' ? segment.splitY - 10000 : segment.splitY} width="20000" height="10000"/></clipPath></defs>}
+              <g clipPath={segment.clip === 'all' ? undefined : `url(#${prefix}segment-${index})`}>
+                <StudioDefs doc={doc} view={displayView} fabrics={fabrics} prefix={`${prefix}${index}-`}/>
+                {model ? <FlatArtwork view={illustration} prefix={`${prefix}${index}-art`} spec={model.flat} fills={Object.fromEntries(Object.entries(active.zoneFills ?? {}).map(([zone, fill]) => [zone, fillAttr(fill, `${prefix}${index}-zf-${zone}`).fill]))}/> : <ViewBase view={displayView} mode="apariencia" prefix={`${prefix}${index}-`} fabrics={fabrics}/>}
+                {doc.elements.filter(element => element.viewId === active.id).map(element => <ElementSvg key={element.id} el={element} mode="apariencia" prefix={`${prefix}${index}-`} doc={doc} fabrics={fabrics}/>)}
+              </g>
+            </g>)}
           </svg>
         </div>
-        <p className="tiny faint">Vista plana para probar composición y tonos. El figurín no calcula ajuste ni caída; las medidas del patrón se conservan.</p>
+        <p className="tiny faint">{active.source.type === 'pieza' ? 'Pieza de patrón sin armar. Sus medidas y posiciones se conservan.' : projectedArtwork ? 'Tu diseño se muestra en plano para conservar la posición de los detalles.' : showFigure ? 'Vista ilustrativa para combinar telas y colores. El ajuste se comprueba con las medidas del patrón.' : 'Vista plana para combinar telas y colores. El ajuste se comprueba con las medidas del patrón.'}</p>
       </div>
-      <div className="stack-lg">
-        <Field label="Vista del diseño" htmlFor="figure-view"><Select id="figure-view" value={active.id} onChange={setViewId} options={doc.views.map((v) => ({ value: v.id, label: v.label }))} /></Field>
-        <Field label="Silueta" htmlFor="figure-body"><Select id="figure-body" value={options.body} onChange={(body) => update({ body })} options={Object.entries(FIGURE_BODY_LABEL).map(([value, label]) => ({ value: value as FigurineOptions['body'], label }))} /></Field>
-        <Field label="Proporciones" htmlFor="figure-age"><Select id="figure-age" value={options.age} onChange={(age) => update({ age })} options={[{ value: 'adulto', label: 'Adultas' }, { value: 'infantil', label: 'Infantiles' }]} /></Field>
-        <Field label="Tono del figurín"><div className="row-wrap">{SKIN_TONES.map((color, i) => <button key={color} type="button" aria-label={`Tono de piel ${i + 1}`} aria-pressed={options.skin === color} onClick={() => update({ skin: color })} style={{ width: 34, height: 44, borderRadius: 6, background: color, border: `2px solid ${options.skin === color ? 'var(--mat)' : 'var(--line)'}` }} />)}<input type="color" aria-label="Color personalizado del figurín" value={options.skin} onChange={(e) => update({ skin: e.target.value })} style={{ width: 44, height: 44 }} /></div></Field>
-        <div className="row"><Field label="Cabello" htmlFor="figure-hair"><Select id="figure-hair" value={options.hair} onChange={(hair) => update({ hair })} options={[{ value: 'corto', label: 'Corto' }, { value: 'largo', label: 'Largo' }, { value: 'rizado', label: 'Rizado' }, { value: 'sin', label: 'Sin cabello' }]} /></Field><Field label="Color del cabello"><input type="color" aria-label="Color del cabello" value={options.hairColor} onChange={(e) => update({ hairColor: e.target.value })} style={{ width: 48, height: 44 }} /></Field></div>
-        <Field label="Tamaño de la prenda" htmlFor="figure-width"><input id="figure-width" type="range" min={40} max={380} value={options.garmentWidth} onChange={(e) => update({ garmentWidth: Number(e.target.value) })} style={{ width: '100%', accentColor: 'var(--mat)' }} /></Field>
-        <Field label="Subir o bajar diseño" htmlFor="figure-y"><input id="figure-y" type="range" min={80} max={500} value={options.garmentY} onChange={(e) => update({ garmentY: Number(e.target.value) })} style={{ width: '100%', accentColor: 'var(--mat)' }} /></Field>
-        <Field label="Mover a izquierda o derecha" htmlFor="figure-x"><input id="figure-x" type="range" min={-140} max={140} value={options.garmentX} onChange={(e) => update({ garmentX: Number(e.target.value) })} style={{ width: '100%', accentColor: 'var(--mat)' }} /></Field>
-        <Button onClick={() => update(defaultFigurine(model?.flat.family))}>Restablecer figurín</Button>
+      <div className="stack-lg figurine-controls">
+        {views.length > 1 && <Field label="Vista" htmlFor={`${prefix}view`}><Select id={`${prefix}view`} value={active.id} onChange={setViewId} options={views.map(candidate => ({value: candidate.id, label: candidate.label}))}/></Field>}
+        {showFigure && <>
+          <Field label="Silueta" htmlFor={`${prefix}body`}><Select id={`${prefix}body`} value={options.body} onChange={body => update({body})} options={Object.entries(FIGURE_BODY_LABEL).map(([body, label]) => ({value: body as FigurineOptions['body'], label}))}/></Field>
+          <Field label="Tono de piel"><div className="figurine-skin-tones">{SKIN_TONES.map((color, index) => <button key={color} type="button" aria-label={`Tono de piel ${index + 1}`} aria-pressed={options.skin === color} onClick={() => update({skin: color})} style={{'--skin-tone': color} as React.CSSProperties}/>)}</div></Field>
+          <details className="figurine-details"><summary>Cabello y proporciones</summary><div className="stack">
+            <Field label="Proporciones" htmlFor={`${prefix}age`}><Select id={`${prefix}age`} value={options.age} onChange={age => update({age})} options={[{value: 'adulto', label: 'Adultas'}, {value: 'infantil', label: 'Infantiles'}]}/></Field>
+            <div className="row"><Field label="Cabello" htmlFor={`${prefix}hair`}><Select id={`${prefix}hair`} value={options.hair} onChange={hair => update({hair})} options={[{value: 'corto', label: 'Corto'}, {value: 'largo', label: 'Largo'}, {value: 'rizado', label: 'Rizado'}, {value: 'sin', label: 'Sin cabello'}]}/></Field><Field label="Color"><input type="color" aria-label="Color del cabello" value={options.hairColor} onChange={event => update({hairColor: event.target.value})}/></Field></div>
+            <Field label="Otro tono de piel"><input type="color" aria-label="Color personalizado del figurín" value={options.skin} onChange={event => update({skin: event.target.value})}/></Field>
+          </div></details>
+          <details className="figurine-details"><summary>Ajustar la ilustración</summary><div className="stack">
+            <p className="tiny muted">Solo cambia la composición visual.</p>
+            <Button size="sm" onClick={() => update({placement: 'auto'})}>Acomodar automáticamente</Button>
+            <Field label="Tamaño de la prenda" htmlFor={`${prefix}width`}><input id={`${prefix}width`} type="range" min="40" max="380" value={options.garmentWidth} onChange={event => update({placement: 'manual', garmentWidth: Number(event.target.value)})}/></Field>
+            <Field label="Subir o bajar" htmlFor={`${prefix}y`}><input id={`${prefix}y`} type="range" min="80" max="500" value={options.garmentY} onChange={event => update({placement: 'manual', garmentY: Number(event.target.value)})}/></Field>
+            <Field label="Mover a los lados" htmlFor={`${prefix}x`}><input id={`${prefix}x`} type="range" min="-140" max="140" value={options.garmentX} onChange={event => update({placement: 'manual', garmentX: Number(event.target.value)})}/></Field>
+          </div></details>
+        </>}
         {error && <Notice tone="err">{error}</Notice>}
       </div>
     </div>

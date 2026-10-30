@@ -12,16 +12,62 @@ Actualízalo al terminar cada tarea.
 
 ```bash
 npm install
-npm test            # 2260 pruebas: catálogo completo, patrones, extras, letras, PDF y estudio
+npm test            # 2272 pruebas: patrones, extras, materiales, figurines, letras y PDF
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Ilustraciones profesionales, figurines y telas recientes (2026-10-30)
+
+**Este es el relevo más reciente.** Se conserva la identidad y el recorrido de
+Hilvana; esta entrega mejora los dibujos y reduce las herramientas visibles.
+
+- Catálogo con acabado vectorial compartido: paletas por familia, volumen
+  discreto, costuras, pespuntes y herrajes. Cojines proporcionados y fundas para
+  bebida montadas; los dibujos no cambian las piezas del patrón.
+- Figurines originales con anatomía, rostro, manos, pies y cabello nuevos.
+  Cuatro siluetas, ocho tonos iniciales más color libre, proporciones adultas o
+  infantiles y espalda. Los SVG funcionan sin red ni un servicio de IA.
+- En el detalle de prendas: **Prenda / En figurín**. En Acabados: **Ver en
+  modelo**, para revisar los colores y fotos elegidos en las piezas. Hereda
+  materiales del delantero, espalda, mangas, capucha y acabados integrados;
+  distingue peto/falda y exterior/asas. Las composiciones con paneles distintos
+  se revisan en las piezas, sin inventar su montaje sobre un cuerpo.
+- Composición específica de capucha bajada, mangas caídas de haori/cárdigan,
+  cintura y tirantes de jumper, proporciones de bebé. Los monos antiguos de
+  referencia sin una composición coherente conservan la vista plana. El estudio
+  usa también vista plana cuando proyectar una manga/capucha desplazaría un
+  bordado o imagen existente. La geometría y coordenadas físicas no se alteran.
+- Estudio con **Mover, Dibujar, Bordados, Telas y Más**. Se retira Imagen de la
+  barra; Más conserva funciones avanzadas, propiedades, capas, vistas y cortes.
+  Borrar y Deshacer siguen funcionando.
+- **Telas → Tomar foto / Elegir del carrete**. Las nuevas aparecen primero en
+  Mis telas y en Estudio/Acabados, también después de recargar. No se obliga a
+  calibrar al importar. Se espera el guardado antes de anunciar éxito; ante un
+  fallo se ofrece Reintentar. Se conservan fotos y diseños anteriores.
+- Exportación del figurín a SVG autónomo con fotografías incrustadas y trazos
+  incluidos; el archivo no depende de URLs temporales ni del CSS de la app.
+
+**Verificado:** 2,272 pruebas en 41 archivos, TypeScript y build para Pages.
+Chromium 320/390/950/1440 px: cámara/carrete, muestras recientes, recarga,
+barra única de cinco controles, piel/silueta, fotos reales sobre modelo y
+patrones intactos. Regresiones de basurita, foto/calibración y cortes de paneles
+aprobadas; el PDF conserva controles de 50/100 mm. SVG fotográfico autónomo
+comprobado. Se revisaron visualmente hoodie, haori, cárdigan, pantalón, falda,
+jumper y bebé, incluidos cuerpos amplios y vista de espalda.
+
+**Pendiente:** Safari/iPhone físico, permisos reales de cámara/carrete y HEIC,
+VoiceOver; muestras físicas de los patrones. El figurín es ilustrativo 2D y
+no verifica ajuste, caída ni ubicación de extras: estos se trabajan en las piezas.
+
+Detalle para continuar:
+[docs/ILUSTRACIONES_Y_TELAS.md](docs/ILUSTRACIONES_Y_TELAS.md).
+
 ## Hilvana 0.2 · interfaz simple y biblioteca diez veces mayor (2026-10-30)
 
-**Este es el relevo más reciente.** Se conserva el historial de entregas debajo.
+Se conserva el historial de esta entrega y de las anteriores debajo.
 
 - La app abre en un **buscador de prendas y accesorios**. Navegación principal:
   Elegir una base, Proyectos y Más. La biblioteca muestra 24 tarjetas por página,

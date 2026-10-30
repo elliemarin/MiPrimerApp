@@ -1,0 +1,5 @@
+.model-illustration { display: block; width: 100%; height: 100%; }
+.simple-model-art.is-figurine { aspect-ratio: 400/680; max-height: 600px; padding: 0; overflow: hidden; }
+.model-presentation-switch { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.model-illustration-note { max-width: 52ch; margin-top: 10px; }
+@media(max-width:700px) { .simple-model-art.is-figurine { aspect-ratio: auto; height: 420px; max-height: 55vh; } }

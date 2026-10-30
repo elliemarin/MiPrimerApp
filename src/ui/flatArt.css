@@ -1,0 +1,14 @@
+/* Garment illustrations share the atelier's ink, seams and material light.
+   Separate classes keep these presentation strokes out of the pattern editor. */
+.flat-editorial { display: block; overflow: visible; }
+.flat-outline { stroke: #37473f; stroke-width: 1.05; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.flat-detail { stroke: #3f5148; stroke-opacity: .76; stroke-width: .8; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.flat-pespunte { stroke-width: .58; stroke-dasharray: 2.1 1.9; stroke-opacity: .8; }
+.flat-pliegue { stroke-width: .65; stroke-opacity: .45; }
+.flat-doblez { stroke-width: .65; stroke-opacity: .6; }
+.flat-hardware > circle:first-child { stroke: #6e6955; stroke-width: .6; vector-effect: non-scaling-stroke; }
+@media (max-width: 700px) {
+  .simple-pattern-art .flat-outline { stroke-width: .85; }
+  .simple-pattern-art .flat-detail { stroke-width: .6; }
+  .simple-pattern-art .flat-pespunte { stroke-width: .5; stroke-dasharray: 1.5 1.5; }
+}
