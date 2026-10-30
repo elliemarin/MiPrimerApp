@@ -62,6 +62,8 @@ export interface CutInfo {
 }
 
 export interface Piece {
+  /** Panel procedente de una pieza real, conservando trazabilidad. */
+  panelSource?: { pieceId: string; cutIds: string[] };
   id: string;
   name: string;
   nodes: PNode[];

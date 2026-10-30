@@ -1,6 +1,11 @@
 // Dibujos técnicos paramétricos (planos) en milímetros, talla de referencia adulta.
 // Cada vista define zonas editables (para máscaras y relaciones), detalles de
 // construcción, una línea de referencia compartida y la posición de los costados.
+import { presetLines } from './panelPresets';
+import { parseSvgPath } from '../lib/draw/svgpath';
+import { cmdsToPolylines } from '../lib/draw/flatten';
+import { bboxOf } from '../lib/geom/vec';
+import { intersectPolygons } from '../lib/geom/polyoffset';
 import type { Zone, ZoneType } from '../features/studio/model';
 
 export type FlatViewKey = 'frente' | 'espalda' | 'costado-der' | 'costado-izq';
@@ -205,6 +210,8 @@ export type TopType = 'camiseta' | 'camisa' | 'blusa' | 'sudadera' | 'hoodie' | 
 export type JacketStyle = 'bomber' | 'denim' | 'trench' | 'acolchada' | 'biker' | 'safari' | 'varsity' | 'anoraq' | 'haori' | 'cardigan' | 'poncho' | 'capa' | 'bolero' | 'shacket' | 'parka' | 'bluson';
 export interface TopOpts {
   style?: JacketStyle;
+  /** Líneas de composición: el patrón real se corta con el preset del modelo. */
+  panelPreset?: string;
   type: TopType;
   sleeve: 'sin' | 'corta' | 'tres-cuartos' | 'larga';
   neck: 'redondo' | 'v' | 'camisa' | 'capucha' | 'solapa' | 'alto' | 'cuadrado';
@@ -569,6 +576,31 @@ function relaxedView(key: FlatViewKey,o:TopOpts):FlatView {
     details.push({d:line([sign*(W+ext-22),20],[sign*(W+ext-22),arm-20]),style:'pespunte'});
   }
   if(!back&&o.style!=='bluson') for(const sign of [-1,1]) zones.push(zone(`bies-${sign}`,'Remate de abertura','otra',poly([[sign*neck,0],[sign*(neck+12),0],[sign*26,125],[sign*26,L],[sign*14,L],[sign*14,120]])));
+  if(o.panelPreset) for(const z of [...zones]) {
+    const role=z.type==='manga'?'manga':z.type==='espalda'?'espalda':z.type==='delantero'?'delantero':undefined;
+    if(!role) continue;
+    const contours=cmdsToPolylines(parseSvgPath(z.d),.25).filter(p=>p.closed).map(p=>p.pts);
+    // The sleeve is laid horizontally in both the real pattern and this drawing.
+    // Mirror the ratios for the left-hand fronts/sleeves to retain paired layout.
+    const mirrored=z.id.endsWith('--1');
+    const localContours=mirrored?contours.map(p=>p.map(v=>({x:-v.x,y:v.y}))):contours;
+    const localBox=bboxOf(localContours.flat());
+    const paths=presetLines(o.panelPreset,role,localBox);
+    for(const path of paths) for(let i=1;i<path.length;i++) {
+      const a=path[i-1], c=path[i], dx=c.x-a.x,dy=c.y-a.y,l=Math.hypot(dx,dy),eps=.4;
+      if(l<.001)continue;
+      const nx=-dy/l*eps,ny=dx/l*eps;
+      const thin=[{x:a.x+nx,y:a.y+ny},{x:c.x+nx,y:c.y+ny},{x:c.x-nx,y:c.y-ny},{x:a.x-nx,y:a.y-ny}];
+      const visible=intersectPolygons(localContours,[thin]);
+      for(const polygon of visible) {
+        if(polygon.length<3)continue;
+        const ts=polygon.map(p=>((p.x-a.x)*dx+(p.y-a.y)*dy)/(l*l));
+        const start=Math.min(...ts),end=Math.max(...ts);
+        const aa:P=[a.x+start*dx,a.y+start*dy],bb:P=[a.x+end*dx,a.y+end*dy];
+        details.push({d:line(mirrored?mx(aa):aa,mirrored?mx(bb):bb),style:'costura'});
+      }
+    }
+  }
   details.push({d:line([-W+10,L-25],[W-10,L-25]),style:'pespunte'});
   return finishView(key,zones,details,[],0,'Hombro',{left:-W,right:W,center:0});
 }

@@ -1,3 +1,4 @@
+import type { StudioPanelCut } from './panelWorkflow';
 import type { FigurineOptions } from '../../lib/draw/figurine';
 import type { Pt, Mat } from '../../lib/geom/vec';
 import { matMul, matRotate, matScale, matTranslate, matApply } from '../../lib/geom/vec';
@@ -192,6 +193,8 @@ export interface Guide {
 }
 
 export interface DesignDoc {
+  /** Cortes de construcción sobre piezas reales del patrón, en milímetros. */
+  panelCuts?: StudioPanelCut[];
   /** Preferencias del figurín de presentación, sin alterar el patrón. */
   figurine?: FigurineOptions;
   id: string;

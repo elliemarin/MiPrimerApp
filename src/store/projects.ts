@@ -1,3 +1,6 @@
+import { presetCuts } from '../data/panelPresets';
+import { preparePanelViews } from '../features/studio/panelWorkflow';
+import { buildPattern } from '../lib/pattern/engine';
 import { uid, nowIso, stableHash } from '../lib/ids';
 import type { CatalogModel } from '../data/catalog';
 import { getFlat } from '../ui/FlatArt';
@@ -132,7 +135,20 @@ export function projectFromModel(model: CatalogModel, profile?: Profile): Projec
   const scale = templateScaleFor(model, profile?.kind, profile ? currentValues(profile) : undefined);
   p.design = newDesign(viewsFromModel(model, scale));
   p.status = p.pattern ? 'patronaje' : 'diseno';
-  return p;
+  return prepareModelPanels(p,model);
+}
+
+/** Resolve collage presets only from the final physical base pattern. */
+export function prepareModelPanels(project: Project, model: CatalogModel): Project {
+  if(!model.panelPreset || !project.pattern) return project;
+  const base=buildPattern({...project.pattern,panelCuts:undefined,panelMaterials:undefined});
+  if(base.missing.length || base.issues.some(i=>i.level==='error')) return project;
+  const pattern={...project.pattern,panelCuts:presetCuts(model.panelPreset,base.pieces),panelMaterials:undefined};
+  const design=project.design??newDesign([]);
+  const prepared=preparePanelViews({...project,pattern},{...design,panelCuts:undefined});
+  const palette=['#c8d7ca','#d9c3a4','#79999a','#b78b74'];
+  const physical=prepared.doc.views.filter(v=>v.source.type==='pieza').map(view=>({...view,zoneFills:Object.fromEntries(view.zones.map((zone,index)=>[zone.id,view.zoneFills?.[zone.id]??{type:'color' as const,color:palette[index%palette.length]}]))}));
+  return {...project,pattern,design:{...prepared.doc,views:[...physical,...prepared.doc.views.filter(v=>v.source.type!=='pieza')]}};
 }
 
 export function makeVersion<T>(prev: VersionRecord<T>[], data: T, label: string): VersionRecord<T> {

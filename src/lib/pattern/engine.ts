@@ -8,6 +8,7 @@ import { getGenerator } from './generators';
 import { FabricType, Fit, GeneratorResult, Params, PatternGenerator, missingMeasures } from './generator';
 import type { Issue, NodeOverride, Piece, PieceLayout, PieceOverrides } from './types';
 import { formatLength } from '../units';
+import { panelizePattern, type PanelCut } from './panels';
 
 export interface PatternContextState {
   kind: PersonKind;
@@ -17,6 +18,9 @@ export interface PatternContextState {
 }
 
 export interface PatternState {
+  /** Cuts from the studio in the original piece coordinate system (mm). */
+  panelCuts?: PanelCut[];
+  panelMaterials?: Record<string, { fabricId?: string; name: string; color?: string }>;
   generatorId: string;
   params: Params;
   context: PatternContextState;
@@ -64,6 +68,7 @@ export interface ReviewItem {
 }
 
 export interface BuiltPattern {
+  panelMapping?: Record<string, string[]>;
   generator?: PatternGenerator;
   result: GeneratorResult | null;
   generated: Piece[];
@@ -144,7 +149,36 @@ export function buildPattern(state: PatternState): BuiltPattern {
       empty.pieces = [...pieces, ...custom];
     }
   }
-  const visible = empty.pieces.filter((p) => !state.hidden.includes(p.id));
+  let panelIssues: Issue[] = [];
+  let panelSeams: import('./types').SeamRelation[] = [];
+  if (state.panelCuts?.length && !empty.missing.length) {
+    const divided = panelizePattern(empty.pieces, empty.result?.seams ?? [], state.panelCuts);
+    panelIssues = divided.issues;
+    panelSeams = divided.seams;
+    empty.panelMapping = divided.mapping;
+    empty.generated = [...empty.generated, ...divided.pieces.filter(piece => piece.panelSource)];
+    empty.pieces = divided.pieces.map(piece => {
+      if (!piece.panelSource) return piece;
+      const applied = applyOverrides(piece, state.overrides[piece.id], state.allowances[piece.id]);
+      empty.review.push(...applied.review);
+      return applied.piece;
+    });
+    if (empty.result && !panelIssues.some(issue => issue.level === 'error')) {
+      const replaceIds = (ids: string[]) => [...new Set(ids.flatMap(id => divided.mapping[id] ?? [id]))];
+      const joins = divided.seams.filter(seam => seam.id.startsWith('panel-union-')).reverse();
+      empty.result = { ...empty.result, pieces: empty.pieces, seams: divided.seams,
+        assumptions: [...empty.result.assumptions, 'Los paneles del estudio se unen antes de montar la prenda. No cambian la holgura ni la talla de la pieza base.'],
+        steps: [
+          ...joins.map(seam => ({ id: seam.id, title: seam.label, detail: 'Relaciona los piquetes y cose derecho con derecho por la línea de unión. Plancha los márgenes antes de continuar el montaje.', pieces: [...new Set([...seam.a,...seam.b].map(side => side.pieceId))], seams: [seam.id] })),
+          ...empty.result.steps.map(step => ({ ...step, pieces: replaceIds(step.pieces) }))
+        ] };
+    }
+    empty.pieces = empty.pieces.map(piece => {
+      const material = state.panelMaterials?.[piece.id];
+      return piece.panelSource && material?.name ? { ...piece, name: `${piece.name} · ${material.name.slice(0,50)}` } : piece;
+    });
+  }
+  const visible = empty.pieces.filter((p) => !state.hidden.includes(p.id) && !state.hidden.includes(p.panelSource?.pieceId ?? p.id));
   for (const p of empty.pieces) {
     try {
       empty.cuts.set(p.id, cutOutline(p));
@@ -154,10 +188,12 @@ export function buildPattern(state: PatternState): BuiltPattern {
   }
   if (empty.result) {
     const issues = validatePattern({ ...empty.result, pieces: visible }, empty.cuts);
-    empty.issues = [...empty.result.notices, ...issues];
+    empty.issues = [...empty.result.notices, ...panelIssues, ...issues];
     empty.seamResults = evaluateSeams(empty.pieces, empty.result.seams);
   } else {
-    for (const p of custom) empty.issues.push(...validatePiece(p, empty.cuts.get(p.id)));
+    empty.issues.push(...panelIssues);
+    for (const p of empty.pieces) empty.issues.push(...validatePiece(p, empty.cuts.get(p.id)));
+    if (state.panelCuts?.length) empty.seamResults = evaluateSeams(empty.pieces, panelSeams);
   }
   for (const r of empty.review) {
     empty.issues.push({ level: 'aviso', code: 'revisar-ajuste', message: `${r.label} en ${r.pieceId}: el patrón se regeneró y el ajuste manual necesita revisión.`, pieceId: r.pieceId });

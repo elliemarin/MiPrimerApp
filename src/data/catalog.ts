@@ -73,6 +73,8 @@ export interface CatalogModel {
   params?: Params;
   /** Flujo del estudio en lugar de un generador de patrón. */
   studioOnly?: boolean;
+  /** Distribución de cortes sobre las piezas reales, aplicada al crear el proyecto. */
+  panelPreset?: string;
   flat: FlatSpec;
   description: string;
   variants: { name: string; text: string }[];

@@ -23,10 +23,13 @@ import { surfaceAt, fillSurface, Surface } from './surfaces';
 import { FabricTray, FabricChoice, resolveFabricChoice } from './FabricTray';
 import { ColorimetrySheet } from './ColorimetrySheet';
 import { FigurineSheet } from './FigurineSheet';
+import { PanelPatternsSheet } from './PanelPatternsSheet';
+import { panelPieceForView, panelPatternFromDesign, syncPanelZones, applyPanelPattern } from './panelWorkflow';
+import { pieceGeometryHash } from '../../lib/pattern/panels';
 import { CATALOG } from '../../data/catalog';
 import { viewsFromModel, templateScaleFor, currentValues } from '../../store/projects';
 
-type Tool = 'tela' | 'seleccionar' | 'forma' | 'organica' | 'lapiz' | 'pincel' | 'linea' | 'pluma' | 'texto' | 'recorte' | 'zona' | 'medir' | 'calibrar' | 'referencia' | 'guia';
+type Tool = 'corte-panel' | 'tela' | 'seleccionar' | 'forma' | 'organica' | 'lapiz' | 'pincel' | 'linea' | 'pluma' | 'texto' | 'recorte' | 'zona' | 'medir' | 'calibrar' | 'referencia' | 'guia';
 type Panel = 'elemento' | 'capas' | 'vistas';
 
 const TOOLS: { key: Tool; label: string; icon: string; hint: string }[] = [
@@ -38,6 +41,7 @@ const TOOLS: { key: Tool; label: string; icon: string; hint: string }[] = [
   { key: 'linea', label: 'Línea', icon: 'line', hint: 'Arrastra para trazar una línea recta (cintas, pespuntes).' },
   { key: 'pluma', label: 'Pluma', icon: 'pen', hint: 'Toca para agregar puntos de un polígono o curva; ciérralo al terminar.' },
   { key: 'texto', label: 'Texto', icon: 'text', hint: 'Toca donde quieras el texto.' },
+  { key: 'corte-panel', label: 'Cortar paneles', icon: 'scissors', hint: 'Sobre una pieza real: arrastra de un borde a otro para dividirla. El margen se agrega al generar el patrón.' },
   { key: 'recorte', label: 'Recortar', icon: 'crop', hint: 'Con un elemento elegido, marca los puntos del recorte.' },
   { key: 'zona', label: 'Zona', icon: 'mask', hint: 'Marca el contorno de una zona de la prenda (delantero, manga…).' },
   { key: 'medir', label: 'Medir', icon: 'ruler', hint: 'Arrastra entre dos puntos para medir.' },
@@ -52,6 +56,7 @@ type Drag =
   | { kind: 'rotate'; start: Pt; d0: DesignDoc; ids: string[]; center: Pt }
   | { kind: 'draw'; pts: Pt[] }
   | { kind: 'shape'; start: Pt; cur: Pt }
+  | { kind: 'panel-cut'; start: Pt; cur: Pt }
   | { kind: 'measure'; start: Pt; cur: Pt };
 
 export function StudioEditor({ projectId }: { projectId: string }) {
@@ -72,6 +77,9 @@ export function StudioEditor({ projectId }: { projectId: string }) {
   const [panel, setPanel] = useState<Panel>('elemento');
   const [mobilePanel, setMobilePanel] = useState<Panel | null>(null);
   const [shapeKind, setShapeKind] = useState<'rect' | 'ellipse' | 'polygon' | 'star'>('ellipse');
+  const [panelSheet, setPanelSheet] = useState(false);
+  const [panelAllowance,setPanelAllowance] = useState<number|undefined>(10);
+  const [panelMode,setPanelMode] = useState<'recta'|'quebrada'>('recta');
   const [showFabrics, setShowFabrics] = useState(false);
   const [activeFabric, setActiveFabric] = useState<string | null>(null);
   const [showColors, setShowColors] = useState(false);
@@ -231,6 +239,19 @@ export function StudioEditor({ projectId }: { projectId: string }) {
       }
     } catch(e) { useApp.getState().toast(e instanceof Error ? e.message : 'No se pudo cargar la tela.', 'error'); }
   };
+  function addPanelCut(points: Pt[]) {
+    if (!doc || !view || !project) return;
+    const piece=panelPieceForView(project,view);
+    if (!piece) {setPanelSheet(true);setReadout('Prepara las piezas reales del patrón para dividirlas.');return;}
+    if (!panelAllowance || panelAllowance<1 || panelAllowance>30) {setReadout('El margen de unión debe medir entre 1 y 30 mm.');return;}
+    if(points.length<2 || dist(points[0],points[points.length-1])*vp.view.scale<4) {setReadout('Traza el corte desde un borde hasta otro.');return;}
+    const cut={id:uid('corte'),viewId:view.id,pieceId:piece.id,points,allowance:panelAllowance,baseHash:pieceGeometryHash(piece)};
+    const next={...doc,panelCuts:[...(doc.panelCuts??[]),cut]};
+    const result=panelPatternFromDesign(project,next);
+    if (result.errors.length) {setReadout(result.errors[0]);return;}
+    const synced=syncPanelZones(project,next,view.id);
+    commit(synced);setPen([]);setReadout('Paneles separados. Aplica una tela a cada parte o genera el patrón.');
+  }
   const handlers = {
     onPinchStart: (p: BoardPinch): boolean => {
       if (tool !== 'seleccionar' || !single || single.locked || !p.points.some(point => {
@@ -257,6 +278,11 @@ export function StudioEditor({ projectId }: { projectId: string }) {
     onDown: (bp: BoardPointer): boolean => {
       const w = bp.world;
       const shift = (bp.event as PointerEvent).shiftKey || multi;
+      if(tool==='corte-panel') {
+        if(!panelPieceForView(project,view)){setPanelSheet(true);return true;}
+        if(panelMode==='quebrada'){setPen([...pen,w]);return true;}
+        drag.current={kind:'panel-cut',start:w,cur:w};setLive(drag.current);return true;
+      }
       if (tool === 'tela') {
         if (activeFabric) applyFabricAt(activeFabric,w);
         else { setShowFabrics(true); setReadout('Elige una tela de la biblioteca.'); }
@@ -440,6 +466,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
         d.cur = w;
         setLive({ ...d });
         setReadout(`${formatLength(Math.abs(w.x - d.start.x), unit)} × ${formatLength(Math.abs(w.y - d.start.y), unit)}`);
+      } else if(d.kind==='panel-cut'){d.cur=w;setLive({...d});
       } else if (d.kind === 'measure') {
         d.cur = w;
         setReadout(`Distancia: ${formatLength(dist(d.start, w), unit, { decimals: unit === 'cm' ? 2 : 3 })}`);
@@ -451,6 +478,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
       drag.current = null;
       setLive(null);
       if (!d) return;
+      if(d.kind==='panel-cut'){addPanelCut([d.start,d.cur]);return;}
       if ((d.kind === 'move' || d.kind === 'scale' || d.kind === 'rotate') && hist.state && hist.state !== d.d0) hist.commit(hist.state, d.d0);
       if (d.kind === 'draw') {
         if (d.pts.length < 2) return;
@@ -485,7 +513,8 @@ export function StudioEditor({ projectId }: { projectId: string }) {
       }
       setTimeout(() => setReadout(null), 1500);
     },
-    onDoubleTap: () => {
+    onDoubleTap: tool==='corte-panel' ? undefined : () => {
+
       if ((tool === 'pluma' || tool === 'recorte' || tool === 'zona') && pen.length >= 3) finishPen(true);
     },
     onHover: (bp: BoardPointer) => { setCursor(bp.world); setPaintTarget(tool==='tela' ? surfaceAt(doc,view,bp.world) : undefined); }
@@ -550,7 +579,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
     return <ViewsPanel key={view.id} focusZoneId={painted?.viewId===view.id && painted.kind==='zona'?painted.id:undefined} doc={doc} view={view} commit={commit} setViewId={setViewId} onAdd={() => setAddView(true)} setTool={(t) => setTool(t as Tool)} />;
   };
   const toolInfo = tool==='tela' ? {hint:'Arrastra una muestra sobre la prenda o toca una zona para aplicar la tela elegida.'} : TOOLS.find((t) => t.key === tool)!;
-  const visibleTools = TOOLS.filter((t) => (t.key === 'calibrar' ? view.source.type === 'foto' : true));
+  const visibleTools = TOOLS.filter((t) => t.key!=='corte-panel'&&(t.key === 'calibrar' ? view.source.type === 'foto' : true));
 
   return (
     <div className="editor">
@@ -566,6 +595,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
         <span className="desktop-only">
           <Segmented value={mode} onChange={setMode} options={[{ value: 'apariencia', label: 'Apariencia' }, { value: 'tecnica', label: 'Técnica' }]} />
         </span>
+        <IconButton icon="patronaje" label="Generar patrones del diseño" onClick={()=>setPanelSheet(true)} />
         <IconButton icon="undo" label="Deshacer" onClick={hist.undo} disabled={!hist.canUndo} />
         <IconButton icon="redo" label="Rehacer" onClick={hist.redo} disabled={!hist.canRedo} />
       </div>
@@ -574,8 +604,10 @@ export function StudioEditor({ projectId }: { projectId: string }) {
           <button className="tool" aria-pressed={showFabrics} onClick={()=>{setShowFabrics(!showFabrics);setTool('tela');}}><Icon name="telas" />Telas</button>
           <button className="tool" onClick={()=>setShowColors(true)}><Icon name="palette" />Tonos</button>
           <button className="tool" onClick={()=>setShowFigurine(true)}><Icon name="hanger" />Figurín</button>
+          <button className="tool" onClick={()=>setPanelSheet(true)}><Icon name="patronaje" />Generar patrones</button>
+        <button className="tool" aria-pressed={tool==='corte-panel'} onClick={()=>{setPen([]);if(!panelPieceForView(project,view)){setPanelSheet(true);}else setTool('corte-panel');}}><Icon name="scissors" />Cortar paneles</button>
           {visibleTools.map((t) => (
-            <button key={t.key} className="tool" aria-pressed={tool === t.key} onClick={() => (t.key === 'organica' ? (setTool('organica'), setShowShapes(true)) : setTool(t.key))} title={t.hint}>
+            <button key={t.key} className="tool" aria-pressed={tool === t.key} onClick={() => {setPen([]);if(t.key==='corte-panel'&&!panelPieceForView(project,view)){setPanelSheet(true);return;}if(t.key==='organica'){setTool('organica');setShowShapes(true);}else setTool(t.key);}} title={t.hint}>
               <Icon name={t.icon} />
               {t.label}
             </button>
@@ -610,6 +642,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
             <Board vp={vp} handlers={handlers} unit={unit} grid={mode === 'tecnica'} cursor={tool === 'seleccionar' ? 'default' : 'crosshair'}>
               <StudioDefs doc={doc} view={view} fabrics={fabrics} prefix={prefix} />
               <ViewBase view={view} mode={mode} prefix={prefix} fabrics={fabrics} />
+              {(doc.panelCuts??[]).filter(c=>c.viewId===view.id).map((cut,i)=><g key={cut.id} pointerEvents="none"><polyline points={cut.points.map(p=>`${p.x},${p.y}`).join(' ')} fill="none" stroke="var(--thread)" strokeWidth={1.6} strokeDasharray="5 3" vectorEffect="non-scaling-stroke"/><text x={(cut.points[0].x+cut.points[cut.points.length-1].x)/2} y={(cut.points[0].y+cut.points[cut.points.length-1].y)/2-5/vp.view.scale} fontSize={12/vp.view.scale} fill="var(--thread)">C{i+1}</text></g>)}
               {tool==='tela' && paintTarget?.kind==='zona' && <path d={view.zones.find(z=>z.id===paintTarget.id)?.d} fill="none" stroke="var(--tape)" strokeWidth={4} vectorEffect="non-scaling-stroke" />}
               {els.map((e) => (
                 <ElementSvg key={e.id} el={e} mode={mode} prefix={prefix} doc={doc} fabrics={fabrics} />
@@ -657,10 +690,18 @@ export function StudioEditor({ projectId }: { projectId: string }) {
               )}
               {live?.kind === 'draw' && <polyline points={live.pts.map((p) => `${p.x},${p.y}`).join(' ')} fill="none" stroke={tool === 'pincel' ? '#c0582d' : '#1d2420'} strokeWidth={tool === 'pincel' ? 5 : 1} strokeLinecap="round" strokeLinejoin="round" opacity={0.8} />}
               {live?.kind === 'shape' && (shapeKind === 'ellipse' ? <ellipse cx={(live.start.x + live.cur.x) / 2} cy={(live.start.y + live.cur.y) / 2} rx={Math.abs(live.cur.x - live.start.x) / 2} ry={Math.abs(live.cur.y - live.start.y) / 2} fill="rgba(36,88,74,0.12)" stroke="var(--mat)" vectorEffect="non-scaling-stroke" /> : <rect x={Math.min(live.start.x, live.cur.x)} y={Math.min(live.start.y, live.cur.y)} width={Math.abs(live.cur.x - live.start.x)} height={Math.abs(live.cur.y - live.start.y)} fill="rgba(36,88,74,0.12)" stroke="var(--mat)" vectorEffect="non-scaling-stroke" />)}
+              {live?.kind==='panel-cut'&&<line x1={live.start.x} y1={live.start.y} x2={live.cur.x} y2={live.cur.y} stroke="var(--thread)" strokeWidth={2} vectorEffect="non-scaling-stroke" />}
               {live?.kind === 'measure' && <line x1={live.start.x} y1={live.start.y} x2={live.cur.x} y2={live.cur.y} stroke="var(--tape)" strokeWidth={3} vectorEffect="non-scaling-stroke" />}
               {calibPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={hs * 0.7} fill="var(--tape)" stroke="var(--ink)" vectorEffect="non-scaling-stroke" />)}
             </Board>
-            {painted?.viewId===view.id && <div className="float-bar" style={{left:28,top:26}}><Button size="sm" icon="telas" onClick={()=>setMobilePanel(painted.kind==='zona'?'vistas':'elemento')}>Ajustar tela de {painted.label}</Button></div>}
+            {tool==='corte-panel'&&<div className="float-bar" style={{left:26,top:26,padding:6,gap:6,maxWidth:'calc(100% - 40px)',flexWrap:'wrap'}}>
+              <Segmented value={panelMode} onChange={v=>{setPanelMode(v);setPen([]);}} options={[{value:'recta',label:'Recta'},{value:'quebrada',label:'Por puntos'}]} />
+              <div style={{width:100}}><Field label="Margen nuevo corte"><LengthInput mm={panelAllowance} min={1} max={30} onChange={setPanelAllowance} /></Field></div>
+              {panelMode==='quebrada'&&<Button size="sm" disabled={pen.length<2} onClick={()=>addPanelCut(pen)}>Guardar corte</Button>}
+              {pen.length>0&&<Button size="sm" variant="ghost" onClick={()=>setPen([])}>Cancelar trazo</Button>}
+              <Button size="sm" onClick={()=>setPanelSheet(true)}>Ver paneles y generar</Button>
+            </div>}
+            {tool!=='corte-panel'&&painted?.viewId===view.id && <div className="float-bar" style={{left:28,top:26}}><Button size="sm" icon="telas" onClick={()=>setMobilePanel(painted.kind==='zona'?'vistas':'elemento')}>Ajustar tela de {painted.label}</Button></div>}
             {readout && <div className="readout">{readout}</div>}
             {(tool === 'pluma' || tool === 'recorte' || tool === 'zona') && (
               <div className="float-bar" style={{ left: '50%', transform: 'translateX(-50%)', top: 10, gap: 6, padding: '4px 8px', alignItems: 'center' }}>
@@ -720,6 +761,8 @@ export function StudioEditor({ projectId }: { projectId: string }) {
         <button className="tool" aria-pressed={showFabrics} onClick={()=>{setShowFabrics(!showFabrics);setTool('tela');}}><Icon name="telas" />Telas</button>
         <button className="tool" onClick={()=>setShowColors(true)}><Icon name="palette" />Tonos</button>
         <button className="tool" onClick={()=>setShowFigurine(true)}><Icon name="hanger" />Figurín</button>
+        <button className="tool" onClick={()=>setPanelSheet(true)}><Icon name="patronaje" />Generar patrones</button>
+        <button className="tool" aria-pressed={tool==='corte-panel'} onClick={()=>{setPen([]);if(!panelPieceForView(project,view)){setPanelSheet(true);}else setTool('corte-panel');}}><Icon name="scissors" />Cortar paneles</button>
         <button className="tool" onClick={() => setMobilePanel('elemento')} aria-pressed={false}>
           <Icon name="palette" />
           Propiedades
@@ -734,7 +777,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
         </button>
         <span style={{ width: 1, background: 'var(--line)', margin: '8px 4px', flex: 'none' }} />
         {visibleTools.map((t) => (
-          <button key={t.key} className="tool" aria-pressed={tool === t.key} onClick={() => (t.key === 'organica' ? (setTool('organica'), setShowShapes(true)) : setTool(t.key))}>
+          <button key={t.key} className="tool" aria-pressed={tool === t.key} onClick={() => {setPen([]);if(t.key==='corte-panel'&&!panelPieceForView(project,view)){setPanelSheet(true);return;}if(t.key==='organica'){setTool('organica');setShowShapes(true);}else setTool(t.key);}}>
             <Icon name={t.icon} />
             {t.label}
           </button>
@@ -753,6 +796,7 @@ export function StudioEditor({ projectId }: { projectId: string }) {
           {panelBody(mobilePanel)}
         </Sheet>
       )}
+      {panelSheet&&<PanelPatternsSheet project={project} doc={doc} onClose={()=>setPanelSheet(false)} onPrepared={(next,id)=>{commit(next);setViewId(id);setTool('corte-panel');setPen([]);}} onGenerated={pattern=>{updateProject(projectId,p=>applyPanelPattern({...p,design:doc},pattern));setPanelSheet(false);navigate(`/patronaje/${projectId}`);}} />}
       {showColors && <ColorimetrySheet onClose={()=>setShowColors(false)} applyLabel={sel.length ? "Aplicar a la selección" : "Aplicar a toda la vista"} colors={[...Object.values(fabrics).map(f=>f.color),...doc.elements.filter(e=>e.viewId===view.id).flatMap(e=>e.fill.type==='color'?[e.fill.color]:[]),...Object.values(view.zoneFills??{}).flatMap(f=>f.type==='color'?[f.color]:[])]} onApply={color=>{
         if(sel.length) commit(updateElements(doc,expandSelection(doc,sel).filter(id=>!doc.elements.find(e=>e.id===id)?.locked),e=>({...e,fill:{type:'color',color}})));
         else commit({...doc,views:doc.views.map(v=>v.id===view.id?{...v,zoneFills:Object.fromEntries(v.zones.map(z=>[z.id,{type:'color',color}]))}:v)});

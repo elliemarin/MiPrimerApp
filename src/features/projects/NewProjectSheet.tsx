@@ -5,7 +5,7 @@ import { Button, Field, FilePick, Notice, Segmented, Sheet, TextInput, Select } 
 import { Icon } from '../../ui/Icon';
 import { navigate } from '../../ui/router';
 import { ProfileChoice, ProfilePicker, resolveProfile, defaultProfileChoice } from './ProfilePicker';
-import { blankProject, projectFromModel, currentValues, templateScaleFor, viewsFromModel } from '../../store/projects';
+import { blankProject, projectFromModel, patternFor, prepareModelPanels, currentValues, templateScaleFor, viewsFromModel } from '../../store/projects';
 import { GENERATORS, getGenerator } from '../../lib/pattern/generators';
 import { newPatternState } from '../../lib/pattern/engine';
 import { FIT_LABEL, Fit, FabricType } from '../../lib/pattern/generator';
@@ -84,15 +84,16 @@ function FromModel({ model, onClose, initialRecipient, initialBabySize }: { mode
   const [fit, setFit] = useState<Fit>(model.fits.includes('regular') ? 'regular' : model.fits[0]);
   const create = () => {
     const profile = resolveProfile(choice, put, profiles);
-    const p = projectFromModel(model, profile);
+    let p = projectFromModel(model, profile);
     p.name = name.trim() || model.name;
     p.fabricType = fabric;
     p.stretch = fabric === 'punto' ? stretch : 0;
     p.fit = fit;
-    if (p.pattern) p.pattern = { ...p.pattern, context: { ...p.pattern.context, fabric, stretch: p.stretch, fit } };
+    if (p.pattern) p.pattern = patternFor(model,profile,fabric,p.stretch,fit);
+    p=prepareModelPanels(p,model);
     put('project', p);
     onClose();
-    navigate(p.pattern ? `/patronaje/${p.id}` : `/estudio/${p.id}`);
+    navigate(p.pattern && !model.panelPreset ? `/patronaje/${p.id}` : `/estudio/${p.id}`);
   };
   return (
     <div className="stack">

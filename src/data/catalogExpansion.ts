@@ -129,4 +129,15 @@ const squareTops:CatalogModel[]=[
 ].map(([id,name,len,fit,sleeve,sl])=>model(String(id),String(name),'superiores','Hombro caído · patrón editable',top('bluson',Number(len),{sleeve:sleeve as TopOpts['sleeve'],fit:Number(fit),neck:'cuadrado'}),{
  status:'experimental',generatorId:'top-hombro-caido',params:{largo:Number(len),holgura:Number(fit)>1.2?300:220,largoManga:Number(sl),manga:sleeve==='sin'?'no':'si'},fits:['holgado','oversize'],description:'Top cerrado de construcción recta, hombro caído y escote cuadrado amplio. Genera las piezas con medidas corporales y holgura; no incorpora rib ni cuello de suéter. Prueba el paso de la cabeza y una muestra antes de cortar.',materials:['Bies para escote','Hilo'],recommendedFabrics:['Lino','Algodón','Punto estable'],fabrics:['plano','punto']
 }));
-export const EXPANDED_CATALOG:CatalogModel[]=[...jacketInspiration,...relaxed,...ponchos,...jumpers,...monos,...looseTops,...squareTops,...accessoryPatterns,...extraIdeas];
+const panelJackets:CatalogModel[]=[
+ ['chaqueta-collage-bandas','Chaqueta collage de bandas','bandas-horizontales',740],
+ ['chaqueta-patchwork-franjas','Chaqueta patchwork de franjas','franjas-verticales',740],
+ ['chaqueta-patchwork-cuadros','Chaqueta patchwork de nueve paneles','cuadros-nueve',780],
+ ['chaqueta-canesu-diagonal','Chaqueta de canesú diagonal','canesu-diagonal',700],
+ ['chaqueta-collage-irregular','Chaqueta de collage geométrico','collage-asimetrico',760]
+].map(([id,name,preset,length])=>model(String(id),String(name),'abrigo','Collage y patchwork · paneles',top('haori',Number(length),{fit:1.2,panelPreset:String(preset)}),{
+ status:'experimental',generatorId:'chaqueta-hombro-caido',panelPreset:String(preset),params:{largo:Number(length),holgura:300,largoManga:390},fits:['holgado','oversize'],difficulty:2,
+ description:'Chaqueta abierta de hombro caído con cortes reales de paneles para combinar telas. El proyecto prepara las piezas y sus uniones con margen; puedes cambiar los cortes en el estudio. Delanteros y mangas se cortan en pares simétricos. Requiere muestra impresa y cosida.',
+ techniques:['costura-recta','collage','dobladillo'],recommendedFabrics:['Retazos de algodón de peso similar','Lino','Denim ligero'],materials:['Hilo','Bies para escote y abertura'],variants:[{name:'Cambiar la composición',text:'Edita los cortes de las piezas reales en el estudio y vuelve a generar los paneles.'},{name:'Elegir telas por panel',text:'Aplica un color o una muestra a cada panel; conserva el hilo y comprueba las uniones.'}]
+}));
+export const EXPANDED_CATALOG:CatalogModel[]=[...jacketInspiration,...relaxed,...ponchos,...jumpers,...monos,...looseTops,...squareTops,...accessoryPatterns,...extraIdeas,...panelJackets];

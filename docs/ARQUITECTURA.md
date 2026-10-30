@@ -177,3 +177,38 @@ en `FUENTES_Y_MAQUINA.md` y la bitácora principal.
 Pruebas actuales:310 unitarias/integración, más scripts móviles de biblioteca y
 foto en `tests/browser`. Límites y fuentes en la bitácora y
 `FUENTES_PATRONES_AMPLIADAS.md`. Muestras físicas y Safari real siguen pendientes.
+
+
+## 11. Paneles de construcción desde el estudio
+
+- `lib/pattern/panels.ts`: subdivisión atómica de contornos de costura mediante
+  polilíneas abiertas. `PanelCut` almacena IDs, pieza original, puntos en mm,
+  margen y huella `pieceGeometryHash`. `panelizePattern` devuelve piezas,
+  relaciones de costura, mapa origen→paneles y problemas. Bordes externos
+  heredan metadatos; nuevos bordes comparten la línea, margen por cada lado y
+  piquetes C1/C2 coincidentes. Curvas exteriores aproximadas a0.03mm.
+- `PatternState.panelCuts/panelMaterials` opcionales conservan compatibilidad
+  con proyectos anteriores. El motor divide después de ajustes de base; aplica
+  ajustes de panel, remapea relaciones/pasos, materiales y cantidades. Los
+  pasos para armar paneles anteceden a los pasos de montar la prenda.
+  `Piece.panelSource` identifica el origen sin depender del nombre visible.
+- `features/studio/panelWorkflow.ts`: deriva vistas reales desde la base sin
+  divisiones, asigna zonas por panel, conserva telas al subdividir, valida
+  referencias/huellas, transforma cortes en un PatternState y guarda versión
+  anterior. Propaga exclusiones de padres y evita reintroducir paneles omitidos.
+- `DesignDoc.panelCuts` añade viewId a cada corte físico. StudioEditor ofrece
+  Recta/Por puntos, visualización de uniones, deshacer y acceso a generación.
+  No captura doble toque en este modo para no consumir puntos dibujados rápido.
+- `PanelPatternsSheet.tsx`: prepara vistas, ajusta márgenes, elimina cortes,
+  revisa piezas/errores y genera/restaura patrón. Si solo hay foto/ilustración,
+  explica cómo usar una base y enlaza al Despiece de apliques existente.
+- `data/panelPresets.ts`: cinco distribuciones sobre las piezas reales de la
+  chaqueta geométrica; `CatalogModel.panelPreset` vincula cada variante. El
+  proyecto vuelve a resolverlas tras elegir medidas/tejido/ajuste definitivos.
+  `TopOpts.panelPreset` añade líneas ilustrativas al dibujo de catálogo.
+- `ExportPanel.tsx`: bloquea PDF/SVG ante errores `panel-*`; no exporta la
+  base como sustituto silencioso de un despiece inválido. La exportación 1:1
+  sigue usando el motor vectorial existente, sin escalar las piezas.
+
+Pruebas:372 casos y `tests/browser/panels_smoke.py` más regresiones anteriores.
+Relevo/limitaciones físicas detallados en `ESTADO_DEL_PROYECTO.md`.

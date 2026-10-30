@@ -58,7 +58,9 @@ export function ExportPanel({ project, state, built }: { project: Project; state
   const withContent = grid ? tilesWithContent(grid, drawables) : new Set<string>();
   const pages = [...withContent].filter((c) => !excluded.includes(c));
 
+  const panelBlocked = built?.issues.some(issue=>issue.level==='error'&&issue.code.startsWith('panel-')) ?? false;
   const doExport = async (share: boolean) => {
+    if(panelBlocked) return;
     if (!built) return;
     setBusy(true);
     try {
@@ -88,7 +90,7 @@ export function ExportPanel({ project, state, built }: { project: Project; state
   };
 
   const exportSvg = async () => {
-    if (!built) return;
+    if (!built || panelBlocked) return;
     const { project: frozen, deps } = freezeDeps(project, profiles, { pattern: true });
     const ds = piecesToDrawables(built, state, ids, subtitle, `patrón v${deps.pattern?.n}`, true);
     const svg = piecesSvg(ds, `${project.name} · patrón v${deps.pattern?.n}`);
@@ -103,7 +105,8 @@ export function ExportPanel({ project, state, built }: { project: Project; state
   const c = contentBox(tile);
   return (
     <div className="stack-lg">
-      {errors.length > 0 && <Notice tone="err">El patrón tiene {errors.length} errores de geometría. Puedes exportar, pero revisa la pestaña Revisión primero.</Notice>}
+      {panelBlocked&&<Notice tone="err">Los cortes de paneles necesitan revisión. Corrige los cortes en el estudio o restaura una versión antes de exportar; no se exportará la pieza base en lugar de los paneles.</Notice>}
+      {!panelBlocked&&errors.length > 0 && <Notice tone="err">El patrón tiene {errors.length} errores de geometría. Puedes exportar, pero revisa la pestaña Revisión primero.</Notice>}
       <section className="stack">
         <h3 className="section-title" style={{ margin: 0 }}>Piezas</h3>
         <div className="group">
@@ -139,15 +142,15 @@ export function ExportPanel({ project, state, built }: { project: Project; state
         </section>
       )}
       <div className="stack">
-        <Button variant="primary" icon="pdf" block disabled={busy || !ids.length || settingErrors.length > 0 || !pages.length} onClick={() => void doExport(false)}>
+        <Button variant="primary" icon="pdf" block disabled={panelBlocked || busy || !ids.length || settingErrors.length > 0 || !pages.length} onClick={() => void doExport(false)}>
           {busy ? 'Generando…' : 'Descargar PDF a escala real'}
         </Button>
         {canShareFiles() && (
-          <Button icon="share" block disabled={busy || !pages.length} onClick={() => void doExport(true)}>
+          <Button icon="share" block disabled={panelBlocked || busy || !pages.length} onClick={() => void doExport(true)}>
             Compartir o guardar en Archivos
           </Button>
         )}
-        <Button variant="ghost" icon="download" onClick={() => void exportSvg()}>Exportar SVG 1:1 (mm)</Button>
+        <Button variant="ghost" icon="download" disabled={panelBlocked} onClick={() => void exportSvg()}>Exportar SVG 1:1 (mm)</Button>
         <p className="tiny faint">Cada exportación queda registrada con la versión exacta de medidas y patrón. Imprime al 100 % y mide el cuadrado de 5 × 5 cm.</p>
       </div>
     </div>

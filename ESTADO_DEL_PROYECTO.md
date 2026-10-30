@@ -12,17 +12,104 @@ Actualízalo al terminar cada tarea.
 
 ```bash
 npm install
-npm test            # 310 pruebas: geometría, catálogo completo, patrones, PDF, materiales y diseño
+npm test            # 372 pruebas: geometría, paneles, catálogo, patrones, PDF, materiales y diseño
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Paneles de collage y patrones desde el estudio (2026-10-30)
+
+**Entrega más reciente.** El catálogo suma **160 modelos**, **82 con patrón**
+y 21 motores base. Las secciones siguientes conservan las entregas anteriores.
+
+### Qué cambió
+
+- Cinco chaquetas experimentales reales de collage/patchwork, basadas en la
+  chaqueta abierta de hombro caído: bandas horizontales, franjas verticales,
+  cuadrícula, canesú diagonal y collage geométrico irregular. La composición
+  divide las piezas del patrón, no solo dibuja rayas sobre una ilustración.
+- El proyecto de estas variantes abre directamente las piezas reales en el
+  estudio, con paneles pintables y colores orientativos que se pueden cambiar
+  por muestras de telas/fotos. Se conservan las vistas ilustrativas originales.
+- En otras prendas con patrón: **Estudio → Generar patrones → Preparar piezas
+  reales → Cortar paneles**. Recta funciona arrastrando de borde a borde;
+  Por puntos permite cortes quebrados con «Guardar corte». Se pueden cruzar
+  cortes, trabajar sobre contornos cóncavos y elegir tela en cada región.
+- «Generar patrones de paneles» convierte el diseño a piezas editables en
+  Patronaje para descargar PDF/SVG 1:1. Conserva las piezas no cortadas y una
+  versión recuperable del patrón anterior. Quitar todos los cortes permite
+  restaurar la base. Preparar vistas no borra fotografías ni dibujos existentes.
+- Cada nueva unión lleva margen por lado (10 mm por defecto), piquetes
+  coincidentes, etiqueta legible C1/C2…, hilo y guía de armado antes del montaje
+  de la prenda. Se puede ajustar el margen de un corte en el diálogo de paneles.
+  La unión conserva exactamente la línea terminada: no se reduce ni agranda
+  la prenda para hacer sitio al margen.
+- Se heredan márgenes exteriores, dobladillos, jaretas, cantidades al doblez,
+  pares simétricos, marcas, líneas internas y costuras con otras piezas.
+  Cuando un panel deja de tocar el doblez se convierte en un par simétrico.
+- La tela/color de una zona se asocia al nombre imprimible de su panel.
+  Los patrones exportados contienen también orientación, cantidad y marcas;
+  las fotos de tela son referencias visuales, no instrucciones de corte automático.
+- Los cortes inválidos se rechazan sin aplicar partes del resultado. Si cambia
+  la geometría del patrón base, se exige revisar los cortes; se bloquea PDF/SVG
+  del editor para evitar entregar las piezas originales como si fueran paneles.
+- Se propagan exclusiones de exportación y ocultación a paneles descendientes.
+  La versión anterior conserva la base para recuperar el trabajo. Los cortes
+  y materiales se guardan en el documento/patrón y viajan en JSON/ZIP existentes.
+
+### Ejemplos y pruebas
+
+- Chaqueta M92: bandas **8 plantillas**, franjas **9**, cuadrícula **22**,
+  diagonal **6**, irregular **8**. La cuadrícula contiene 9 paneles de espalda,
+  9 de delantero y 4 de manga: 35 piezas físicas al contar los pares.
+- Base anterior:310 pruebas y build correctos. Resultado: **372 pruebas**,
+  TypeScript y compilación de producción correctos.
+- Pruebas matemáticas: conservación del área, márgenes una sola vez, uniones
+  coincidentes, piquetes en el mismo punto físico, contorno curvo, concavidades,
+  cortes cruzados/quebrados, hilo, doblez/cantidades, estabilidad de IDs,
+  materiales, versiones, exclusiones y rechazo atómico de errores.
+- Cinco composiciones en cinco tallas adultas; todos los 82 modelos de catálogo
+  con motor se crean con sus parámetros reales y pasan validación.
+- Chromium 390×844: crear haori desde Biblioteca, preparar piezas, dibujar
+  corte recto y quebrado rápido, deshacer, aplicar tela a un panel, generar,
+  guardar/recargar, descargar PDF de paneles. 25 páginas, cuadrado de 50 mm y
+  barra de 100 mm verificados con PyMuPDF. Variante de cuadrícula abre 22
+  plantillas y zonas9/9/4; geometría obsoleta bloquea PDF y SVG.
+- Script repetible: `tests/browser/panels_smoke.py` (servidor dev + Python
+  Playwright/Chromium/PyMuPDF). Siguen pasando las pruebas móviles previas de
+  telas, figuras, pellizco y PDF del haori sin cortes.
+
+### Límites y siguiente trabajo para Claude
+
+1. **Experimental hasta imprimir y coser muestras.** Comprobar planchado,
+   encuentros, piquetes y volúmenes de márgenes con retazos de peso parecido.
+   Se conserva la talla de la base; no se simulan caída ni elasticidad 3D.
+2. Funciona sobre piezas reales generadas o manuales del patrón. La foto o
+   dibujo ilustrativo de una prenda no define automáticamente su despiece de
+   confección. En esos proyectos, Despiece conserva la exportación de recortes
+   decorativos; para paneles de construcción se necesita una base real.
+3. Cortes abiertos rectos o quebrados, sin lazos/autointersecciones. Las curvas
+   exteriores se aproximan como segmentos con tolerancia de 0.03 mm. Curvas de
+   corte Bézier editables y recortes cerrados con hueco quedan para otra etapa.
+   Se rechazan tangencias ambiguas y bordes resultantes menores de 0.5 mm.
+4. Los delanteros/mangas de la base son pares simétricos: la distribución se
+   espeja. Para telas diferentes a izquierda/derecha o verdadera asimetría
+   habrá que expandir instancias y mapearlas antes de cortar; no prometerlo hoy.
+5. Las vistas de patrón son exactas; las vistas de la prenda/figurín siguen
+   siendo ilustrativas y no reciben una proyección 3D del patchwork. Mejorar
+   una composición plana ensamblada es un trabajo posterior, sin usarla para
+   calcular medidas ni inventar un ajuste.
+6. Al cambiar medidas/márgenes de la base, revisar/eliminar cortes antiguos y
+   trazar sobre la nueva geometría. Los ajustes manuales de nodos de paneles
+   siguen disponibles en Patronaje y pueden necesitar revisión si cambia la
+   distribución. Los IDs evitan mezclar ajustes de piezas distintas.
+
 ## Segunda ampliación · prendas, accesorios y fotos de tela (2026-10-30)
 
-Esta sección es el relevo más reciente. Conserva las notas de la primera entrega
-más abajo como historial; las cifras actuales son las de esta sección.
+Esta sección documenta la segunda ampliación. Las cifras más recientes están
+en el relevo de paneles situado arriba; se conserva este historial.
 
 ### Resultado actual
 
@@ -279,7 +366,7 @@ el intento inicial; esta bitácora del repositorio es el estado más reciente.
   y vuelta del formato).
 
 ### Interfaz (src/features)
-- Biblioteca: 155 modelos con filtros (destinatario, prenda, dificultad, talla,
+- Biblioteca: 160 modelos con filtros (destinatario, prenda, dificultad, talla,
   tejido, elasticidad, ajuste, técnica), dibujos técnicos paramétricos de
   frente, espalda y costados, tablas de tallas explícitas, fotos de referencia
   con permiso de uso, estado honesto (implementado / experimental / pendiente).
