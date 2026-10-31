@@ -94,7 +94,7 @@ export function SewingPackSheet({ projectId, onClose, onPrepareEditorial }: { pr
         <div className="group" style={{marginTop:10}}>{preview.pieces.map(piece=><div className="list-row" key={piece.id}><div><span className="t small">{piece.name}</span><span className="s tiny">{piece.qty} {piece.onFold?'al doblez':'por cortar'} · sin margen {formatLength(piece.wMm,settings.unit)} × {formatLength(piece.hMm,settings.unit)} · corte {formatLength(piece.cutWMm,settings.unit)} × {formatLength(piece.cutHMm,settings.unit)}</span></div></div>)}</div>
       </details>}
       {preview.warnings.length>0&&<details className="panel panel-pad small" open={preview.mode==='intervention'}><summary>Notas para confeccionar · {preview.warnings.length}</summary><div className="stack" style={{marginTop:10}}>{preview.warnings.map(warning=><p key={warning} style={{margin:0}}>{warning}</p>)}</div></details>}
-      <Notice>Las plantillas son vectoriales y conservan sus medidas. El bordado se incluye como dibujo para transferir o digitalizar; no es un archivo de puntadas.</Notice>
+      <Notice>Las plantillas conservan sus medidas. Los bordados y logotipos se incluyen a tamaño real para transferir o digitalizar; no son archivos de puntadas.</Notice>
     </div>
   </Sheet>;
 }

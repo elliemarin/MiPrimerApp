@@ -151,8 +151,8 @@ export type Fill =
 export interface DesignElement {
   /** Original closed SVG contours, normalized to a 0..100 box; preserves glyph holes. */
   vectorPath?: string;
-  /** A coloured motif or outlined lettering, grouped for moving as one object. */
-  embroidery?: { kind: 'motif' | 'lettering'; motifId?: string; fontId?: string; text?: string };
+  /** A motif, outlined lettering or uploaded image, grouped for moving as one object. */
+  embroidery?: { kind: 'motif' | 'lettering' | 'image'; motifId?: string; fontId?: string; text?: string };
   id: string;
   viewId: string;
   /** The assembled instance (for example the right sleeve) of a physical piece. */

@@ -1,4 +1,5 @@
 import type { Pt } from '../../lib/geom/vec';
+import { elementImage } from '../../lib/draw/designImage';
 import { bboxOf, matApply, matInvert, matMul, matRotate, matScale, Mat } from '../../lib/geom/vec';
 import { cmdsToPolylines } from '../../lib/draw/flatten';
 import { transformCmds, polylineCmds, PathCmd } from '../../lib/draw/paths';
@@ -179,6 +180,15 @@ export function embroideryDrawables(doc: DesignDoc): Drawable[] {
   const out: Drawable[] = [];
   for (const el of doc.elements) {
     if (el.technique !== 'bordado' || el.hidden || el.kind === 'grupo') continue;
+    if(el.kind==='imagen') {
+      const image=elementImage({...el,x:0,y:0});
+      if(image) {
+        const images=[image];
+        const labels:DrawLabel[]=[{text:`${el.name} · imagen de referencia`,at:{x:0,y:el.h/2+8},size:2.6}];
+        out.push({id:`bord-${el.id}`,name:el.name,paths:[],images,labels,grains:[],bbox:drawableBBox([],labels,images)});
+      }
+      continue;
+    }
     const cmds = transformCmds(elementLocalCmds(el), elementMatrix({ ...el, x: 0, y: 0 }));
     const paths: DrawPath[] = [{ cmds, style: 'bordado', fillColor: el.fill.type === 'color' ? el.fill.color : undefined }];
     const labels: DrawLabel[] = [{ text: `${el.name} · ${el.stroke ? el.stroke.style : 'relleno'}`, at: { x: 0, y: el.h / 2 + 8 }, size: 2.6 }];

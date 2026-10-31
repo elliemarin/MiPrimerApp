@@ -8,9 +8,9 @@ import { Icon } from '../../ui/Icon';
 import { StudioDefs, ViewBase, ElementSvg } from '../studio/render';
 import type { DesignDoc, DesignElement, DesignView, Fill } from '../studio/model';
 import { elementCorners } from '../studio/model';
-import { editElement, removeElements, toLocal } from '../studio/ops';
+import { editElement, removeElements } from '../studio/ops';
 import { componentElementId, componentIdForElement, reconcileComponentDesign } from '../customize/componentDesign';
-import { pointInPreview } from '../customize/placementDrag';
+import { pointInPreview, previewDelta } from '../customize/placementDrag';
 import { applyMaterial, materialTargets, missingMaterials, physicalViewsNeedRefresh, prepareSimpleProject, simpleViews, type MaterialTarget } from './workflow';
 import { FabricTray } from '../studio/FabricTray';
 import { EmbroideryPicker, type EmbroideryChoice } from './EmbroideryPicker';
@@ -23,18 +23,19 @@ import { parseSvgPath } from '../../lib/draw/svgpath';
 import { findModel } from '../../data/catalog';
 import { ProjectModelPreview } from './ProjectModelPreview';
 import { supportsModelIllustration } from '../../lib/draw/garmentComposition';
-import { assemblyHit, assemblySurfaceForElement, buildAssembly, inverseAssemblyPoint, type AssemblySurface } from './assembled';
+import { assemblySurfaceForElement, buildAssembly, inverseAssemblyPoint, type AssemblySurface } from './assembled';
 import { AssemblyArtwork } from './AssemblyArtwork';
 import { embroideryFitsView, firstEmbroideryPosition, moveEmbroidery } from './finishEmbroidery';
+import { SelectionMoveHandle } from '../../ui/SelectionMoveHandle';
+import { EmbroideryImageSheet } from './EmbroideryImageSheet';
+import { createImageEmbroidery, type ImportedEmbroideryImage } from './embroideryImage';
+import { embroideryAtPointer, embroideryPointerOffset, embroiderySceneCorners } from './embroideryPlacement';
+import type { EmbroideryInsertion } from '../../lib/draw/embroideryMotifs';
 import './finishes.css';
 
 const COLORS = ['#F3E9D2', '#18211D', '#FFFFFF', '#24584A', '#B4273A', '#DFAE29', '#3366AA', '#8A5D91', '#C97B55', '#849B79', '#F6CADA', '#757975'];
 const EditorialSheet = lazy(() => import('../editorial/EditorialSheet').then(module => ({ default: module.EditorialSheet })));
-function rootOf(doc: DesignDoc, element: DesignElement): DesignElement {
-  const parent = element.parentId ? doc.elements.find(candidate => candidate.id === element.parentId) : undefined;
-  return parent ? rootOf(doc, parent) : element;
-}
-type EmbroideryDrag = { id: string; point: Pt; start: DesignElement; doc: DesignDoc; latest: DesignDoc; view: DesignView; surface?: AssemblySurface; offset: Pt };
+type EmbroideryDrag = { pointerId: number; id: string; doc: DesignDoc; latest: DesignDoc; view: DesignView; surface?: AssemblySurface; offset: Pt };
 
 export function FinishesPage({ projectId }: { projectId: string }) {
   const project = useApp(state => state.projects[projectId]);
@@ -51,6 +52,7 @@ export function FinishesPage({ projectId }: { projectId: string }) {
   const [fabricTray, setFabricTray] = useState(false);
   const materialTrigger = useRef<HTMLButtonElement | null>(null);
   const [picker, setPicker] = useState(false);
+  const [imagePicker, setImagePicker] = useState(false);
   const [modelPreview, setModelPreview] = useState(false);
   const [editorial, setEditorial] = useState(false);
   const [selected, setSelected] = useState<string>();
@@ -69,7 +71,7 @@ export function FinishesPage({ projectId }: { projectId: string }) {
   }, [project?.pattern, projectId, update]);
   useEffect(() => {
     setMode('materiales'); setViewId(undefined); setSceneId(undefined); setSurfaceId(undefined);
-    setPieceMode(false); setTargetId(undefined); setPalette(false); setFabricTray(false);
+    setImagePicker(false); setPicker(false); setPieceMode(false); setTargetId(undefined); setPalette(false); setFabricTray(false);
     setSelected(undefined); setLive(undefined); setPast([]); setFuture([]); drag.current = undefined; insertionPoint.current = undefined; materialTap.current = undefined;
   }, [projectId]);
   if (!project?.design) return <div className="page"><Empty icon="estudio" title="Elige una base para empezar" action={<Button onClick={() => navigate('/biblioteca')}>Elegir base</Button>}/></div>;
@@ -88,6 +90,8 @@ export function FinishesPage({ projectId }: { projectId: string }) {
   const activeView = active ? views.find(candidate => candidate.id === active.viewId) ?? view : view;
   const activeSurface = active ? scenes.flatMap(item => item.surfaces).find(item => item.id === active.assemblySurfaceId)
     ?? (scene && !pieceMode ? assemblySurfaceForElement(scene, { ...project, design: doc }, active) : undefined) : undefined;
+  const visibleActiveSurface = active && scene && !pieceMode ? assemblySurfaceForElement(scene, { ...project, design: doc }, active) : undefined;
+  const visibleActive = active && !active.hidden && (pieceMode ? active.viewId === view.id : !!visibleActiveSurface) ? active : undefined;
   const catalogModel = findModel(project.modelId ?? '');
   const currentFill = materialScope === 'all' ? targets.find(item => item.fill && item.fill.type !== 'ninguno')?.fill : target?.fill;
   const materialLabel = materialScope === 'all' ? 'Todo el diseño' : target?.label ?? 'Esta parte';
@@ -130,38 +134,32 @@ export function FinishesPage({ projectId }: { projectId: string }) {
     setPast(values => [...values, project.design!]); setFuture(values => values.slice(1));
     update(projectId, current => reconcileComponentDesign({ ...current, design: next }, fabrics)); setSelected(undefined);
   };
-  const insert = (choice: EmbroideryChoice) => {
+  const insertArtwork = (make: (viewId: string, x: number, y: number) => EmbroideryInsertion) => {
     try {
       const destination = !pieceMode ? surface : undefined;
       const physicalView = destination?.view ?? view;
-      const x = physicalView.minX + physicalView.width / 2, y = physicalView.minY + physicalView.height / 2;
-      const result = choice.kind === 'motif' ? createEmbroideryMotif(choice.id, physicalView.id, x, y, choice.widthMm) : createLettering(choice.text, choice.fontId, physicalView.id, x, y, choice.heightMm, choice.color);
+      const result = make(physicalView.id, physicalView.minX + physicalView.width / 2, physicalView.minY + physicalView.height / 2);
       const group = result.elements.find(element => element.id === result.groupId)!;
       const preferred = destination?.id === insertionPoint.current?.surfaceId ? insertionPoint.current?.point : undefined;
       const point = firstEmbroideryPosition(group, physicalView, preferred, destination?.physicalBounds);
       if (!point) throw new Error('Este bordado no cabe aquí. Elige un tamaño menor o toca otra zona del diseño.');
       const placed = moveEmbroidery({ ...doc, elements: [...doc.elements, ...result.elements] }, group.id, point, physicalView.id, destination ? { id: destination.id, label: destination.label } : undefined);
-      commit(placed); setSelected(result.groupId); setPicker(false);
+      commit(placed); setSelected(result.groupId); setPicker(false); setImagePicker(false);
     } catch (cause) { useApp.getState().toast(cause instanceof Error ? cause.message : 'No se pudo agregar el bordado.', 'error'); }
   };
-  const hit = (point: Pt) => {
-    for (const element of [...doc.elements].reverse()) {
-      if (element.viewId !== view.id || element.hidden || element.kind === 'grupo') continue;
-      const root = rootOf(doc, element);
-      if (!root.embroidery) continue;
-      const local = toLocal(element, point);
-      if (Math.abs(local.x) <= element.w / 2 && Math.abs(local.y) <= element.h / 2) return root;
-    }
-  };
+  const insert = (choice: EmbroideryChoice) => insertArtwork((id, x, y) => choice.kind === 'motif' ? createEmbroideryMotif(choice.id, id, x, y, choice.widthMm) : createLettering(choice.text, choice.fontId, id, x, y, choice.heightMm, choice.color));
+  const insertImage = (image: ImportedEmbroideryImage, width: number) => insertArtwork((id, x, y) => createImageEmbroidery(image, id, x, y, width));
   const startEmbroidery = (event: React.PointerEvent, element: DesignElement, physicalView: DesignView, destination?: AssemblySurface) => {
-    const scenePoint = pointInPreview(svg.current, event.clientX, event.clientY); if (!scenePoint || event.button !== 0) return;
-    const point = destination ? inverseAssemblyPoint(destination, scenePoint) : scenePoint;
-    event.preventDefault(); event.stopPropagation(); svg.current?.setPointerCapture(event.pointerId);
-    setSelected(element.id);
-    drag.current = { id: element.id, point, start: element, doc, latest: doc, view: physicalView, surface: destination, offset: { x: element.x - point.x, y: element.y - point.y } };
+    if (event.button !== 0 || event.isPrimary === false || drag.current) return;
+    event.preventDefault(); event.stopPropagation(); setSelected(element.id);
+    if (element.locked) { useApp.getState().toast('Este bordado está bloqueado en el diseño guardado.', 'error'); return; }
+    const point = pointInPreview(svg.current, event.clientX, event.clientY); if (!point) return;
+    svg.current?.setPointerCapture(event.pointerId);
+    drag.current = { pointerId: event.pointerId, id: element.id, doc, latest: doc, view: physicalView, surface: destination, offset: embroideryPointerOffset(element, point, destination) };
   };
   const onAssemblyElement = (event: React.PointerEvent, id: string, destination: AssemblySurface) => {
     event.stopPropagation();
+    if (drag.current) return;
     const element = doc.elements.find(candidate => candidate.id === id); if (!element) return;
     setSurfaceId(destination.id); setViewId(destination.viewId);
     if (mode === 'materiales') {
@@ -172,7 +170,7 @@ export function FinishesPage({ projectId }: { projectId: string }) {
     } else if (element.embroidery) startEmbroidery(event, element, destination.view, destination);
   };
   const onAssemblySurface = (event: React.PointerEvent, destination: AssemblySurface) => {
-    if (event.button !== 0) return;
+    if (event.button !== 0 || event.isPrimary === false || drag.current) return;
     event.stopPropagation(); setSurfaceId(destination.id); setViewId(destination.viewId); setSelected(undefined);
     const point = pointInPreview(svg.current, event.clientX, event.clientY);
     const local = point ? inverseAssemblyPoint(destination, point) : undefined;
@@ -184,33 +182,44 @@ export function FinishesPage({ projectId }: { projectId: string }) {
     }
   };
   const pointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
-    if (!pieceMode || mode !== 'bordados' || event.button !== 0) return;
-    const point = pointInPreview(svg.current, event.clientX, event.clientY); if (!point) return;
-    const element = hit(point); setSelected(element?.id);
-    if (element) startEmbroidery(event, element, view);
+    if (mode === 'bordados' && event.button === 0 && event.isPrimary !== false && !drag.current) setSelected(undefined);
+  };
+  const advanceDrag = (event: React.PointerEvent<SVGSVGElement>) => {
+    const gesture = drag.current; if (!gesture || gesture.pointerId !== event.pointerId) return;
+    const point = pointInPreview(svg.current, event.clientX, event.clientY, true); if (!point) return;
+    const next = embroideryAtPointer(gesture.doc, gesture.id, point, gesture.offset, gesture.view, !pieceMode ? scene : undefined, gesture.surface);
+    gesture.latest = next.doc; gesture.view = next.view; gesture.surface = next.surface;
+    return gesture;
   };
   const pointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
     if (materialTap.current && Math.hypot(event.clientX - materialTap.current.x, event.clientY - materialTap.current.y) > 8) materialTap.current = undefined;
-    const gesture = drag.current; if (!gesture) return;
-    const point = pointInPreview(svg.current, event.clientX, event.clientY); if (!point) return;
-    if (gesture.surface && scene) {
-      const destination = assemblyHit(scene, point)?.surface ?? gesture.surface;
-      const local = inverseAssemblyPoint(destination, point);
-      gesture.latest = moveEmbroidery(gesture.doc, gesture.id, { x: local.x + gesture.offset.x, y: local.y + gesture.offset.y }, destination.viewId, { id: destination.id, label: destination.label });
-      gesture.view = destination.view;
-      gesture.surface = destination;
-    } else gesture.latest = editElement(gesture.doc, gesture.id, { x: gesture.start.x + point.x - gesture.point.x, y: gesture.start.y + point.y - gesture.point.y });
-    setLive(gesture.latest);
+    const gesture = advanceDrag(event);
+    if (gesture) setLive(gesture.latest);
   };
-  const pointerUp = () => {
+  const pointerUp = (event: React.PointerEvent<SVGSVGElement>) => {
+    if (drag.current && drag.current.pointerId !== event.pointerId) return;
     const tapped = materialTap.current; materialTap.current = undefined;
     if (tapped) showTarget(tapped.item, undefined, tapped.surface);
-    const gesture = drag.current; drag.current = undefined; setLive(undefined); if (!gesture) return;
+    const gesture = advanceDrag(event); drag.current = undefined; setLive(undefined); if (!gesture) return;
     const element = gesture.latest.elements.find(candidate => candidate.id === gesture.id)!;
     const destination = gesture.surface ?? scenes.flatMap(item => item.surfaces).find(item => item.id === element.assemblySurfaceId);
     if (!embroideryFitsView(element, gesture.view, destination?.physicalBounds)) { useApp.getState().toast('Coloca el bordado dentro de la zona elegida.', 'error'); return; }
     if (element.assemblySurfaceId) setSurfaceId(element.assemblySurfaceId);
     setViewId(element.viewId); commit(gesture.latest);
+  };
+  const cancelDrag = (event: React.PointerEvent<SVGSVGElement>) => {
+    if (drag.current && drag.current.pointerId !== event.pointerId) return;
+    drag.current = undefined; materialTap.current = undefined; setLive(undefined);
+  };
+  const nudge = (pixels: Pt) => {
+    if (!visibleActive || visibleActive.locked || drag.current) return;
+    const delta = previewDelta(svg.current, pixels); if (!delta) return;
+    const corners = embroiderySceneCorners(visibleActive, visibleActiveSurface);
+    const center = { x: corners.reduce((sum, point) => sum + point.x, 0) / corners.length, y: corners.reduce((sum, point) => sum + point.y, 0) / corners.length };
+    const next = embroideryAtPointer(doc, visibleActive.id, { x: center.x + delta.x, y: center.y + delta.y }, { x: 0, y: 0 }, activeView, !pieceMode ? scene : undefined, visibleActiveSurface);
+    const element = next.doc.elements.find(candidate => candidate.id === visibleActive.id)!;
+    if (!embroideryFitsView(element, next.view, (next.surface ?? activeSurface)?.physicalBounds)) { useApp.getState().toast('Coloca el bordado dentro de la zona elegida.', 'error'); return; }
+    setViewId(element.viewId); setSurfaceId(element.assemblySurfaceId); commit(next.doc);
   };
   const changeScene = (id: string) => { setSceneId(id); setSurfaceId(undefined); setSelected(undefined); };
   const chooseAll = (event: React.MouseEvent<HTMLButtonElement>) => { materialTrigger.current = event.currentTarget; setMaterialScope('all'); setPalette(true); };
@@ -227,14 +236,15 @@ export function FinishesPage({ projectId }: { projectId: string }) {
           <div className="scroll-x" role="group" aria-label="Vista del diseño">{!pieceMode && scenes.length ? scenes.map(item => <button key={item.id} className="filter-chip" aria-pressed={scene?.id === item.id} onClick={() => changeScene(item.id)}>{item.label}</button>) : views.map(item => <button key={item.id} className="filter-chip" aria-pressed={view.id === item.id} onClick={() => { setViewId(item.id); setSelected(undefined); }}>{item.label}</button>)}</div>
           {scenes.length > 0 && <Button variant="ghost" size="sm" onClick={() => { setPieceMode(value => !value); setSelected(undefined); }}>{pieceMode ? 'Ver diseño completo' : 'Ver piezas'}</Button>}
         </div>
-        <div className="finish-art" data-preview={pieceMode ? 'piezas' : 'diseno'}><svg ref={svg} viewBox={`${displayView.minX} ${displayView.minY} ${displayView.width} ${displayView.height}`} role="img" aria-label={`Diseño de ${displayView.label}`} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={() => { drag.current = undefined; materialTap.current = undefined; setLive(undefined); }} style={{ touchAction: mode === 'bordados' ? 'none' : 'pan-y' }}>
+        <div className="finish-art" data-preview={pieceMode ? 'piezas' : 'diseno'}><svg ref={svg} viewBox={`${displayView.minX} ${displayView.minY} ${displayView.width} ${displayView.height}`} role="img" aria-label={`Diseño de ${displayView.label}`} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onPointerCancel={cancelDrag} onLostPointerCapture={cancelDrag} style={{ touchAction: mode === 'bordados' ? 'none' : 'pan-y' }}>
           {!pieceMode && scene ? <AssemblyArtwork scene={scene} project={{ ...project, design: doc }} fabrics={fabrics} selectedId={selected} onElementPointerDown={onAssemblyElement} onSurfacePointerDown={onAssemblySurface}/> : <>
             <StudioDefs doc={doc} view={view} prefix="finish-" fabrics={fabrics}/><ViewBase view={view} mode="apariencia" prefix="finish-" fabrics={fabrics}/>
             {doc.elements.filter(element => element.viewId === view.id).map(element => <ElementSvg key={element.id} el={element} doc={doc} mode="apariencia" prefix="finish-" fabrics={fabrics}/>)}
-            {active && <polygon points={elementCorners(active).map(point => `${point.x},${point.y}`).join(' ')} fill="none" stroke="#24584A" strokeWidth="1.5" vectorEffect="non-scaling-stroke" strokeDasharray="5 3" pointerEvents="none"/>}
+            {mode === 'bordados' && artwork.filter(element => !element.hidden).map(element => <polygon key={`hit-${element.id}`} data-embroidery-hit={element.id} points={elementCorners(element).map(point => `${point.x},${point.y}`).join(' ')} fill="transparent" stroke="transparent" strokeWidth="24" vectorEffect="non-scaling-stroke" pointerEvents="all" onPointerDown={event => startEmbroidery(event, element, view)}/>)}
+            {visibleActive && <polygon points={elementCorners(visibleActive).map(point => `${point.x},${point.y}`).join(' ')} fill="none" stroke="#24584A" strokeWidth="1.5" vectorEffect="non-scaling-stroke" strokeDasharray="5 3" pointerEvents="none"/>}
           </>}
-        </svg></div>
-        <p className="tiny muted">{mode === 'materiales' ? 'Toca una zona del diseño para cambiar su material.' : 'Toca una zona, añade un bordado y arrástralo a su lugar.'}</p>
+        </svg>{mode === 'bordados' && visibleActive && <SelectionMoveHandle svgRef={svg} corners={embroiderySceneCorners(visibleActive, visibleActiveSurface)} disabled={visibleActive.locked} label="Mover bordado seleccionado" onNudge={nudge} onPointerDown={event => startEmbroidery(event, visibleActive, activeView, visibleActiveSurface)}/>}</div>
+        <p className="tiny muted">{mode === 'materiales' ? 'Toca una zona del diseño para cambiar su material.' : 'Toca un bordado y arrastra el botón de mover que aparece junto a él.'}</p>
       </section>
       <div className="finishes-controls stack-lg">
         {mode === 'materiales' ? <>
@@ -243,8 +253,9 @@ export function FinishesPage({ projectId }: { projectId: string }) {
           <p className="finish-material-status small" role="status"><Icon name={missing.length ? 'palette' : 'check'} size={18}/>{missing.length ? 'Elige una tela o color para continuar.' : 'Listo. Ya puedes ver tu diseño y añadir bordados.'}</p>
           <details className="finish-part-details"><summary>Cambiar una parte o bolsillo</summary><div className="finish-material-list">{targets.map(item => <button key={item.id} onClick={event => showTarget(item, event.currentTarget)} aria-label={`Elegir color o tela: ${item.label}`}><span className="finish-swatch" style={{ background: item.fill?.type === 'color' ? item.fill.color : item.fill?.type === 'tela' ? fabrics[item.fill.fabricId]?.color : undefined }}/><span><strong>{item.label}</strong><span className="tiny muted">{missing.some(candidate => candidate.id === item.id) ? 'Por elegir' : item.fill?.type === 'tela' ? fabrics[item.fill.fabricId]?.name : 'Color elegido'}</span></span><Icon name={missing.some(candidate => candidate.id === item.id) ? 'plus' : 'check'}/></button>)}</div></details>
         </> : <>
-          <div><h2 className="section-title">Revisa el diseño completo</h2><p className="small muted">Gíralo con las vistas de arriba. Puedes añadir bordados, letras o pasar directamente al PDF.</p></div>
+          <div><h2 className="section-title">Revisa el diseño completo</h2><p className="small muted">Gíralo con las vistas de arriba. Puedes añadir bordados, letras o tu propio logo.</p></div>
           <Button variant="primary" icon="plus" onClick={() => setPicker(true)}>Añadir bordado o letras</Button>
+          <Button onClick={() => setImagePicker(true)}>Subir logo o imagen</Button>
           {surface && !pieceMode && <p className="tiny muted">Zona elegida: {surface.label}. Toca otra zona para cambiarla.</p>}
           {artwork.length > 0 && <div className="group">{artwork.map(element => <button key={element.id} className="list-row" aria-pressed={selected === element.id} onClick={() => { setSelected(element.id); setSurfaceId(element.assemblySurfaceId); setViewId(element.viewId); }}><span className="grow small">{element.name}</span><Icon name="move"/></button>)}</div>}
           {active && <div className="panel panel-pad stack"><div className="spread"><strong>{active.name}</strong><IconButton icon="trash" label="Eliminar bordado seleccionado" onClick={() => { commit(removeElements(doc, [active.id])); setSelected(undefined); }}/></div><Field label="Ancho del bordado" htmlFor="embroidery-width"><LengthInput id="embroidery-width" mm={active.w} min={5} max={Math.max(activeView.width, activeView.height)} onChange={width => {
@@ -261,6 +272,7 @@ export function FinishesPage({ projectId }: { projectId: string }) {
     <div className="finish-footer"><span className="tiny muted">{mode === 'materiales' ? missing.length ? 'Primero elige tela o color' : 'Materiales completos' : 'Bolsillos y extras incluidos en el PDF'}</span><Button variant="primary" icon={mode === 'bordados' ? 'pdf' : undefined} disabled={!!missing.length} onClick={() => mode === 'materiales' ? setMode('bordados') : navigate(`/confeccion/${projectId}`)}>{mode === 'materiales' ? 'Continuar a bordados' : 'Generar patrones'}</Button></div>
     {palette && (target || materialScope === 'all') && <Sheet title={materialLabel} onClose={closePalette}><div className="stack-lg"><p className="small muted">{materialScope === 'all' ? 'Elige una tela, una foto o un color para todo el diseño. Después podrás cambiar cada detalle.' : 'Este cambio se aplica solo a la parte elegida.'}</p><Button block icon="telas" onClick={() => { setPalette(false); setFabricTray(true); }}>Elegir una tela o subir foto</Button><div className="finish-colors">{COLORS.map(color => <button key={color} aria-label={`Color ${color}`} style={{ background: color }} onClick={() => material({ type: 'color', color })}/>)}</div><Field label="Otro color"><input type="color" aria-label="Otro color" value={currentFill?.type === 'color' ? currentFill.color : '#24584A'} onChange={event => material({ type: 'color', color: event.target.value })}/></Field>{materialScope === 'part' && <details><summary>Usar el mismo material en todo</summary><div className="stack" style={{ marginTop: 12 }}><div className="finish-colors">{COLORS.slice(0, 6).map(color => <button key={color} aria-label={`Todas las partes ${color}`} style={{ background: color }} onClick={() => material({ type: 'color', color }, true)}/>)}</div>{target?.fill && target.fill.type !== 'ninguno' && <Button onClick={() => material(target.fill!, true)}>Usar en todas las partes</Button>}</div></details>}</div></Sheet>}
     {fabricTray && <FabricTray immediate dialogTitle={`Tela para ${materialLabel.toLowerCase()}`} modelId={project.modelId} activeId={currentFill?.type === 'tela' ? currentFill.fabricId : null} onChoose={id => material({ type: 'tela', fabricId: id, rotation: 0, offsetX: 0, offsetY: 0, scale: 1 })} onDrop={() => {}} onClose={closeFabrics}/>}
+    {imagePicker && <EmbroideryImageSheet key={projectId} onClose={() => setImagePicker(false)} onPlace={insertImage}/>}
     {picker && <EmbroideryPicker onClose={() => setPicker(false)} onPick={insert}/>}
     {modelPreview && <ProjectModelPreview project={project} onClose={() => setModelPreview(false)} onPrepareEditorial={() => { setModelPreview(false); setEditorial(true); }}/>}
     {editorial && <Suspense fallback={<Sheet title="Lámina con ChatGPT" onClose={() => setEditorial(false)}><p role="status">Abriendo las referencias…</p></Sheet>}><EditorialSheet projectId={projectId} onClose={() => setEditorial(false)}/></Suspense>}

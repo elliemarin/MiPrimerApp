@@ -33,6 +33,8 @@ export function freezeDeps(p: Project, profiles: Record<string, Profile>, what: 
       project = { ...project, designVersions: [...project.designVersions, v] };
     }
     deps.design = { versionId: v.id, n: v.n, hash: h };
+    const imageFileIds=[...new Set(p.design.elements.flatMap(element=>element.image?[element.image.fileId]:[]))].sort();
+    if(imageFileIds.length)deps.imageFileIds=imageFileIds;
   }
   return { project, deps };
 }

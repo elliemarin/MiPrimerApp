@@ -19,6 +19,7 @@ import { arrangeForTiles, exportTiledPdf } from './export';
 import { DEFAULT_TILE, validateTileSettings, type TileSettings } from './tile';
 import { artworkPlacementIssues, missingMaterials, physicalViewsNeedRefresh } from '../../features/simple/workflow';
 import { preparePlacementGuide, type Placement } from './placement';
+import { visibleDesignElement } from '../draw/designImage';
 
 export type SewingPackMode = 'complete' | 'intervention';
 export interface SewingPackCtx extends SummaryCtx {
@@ -125,16 +126,20 @@ export function prepareSewingPack(source: Project, ctx: SewingPackCtx): SewingPa
 
   let embroideryCount = 0;
   if (decorativeDoc) for (const view of embroideryViews(decorativeDoc)) {
-    const elements = decorativeDoc.elements.filter(element => element.viewId === view.id && element.technique === 'bordado' && !element.hidden && element.kind !== 'grupo');
-    const unsupported = elements.filter(element => element.kind === 'texto' || element.kind === 'imagen' || element.kind === 'parche' || !!element.clip || !!element.maskZoneId);
+    const elements = decorativeDoc.elements.filter(element => element.viewId === view.id && element.technique === 'bordado' && visibleDesignElement(element,decorativeDoc) && element.kind !== 'grupo');
+    const unsupported = elements.filter(element => element.kind === 'texto' || element.kind === 'parche' || !!element.clip || !!element.maskZoneId);
+    for(const element of elements.filter(element=>element.kind==='imagen')) {
+      if(!element.image?.fileId) blockers.push(`«${element.name}» no tiene un archivo de imagen. Vuelve a cargar el logotipo desde Bordados.`);
+      if(![element.x,element.y,element.w,element.h,element.rotation].every(Number.isFinite)||element.w<=0||element.h<=0) blockers.push(`Las medidas de «${element.name}» no son válidas. Revisa su tamaño antes de exportar.`);
+    }
     if (unsupported.length) blockers.push(`El bordado de «${view.label}» contiene elementos que necesitan digitalización: ${unsupported.map(element => element.name).join(', ')}. Usa figuras/trazos sin máscaras para obtener su guía vectorial.`);
     const ids = new Set(unsupported.map(element => element.id));
     const isolated = { ...decorativeDoc, elements: [...elements.filter(element => !ids.has(element.id)), ...decorativeDoc.elements.filter(element=>element.viewId===view.id&&element.kind==='grupo'&&element.embroidery)] };
     const ds = embroideryForView(isolated, view.id);
     embroideryCount += ds.length;
-    if (ds.length) drawings.push({ id: `bordado-${view.id}`, title: `Guía de bordado · ${view.label}`, count: ds.length, drawables: ds, note: 'Dibujo de transferencia a tamaño real. Conserva la posición relativa de los motivos de esta vista. No es un molde de tela ni un archivo de puntadas.' });
+    if (ds.length) drawings.push({ id: `bordado-${view.id}`, title: `Guía de bordado · ${view.label}`, count: ds.length, drawables: ds, note: 'Dibujo de transferencia a tamaño real. Usa la guía de ubicación para el centro y el lado de cada motivo. No es un molde de tela ni un archivo de puntadas.' });
   }
-  if (embroideryCount) warnings.push('Los bordados se incluyen como guías vectoriales 1:1. Para bordado a máquina requieren digitalización y una prueba en retazo.');
+  if (embroideryCount) warnings.push('Los bordados se incluyen como guías 1:1; los logotipos conservan su imagen, colores y transparencia. Para bordado a máquina requieren digitalización y una prueba en retazo.');
   const references = decorativeDoc?.elements.filter(element => !element.hidden && element.kind !== 'grupo' && element.technique === 'ninguna') ?? [];
   if (references.length) warnings.push(`${references.length} dibujos sin técnica quedan como referencias visuales. Si necesitas cortarlos o bordarlos, asígnales Aplicación o Bordado en Estudio.`);
   if (doc?.views.some(view => view.source.type === 'foto' && !view.photo?.mmPerPx)) warnings.push('Hay fotografías sin calibrar: sus ubicaciones son orientativas. Las piezas del patrón conservan sus medidas físicas.');
@@ -174,6 +179,7 @@ export async function buildSewingPackPdf(project: Project, ctx: SewingPackCtx): 
   sections.push({ id: 'guia', title: 'Diseño, medidas, materiales e instrucciones', count: 1, bytes: summaryBytes, pages: (await PDFDocument.load(summaryBytes)).getPageCount() });
   for (const drawing of preview.drawings) {
     const result = await exportTiledPdf(arrangeForTiles(drawing.drawables, tile), { settings: tile }, {
+      loadImageFile:ctx.loadImageFile,
       title: drawing.id.startsWith('bordado-')?'Guía de bordado':drawing.title,
       lines: [...depsLines(resolved, deps), drawing.title, drawing.note],
       footer: `${resolved.name.slice(0, 24)} · ${drawing.id === 'patron' ? 'patrón' : drawing.id === 'aplicaciones' ? 'aplicaciones' : 'bordado'}`,

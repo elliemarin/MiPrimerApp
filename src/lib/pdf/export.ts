@@ -1,15 +1,17 @@
-import { PrintScaling, PDFDocument, PDFFont } from 'pdf-lib';
+import { PrintScaling, PDFDocument, PDFFont, type PDFImage } from 'pdf-lib';
 import { BBox, Pt, bboxOf, norm, sub } from '../geom/vec';
 import { flattenCubic } from '../geom/bezier';
 import { shelfPack } from '../geom/pack';
 import type { Drawable } from '../draw/drawable';
-import { STYLE_LABEL, translateDrawable, labelBounds } from '../draw/drawable';
+import { STYLE_LABEL, translateDrawable, labelBounds, imageCorners } from '../draw/drawable';
 import type { PathCmd } from '../draw/paths';
 import { PDF_STYLES, PdfCanvas, newPdf } from './canvas';
 import { TileGrid, TileSettings, computeGrid, contentBox, pageSize, tileRect, Tile } from './tile';
 import { LETTER_MM } from './tile';
+import { embedRasterImages, type ImageFileLoader } from './raster';
 
 export interface ExportInfo {
+  loadImageFile?: ImageFileLoader;
   title: string;
   /** Líneas de trazabilidad: proyecto, versiones de medidas, patrón y diseño, fecha. */
   lines: string[];
@@ -79,10 +81,12 @@ function segTouchesRect(a: Pt, b: Pt, r: BBox): boolean {
 export function tilesWithContent(grid: TileGrid, drawables: Drawable[]): Set<string> {
   const segs = drawables.flatMap(drawableSegments);
   const labels=drawables.flatMap(drawable=>drawable.labels.map(labelBounds));
+  // Filled raster interiors carry content too, even when a tile has no edge.
+  const images=drawables.flatMap(drawable=>(drawable.images??[]).map(image=>bboxOf(imageCorners(image))));
   const out = new Set<string>();
   for (const t of grid.tiles) {
     const r = tileRect(grid, t);
-    if (segs.some(([a, b]) => segTouchesRect(a, b, r)) || labels.some(box=>box.minX<=r.maxX && box.maxX>=r.minX && box.minY<=r.maxY && box.maxY>=r.minY)) out.add(t.code);
+    if (segs.some(([a, b]) => segTouchesRect(a, b, r)) || [...labels,...images].some(box=>box.minX<=r.maxX && box.maxX>=r.minX && box.minY<=r.maxY && box.maxY>=r.minY)) out.add(t.code);
   }
   return out;
 }
@@ -117,11 +121,12 @@ export function arrangeForTiles(ds: Drawable[], s: TileSettings, gap = 15): Draw
   return best ? best.out : ds;
 }
 
-function drawDrawable(cv: PdfCanvas, d: Drawable, tx: (p: Pt) => Pt) {
+function drawDrawable(cv: PdfCanvas, d: Drawable, tx: (p: Pt) => Pt, images:Map<string,PDFImage>) {
   for (const p of d.paths) {
     if (p.fillColor && /^#[0-9a-f]{6}$/i.test(p.fillColor)) cv.fillPathRgb(p.cmds,[parseInt(p.fillColor.slice(1,3),16)/255,parseInt(p.fillColor.slice(3,5),16)/255,parseInt(p.fillColor.slice(5,7),16)/255],tx);
     cv.strokePath(p.cmds, PDF_STYLES[p.style], tx, p.color);
   }
+  for(const image of d.images??[]) cv.image(images.get(image.fileId)!,image,tx);
   for (const g of d.grains) {
     const a = tx(g.a);
     const b = tx(g.b);
@@ -305,6 +310,7 @@ function coverPage(doc: PDFDocument, font: PDFFont, bold: PDFFont, s: TileSettin
 /** PDF de patrón en mosaico de hojas carta, a escala 1:1. */
 export async function exportTiledPdf(drawables: Drawable[], opts: TiledOptions, info: ExportInfo): Promise<{ bytes: Uint8Array; grid: TileGrid; pages: string[] }> {
   const { doc, font, bold } = await newPdf();
+  const images=await embedRasterImages(doc,drawables.flatMap(drawable=>drawable.images??[]),info.loadImageFile);
   const s = opts.settings;
   const grid = computeGrid(unionBBox(drawables), s);
   const withContent = tilesWithContent(grid, drawables);
@@ -329,7 +335,7 @@ export async function exportTiledPdf(drawables: Drawable[], opts: TiledOptions, 
     const tx = (p: Pt): Pt => ({ x: c.x + (p.x - t.x), y: c.y + (p.y - t.y) });
     pc.push();
     pc.clipRect(c.x, c.y, c.w, c.h);
-    for (const d of drawables) drawDrawable(pc, d, tx);
+    for (const d of drawables) drawDrawable(pc, d, tx,images);
     drawJoinMarks(pc, grid, s, t, tx);
     pc.pop();
     addFooter(pc, s, t.code, `Fila ${t.code.replace(/\d+$/, '')} · columna ${t.col + 1} de ${grid.cols}`, info, i + 2, total);
@@ -348,6 +354,7 @@ export interface PackedResult {
 /** Varias piezas pequeñas por hoja, sin cambiar su escala, con separación y márgenes. */
 export async function exportPackedPdf(drawables: Drawable[], s: TileSettings, info: ExportInfo, gap = 8): Promise<PackedResult> {
   const { doc, font, bold } = await newPdf();
+  const images=await embedRasterImages(doc,drawables.flatMap(drawable=>drawable.images??[]),info.loadImageFile);
   const c = contentBox(s);
   const packed = shelfPack(
     drawables.map((d) => ({ id: d.id, w: d.bbox.maxX - d.bbox.minX, h: d.bbox.maxY - d.bbox.minY })),
@@ -368,7 +375,7 @@ export async function exportPackedPdf(drawables: Drawable[], s: TileSettings, in
     for (const p of packed.placed.filter((q) => q.bin === bin)) {
       const d = drawables.find((x) => x.id === p.id)!;
       const tx = (q: Pt): Pt => ({ x: c.x + p.x + (q.x - d.bbox.minX), y: c.y + p.y + (q.y - d.bbox.minY) });
-      drawDrawable(pc, d, tx);
+      drawDrawable(pc, d, tx,images);
     }
     addFooter(pc, s, `Hoja ${bin + 1}`, 'Plantillas acomodadas sin escalar', info, bin + 2, total);
   }

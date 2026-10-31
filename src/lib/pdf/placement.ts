@@ -7,7 +7,8 @@ import type { Mat } from '../geom/vec';
 import { cmdsBBox, polylineCmds, transformCmds, type PathCmd } from '../draw/paths';
 import { assemblyArtworkReflection, buildAssembly } from '../../features/simple/assembled';
 import { parseSvgPath } from '../draw/svgpath';
-import { drawableBBox, wrapLabelText, type DrawLabel, type DrawPath, type Drawable } from '../draw/drawable';
+import { drawableBBox, wrapLabelText, type DrawLabel, type DrawPath, type Drawable, type DrawImage } from '../draw/drawable';
+import { elementImage } from '../draw/designImage';
 
 export interface Placement {
   id: string;
@@ -83,6 +84,7 @@ function guideDrawing(view: DesignView, located: Located[], surfaceId?: string, 
   const bottom = Math.ceil(Math.max(0, bounds.maxY) / 10) * 10;
   const paths: DrawPath[] = [];
   const labels: DrawLabel[] = [];
+  const images:DrawImage[]=[];
   for (let x = left; x <= right + .001; x += 10) {
     const major = Math.abs(x % 50) < .001;
     paths.push({ style: 'referencia', color: major ? '#B5C4BA' : '#E1E7E2', cmds: polylineCmds([{ x, y: top }, { x, y: bottom }], false) });
@@ -111,10 +113,17 @@ function guideDrawing(view: DesignView, located: Located[], surfaceId?: string, 
       ], true);
       paths.push({ style: 'colocacion', color: '#9B651B', cmds: onGuide(footprint) });
     } else {
-      for (const element of item.art) paths.push({ style: 'bordado', cmds: onGuide(elementWorldCmds(element)),
+      for (const element of item.art) {
+        if(element.kind==='imagen') {
+          const image=elementImage(element,item.reflection);
+          if(image)images.push(image);
+          continue;
+        }
+        paths.push({ style: 'bordado', cmds: onGuide(elementWorldCmds(element)),
         color: element.stroke?.color ?? (element.fill.type === 'color' ? element.fill.color : '#18211D'),
         ...(element.fill.type === 'color' ? { fillColor: element.fill.color } : {})
-      });
+        });
+      }
       if (item.element) paths.push({ style: 'colocacion', color: '#78518A', cmds: onGuide(polylineCmds(elementCorners(item.element), true)) });
     }
     const { x, y } = placement;
@@ -145,7 +154,7 @@ function guideDrawing(view: DesignView, located: Located[], surfaceId?: string, 
   }
   const key = `ubicacion-${view.id}${surfaceId ? `-${surfaceId}` : ''}`;
   const title = surfaceLabel ? `${surfaceLabel} · ${view.label}` : view.label;
-  const drawable: Drawable = { id: key, name: `Ubicación en ${title}`, paths, labels, grains: [], bbox: drawableBBox(paths, labels) };
+  const drawable: Drawable = { id: key, name: `Ubicación en ${title}`, paths, labels, grains: [], ...(images.length?{images}:{}), bbox: drawableBBox(paths, labels,images) };
   return { id: key, title: `Guía de ubicación · ${title}`, count: located.length, drawables: [drawable], note };
 }
 

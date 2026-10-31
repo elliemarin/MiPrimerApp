@@ -23,10 +23,13 @@ export async function exportProjectZip(p: Project): Promise<Blob> {
   const root = `${slugify(p.name)}/`;
   const files: Zippable = {};
   const manifest: Record<string, string> = {};
-  const addStored = async (id: string, folder: string) => {
+  const addStored = async (id: string, folder: string, required=false) => {
     if (manifest[id]) return;
     const f = await getFile(id);
-    if (!f) return;
+    if (!f) {
+      if(required)throw new Error(`Falta una imagen del diseño (${id}). Vuelve a cargarla antes de exportar el proyecto completo.`);
+      return;
+    }
     const path = `${folder}/${id}-${safeName(f.name)}`;
     files[root + path] = [new Uint8Array(await f.blob.arrayBuffer()), { level: 0 }];
     manifest[id] = path;
@@ -40,7 +43,7 @@ export async function exportProjectZip(p: Project): Promise<Blob> {
   for (const e of p.exports) await addStored(e.fileId, 'exportaciones');
   const docs = [p.design, ...p.designVersions.map((v) => v.data)].filter(Boolean);
   for (const d of docs) {
-    for (const el of d!.elements) if (el.image) await addStored(el.image.fileId, 'diseno/imagenes');
+    for (const el of d!.elements) if (el.image) await addStored(el.image.fileId, 'diseno/imagenes',true);
     for (const v of d!.views) if (v.source.type === 'foto') await addStored(v.source.fileId, 'referencias');
   }
   const profileIds = new Set<string>();
@@ -82,7 +85,8 @@ export async function exportProjectZip(p: Project): Promise<Blob> {
   if (p.design) {
     files[root + 'diseno/diseno-actual.json'] = json(p.design);
     for (const v of p.designVersions) files[root + `diseno/versiones/v${v.n}${v.approved ? '-aprobada' : ''}.json`] = json(v);
-    for (const v of p.design.views) files[root + `diseno/vistas/${safeName(v.label)}.svg`] = strToU8(viewToSvg(p.design, v, s.fabrics));
+    const imageUrls=Object.fromEntries(Object.entries(manifest).map(([id,path])=>[id,`../../${path.split('/').map(encodeURIComponent).join('/')}`]));
+    for (const v of p.design.views) files[root + `diseno/vistas/${safeName(v.label)}.svg`] = strToU8(viewToSvg(p.design, v, s.fabrics,imageUrls));
   }
   files[root + 'avances/notas.json'] = json(p.notes);
   try {

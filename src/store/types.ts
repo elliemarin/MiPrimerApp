@@ -171,6 +171,8 @@ export const EXPORT_KIND_LABEL: Record<ExportKind, string> = {
 };
 
 export interface ExportDeps {
+  /** Immutable stored originals used by the frozen design (including embroidery logos). */
+  imageFileIds?: string[];
   measurement?: { profileId: string; versionId: string; n: number; profileName: string };
   pattern?: { versionId: string; n: number; hash: string };
   design?: { versionId: string; n: number; hash: string };

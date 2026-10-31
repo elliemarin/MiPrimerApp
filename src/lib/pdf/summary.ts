@@ -20,6 +20,9 @@ import { componentMaterials, isComponentElementId } from '../../features/customi
 import { materialTargets, simpleViews } from '../../features/simple/workflow';
 import { preparePlacementGuide, type Placement } from './placement';
 import { findLetteringFont } from '../draw/lettering';
+import { elementImage, visibleDesignElement } from '../draw/designImage';
+import { embedRasterImages, type ImageFileLoader } from './raster';
+import type { PDFImage } from 'pdf-lib';
 
 export interface SummaryCtx {
   profiles: Record<string, Profile>;
@@ -27,9 +30,10 @@ export interface SummaryCtx {
   materials: Record<string, Material>;
   unit: Unit;
   includePhotos?: boolean;
+  loadImageFile?: ImageFileLoader;
 }
 
-function drawView(fd: FlowDoc, doc: DesignDoc, view: DesignView, fabrics: Record<string, Fabric>, box: { x: number; y: number; w: number; h: number }, placements: Placement[]) {
+function drawView(fd: FlowDoc, doc: DesignDoc, view: DesignView, fabrics: Record<string, Fabric>, box: { x: number; y: number; w: number; h: number }, placements: Placement[], images:Map<string,PDFImage>) {
   const k = Math.min(box.w / view.width, box.h / view.height);
   const ox = box.x + (box.w - view.width * k) / 2;
   const oy = box.y + (box.h - view.height * k) / 2;
@@ -43,9 +47,11 @@ function drawView(fd: FlowDoc, doc: DesignDoc, view: DesignView, fabrics: Record
   }
   for (const d of view.details ?? []) fd.cv.strokePath(parseSvgPath(d.d), d.style === 'pespunte' ? { width: 0.35, dash: [1.4, 1], gray: 0.1 } : { width: 0.35, dash: [], gray: 0.2 }, tx);
   if (view.source.type === 'foto') fd.cv.rect(box.x, box.y, box.w, box.h, PDF_STYLES.referencia);
-  const els = doc.elements.filter((e) => e.viewId === view.id && !e.hidden && e.kind !== 'grupo');
+  const els = doc.elements.filter((e) => e.viewId === view.id && visibleDesignElement(e,doc) && e.kind !== 'grupo');
   let number=0;
   els.forEach((e) => {
+    const image=elementImage(e);
+    if(image && images.has(image.fileId)) {fd.cv.image(images.get(image.fileId)!,image,tx);return;}
     const cmds = elementWorldCmds(e);
     const color = e.fill.type === 'color' ? e.fill.color : e.fill.type === 'tela' ? fabrics[e.fill.fabricId]?.color : undefined;
     if (color && e.kind !== 'texto' && e.kind !== 'imagen') fd.cv.fillPathRgb(cmds, fd.fillColor(color), tx);
@@ -83,10 +89,10 @@ function embroideryArt(doc:DesignDoc,id:string) {
   const included=new Set([id]);
   let more=true;
   while(more) {more=false;for(const element of doc.elements)if(element.parentId&&included.has(element.parentId)&&!included.has(element.id)){included.add(element.id);more=true;}}
-  return doc.elements.filter(element=>included.has(element.id)&&!element.hidden&&element.kind!=='grupo'&&element.technique==='bordado');
+  return doc.elements.filter(element=>included.has(element.id)&&visibleDesignElement(element,doc)&&element.kind!=='grupo'&&element.technique==='bordado');
 }
 
-function drawEmbroideryPalette(fd:FlowDoc,doc:DesignDoc,placements:Placement[],fabrics:Record<string,Fabric>,unit:Unit) {
+function drawEmbroideryPalette(fd:FlowDoc,doc:DesignDoc,placements:Placement[],fabrics:Record<string,Fabric>,unit:Unit,images:Map<string,PDFImage>) {
   const embroidery=placements.filter(placement=>placement.kind==='bordado');
   if(!embroidery.length) return;
   fd.heading('Bordados y colores');
@@ -106,6 +112,8 @@ function drawEmbroideryPalette(fd:FlowDoc,doc:DesignDoc,placements:Placement[],f
       const k=Math.min(24/Math.max(.01,bounds.maxX-bounds.minX),23/Math.max(.01,bounds.maxY-bounds.minY));
       const tx=(point:Pt):Pt=>({x:fd.m+(point.x-bounds.minX)*k,y:top+(point.y-bounds.minY)*k});
       for(const element of parts) {
+        const image=elementImage(element);
+        if(image) {fd.cv.image(images.get(image.fileId)!,image,tx);continue;}
         const color=element.fill.type==='color'?element.fill.color:element.fill.type==='tela'?fabrics[element.fill.fabricId]?.color:undefined;
         const commands=elementWorldCmds(element);
         if(color)fd.cv.fillPathRgb(commands,fd.fillColor(color),tx);
@@ -122,12 +130,14 @@ function drawEmbroideryPalette(fd:FlowDoc,doc:DesignDoc,placements:Placement[],f
     fd.y=Math.max(fd.y,top+27);
     const palette=new Map<string,Set<string>>();
     for(const element of parts) {
+      if(element.kind==='imagen')continue;
       const color=element.fill.type==='color'?element.fill.color:element.fill.type==='tela'?fabrics[element.fill.fabricId]?.color:element.stroke?.color;
       if(!color||!/^#[\da-f]{6}$/i.test(color))continue;
       const label=element.name.startsWith(`${placement.name} · `)?element.name.slice(placement.name.length+3):element.name;
       if(!palette.has(color))palette.set(color,new Set());
       palette.get(color)!.add(label);
     }
+    if(parts.some(element=>element.kind==='imagen'))fd.para('Logotipo o imagen: colores del archivo original. Elige los hilos durante su digitalización; esta guía no genera puntadas.',2.7,{indent:30,gap:1.5});
     for(const [color,names]of palette) {
       fd.ensure(8);
       const swatch=polylineCmds([{x:fd.m,y:fd.y+.5},{x:fd.m+5,y:fd.y+.5},{x:fd.m+5,y:fd.y+5.5},{x:fd.m,y:fd.y+5.5}],true);
@@ -161,6 +171,9 @@ export async function buildSummaryPdf(p: Project, ctx: SummaryCtx): Promise<Uint
 
   // Vistas
   const doc = p.design;
+  const images=await embedRasterImages(fd.doc,(doc?.elements??[]).filter(element=>visibleDesignElement(element,doc!)&&element.technique==='bordado').flatMap(element=>{
+    const image=elementImage(element);return image?[image]:[];
+  }),ctx.loadImageFile);
   const placements=preparePlacementGuide(p).placements;
   if (doc && doc.views.length) {
     fd.heading('Vistas del diseño');
@@ -169,20 +182,20 @@ export async function buildSummaryPdf(p: Project, ctx: SummaryCtx): Promise<Uint
       const h = 92;
       fd.ensure(h + 10);
       const w = (fd.width - 8) / 2;
-      drawView(fd, doc, views[i], ctx.fabrics, { x: fd.m, y: fd.y, w, h },placements);
-      if (views[i + 1]) drawView(fd, doc, views[i + 1], ctx.fabrics, { x: fd.m + w + 8, y: fd.y, w, h },placements);
+      drawView(fd, doc, views[i], ctx.fabrics, { x: fd.m, y: fd.y, w, h },placements,images);
+      if (views[i + 1]) drawView(fd, doc, views[i + 1], ctx.fabrics, { x: fd.m + w + 8, y: fd.y, w, h },placements,images);
       fd.y += h + 10;
     }
     fd.para('Composición en 2D: muestra colores y ubicaciones sin simular caída ni ajuste del tejido. E1, E2… identifican extras; B1, B2… identifican bordados en el plano de colocación.', 2.6);
   }
-  if(doc)drawEmbroideryPalette(fd,doc,placements,ctx.fabrics,u);
+  if(doc)drawEmbroideryPalette(fd,doc,placements,ctx.fabrics,u,images);
 
   // Preserve the actual reference images as well as the schematic placement views.
   if (ctx.includePhotos !== false) {
     const photos = new Map<string,string>();
     for (const reference of p.references) photos.set(reference.corrected?.fileId ?? reference.fileId, reference.name);
     for (const view of doc?.views ?? []) if (view.source.type === 'foto') photos.set(view.source.fileId, view.label);
-    for (const element of doc?.elements ?? []) if (!element.hidden && element.kind === 'imagen' && element.image) photos.set(element.image.fileId, `${element.name} · ${formatLength(element.w,u)} × ${formatLength(element.h,u)}`);
+    for (const element of doc?.elements ?? []) if (visibleDesignElement(element,doc!) && element.kind === 'imagen' && element.image && element.technique!=='bordado') photos.set(element.image.fileId, `${element.name} · ${formatLength(element.w,u)} × ${formatLength(element.h,u)}`);
     const usedFabricIds = new Set([...p.fabricIds, ...(doc?.elements.flatMap(element=>element.fill.type==='tela'?[element.fill.fabricId]:[]) ?? []), ...(doc?.views.flatMap(view=>Object.values(view.zoneFills??{}).flatMap(fill=>fill.type==='tela'?[fill.fabricId]:[])) ?? [])]);
     for (const id of usedFabricIds) {
       const fabric=ctx.fabrics[id];
@@ -192,7 +205,7 @@ export async function buildSummaryPdf(p: Project, ctx: SummaryCtx): Promise<Uint
       fd.heading('Imágenes y muestras de referencia');
       fd.para('Estas imágenes muestran las referencias y telas elegidas. Su tamaño en esta ficha es ilustrativo; utiliza las plantillas 1:1 para cortar.',2.7);
       for(const [id,label] of photos) {
-        const file=await getFile(id);
+        const file=await (ctx.loadImageFile??getFile)(id);
         fd.para(label,2.9,{bold:true});
         if(file && /jpe?g|png/.test(file.type)) await fd.image(new Uint8Array(await file.blob.arrayBuffer()),file.type,100,85);
         else fd.para('La imagen no está disponible en formato JPG/PNG en este dispositivo.',2.6);

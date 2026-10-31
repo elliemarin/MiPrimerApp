@@ -422,3 +422,35 @@ revisado vive en el mapa de cada celda, conserva la proporción y evita vecinos.
 Las fotos ilustrativas nunca proporcionan coordenadas ni medidas al motor.
 Las vistas técnicas y el figurín siguen usando geometría editable; los recursos
 WebP se precargan para uso sin conexión. Ver `IMAGENES_CATALOGO_IA.md`.
+
+## 21. Logos raster y selección accesible (2026-10-31)
+
+`EmbroideryImageSheet` llama a `embroideryImage.ts`: valida/decodifica la foto,
+normaliza orientación y transparencia a PNG y registra el archivo con `addFile`.
+La inserción usa una raíz `embroidery.kind: image` y un hijo `kind: imagen`, ambos
+con técnica Bordado y medidas físicas. El documento referencia `image.fileId`,
+no una URL temporal; los mecanismos existentes conservan el archivo al guardar,
+sincronizar y restaurar ZIP. La cancelación de la hoja no modifica el diseño.
+
+`SelectionMoveHandle` es un botón HTML de 48 px sobre el SVG; transforma las
+esquinas seleccionadas con `getScreenCTM` y recalcula su posición al cambiar
+selección, zoom o ventana. `embroideryPlacement.ts` conserva el desfase en la
+vista visible y elige superficie con el centro del objeto. Así el asa flotante
+no cambia de pieza por estar encima de ella; las instancias en espejo conservan
+escala y legibilidad. `pointInPreview(..., true)` se usa solo durante movimientos
+ya capturados; insertar o soltar desde el catálogo sigue limitado al lienzo.
+Los polígonos transparentes de selección amplían la zona táctil sin alterar la
+geometría guardada o exportada. Cancelar un puntero descarta el estado temporal.
+
+`DrawImage` añade raster afín a `Drawable`; `PdfCanvas.image` conserva alfa,
+giro y espejo a escala 1:1. `raster.ts` valida los archivos antes de devolver PDF.
+La guía de transferencia y la de ubicación tienen orientaciones independientes.
+`visibleDesignElement` aplica visibilidad heredada a raíz e hijos; ocultar un
+subgrupo no deja un raster pendiente en miniaturas. `freezeDeps.imageFileIds`
+identifica las imágenes de la versión exportada. El ZIP incluye las imágenes y
+sus rutas relativas desde las vistas SVG; un archivo ausente bloquea el respaldo.
+
+Relevo y comprobaciones: `LOGOTIPOS_BORDADOS.md`, `LOGOTIPOS_PDF.md` y pruebas
+`embroidery-image`, `embroidery-placement`, `embroidery-raster-pdf`,
+`selection-move-handle`, `placement-drag`. Las imágenes son guías de transferencia,
+no moldes de tela ni digitalización automática de puntadas.

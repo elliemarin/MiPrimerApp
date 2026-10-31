@@ -6,22 +6,79 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-10-30 (Codex, sobre el relevo de Claude).
+- Última actualización: 2026-10-31 (Codex, sobre el relevo de Claude).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 2859 pruebas: catálogo, vistas, patrones, persistencia, PDF e imágenes
+npm test            # 2899 pruebas: catálogo, patrones, persistencia, PDF, logos y arrastre
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Logos en Bordados y control de mover (2026-10-31)
+
+**Este es el relevo más reciente.** El recorrido Base → Extras → Telas y colores →
+Bordados → PDF se conserva. Esta entrega atiende subir un logo y mover objetos
+pequeños sin tener que acertar a una línea de la letra.
+
+- **Subir logo o imagen** en Bordados abre una hoja sencilla: elegir archivo,
+  revisar imagen y ancho, colocar. Después usa los mismos controles de tamaño,
+  borrar, deshacer y posición que los motivos existentes. El alto conserva la
+  proporción. PNG/WebP mantienen transparencia; las fotos conservan orientación.
+  Se guarda una copia PNG local, máximo 2400 px de lado y 40 MB de entrada.
+- **Control de mover de 48 px** sobre la selección, tanto en Bordados como en
+  Extras. Se adapta a zoom, scroll y tamaño de pantalla; al llegar a un borde
+  cambia de lado para seguir accesible. Las flechas del teclado ajustan un píxel
+  de pantalla (Mayús: diez), convertido a coordenadas físicas sin redondearlas.
+- **Selección más fácil:** letras, logos y grupos de la vista armada responden
+  también en su caja y alrededor de sus líneas. El arrastre usa el centro del
+  objeto y el desfase del dedo; agarrar el botón no lo hace saltar. Funciona en
+  vistas físicas y lados en espejo. Un gesto cancelado no guarda movimiento;
+  soltar fuera de una pieza válida conserva la posición anterior.
+- **Persistencia y salida reales:** el archivo permanece en IndexedDB y ZIP;
+  el PDF incluye el logo con su transparencia en ficha, transferencia 1:1 y guía
+  de ubicación cuadriculada. También aparece en las capturas y el prompt de la
+  lámina editorial. Un archivo ausente/corrupto produce un error claro; no se
+  exporta un rectángulo vacío. No hay conversión automática a puntadas.
+- **Revisión de PDF:** un grupo oculto dentro de otro grupo ahora se omite también
+  de las miniaturas, evitando un fallo al exportar un logo oculto.
+- **Publicación anterior verificada:** el despliegue pendiente del 30 de octubre
+  terminó. La prueba del sitio público pasó con las 110 imágenes, intervención
+  sin recarga y PDF del pañalero de 18 páginas/9 plantillas. Se cerró la
+  [incidencia #1](https://github.com/elliemarin/MiPrimerApp/issues/1).
+
+Validación final: **2,899 pruebas en 66 archivos**, TypeScript y compilación para
+GitHub Pages correctos. Comprobaciones y archivos de relevo:
+
+- `docs/LOGOTIPOS_BORDADOS.md`: importación, archivos y capturas editoriales.
+- `docs/LOGOTIPOS_PDF.md`: escala, transparencia, espejo y límites de exportación.
+- `docs/ASAS_DE_MOVIMIENTO.md`: contrato del control, punteros, zoom y extras.
+- `tests/browser/logo_move_smoke.py`: móvil 390 px y escritorio 1440 px; logo,
+  letra de 3 mm tocada en su hueco, control de 48 px, arrastre exacto, cancelación,
+  tamaño proporcional, reapertura, ZIP y PDF real.
+- `tests/browser/move_handle_smoke.py`: extras en pierna espejo, zoom, piezas,
+  cambio de cara, flechas y cambio de tamaño de ventana.
+- `tests/browser/production_logo_smoke.py`: recorrido contra el build compilado
+  con prefijo `/MiPrimerApp/`, sin módulos de desarrollo; guardado y reapertura
+  desde IndexedDB, PNG transparente de 70 mm y PDF del pañalero de 21 páginas.
+- `tests/browser/embroidery_image_import_smoke.py`: PNG/WebP alfa, EXIF, imagen
+  grande, archivo corrupto, ZIP y capturas editoriales.
+- PyMuPDF confirma controles de **50/100 mm**, logo de prueba de **50 × 25 mm**
+  y logo colocado desde la interfaz de **80 mm** de ancho, con canal alfa.
+
+**Pendiente de dispositivo físico:** Safari/iPhone, carrete y formatos HEIC/AVIF
+dependientes del navegador; impresión al 100 % en la impresora real. El panel
+avanzado SVG/DST sigue requiriendo digitalizar las imágenes. No se certifica
+compatibilidad de puntadas con la Singer HD9120 ni se promueven los patrones
+experimentales a probados por este cambio.
+
 ## Prenda completa, pañalero y 44 disfraces (2026-10-30)
 
-**Este es el relevo más reciente.** El recorrido principal ahora es **Base →
+El recorrido principal ahora es **Base →
 Extras sobre la prenda completa → Telas y colores → Bordados → PDF**. Se conservan
 los proyectos existentes, sus medidas físicas y las piezas independientes.
 

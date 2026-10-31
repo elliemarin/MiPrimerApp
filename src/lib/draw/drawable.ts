@@ -1,4 +1,4 @@
-import { Pt, Mat, matApply, add, mul, norm, sub, BBox, bboxOf, IDENTITY } from '../geom/vec';
+import { Pt, Mat, matApply, matMul, add, mul, norm, sub, BBox, bboxOf, IDENTITY } from '../geom/vec';
 import { CutOutline } from '../pattern/offset';
 import { edgeCmds, PathCmd, polylineCmds, transformCmds, cmdsBBox } from './paths';
 import { orientation, outwardNormal, pointOnEdge } from '../pattern/outline';
@@ -24,11 +24,23 @@ export interface DrawLabel {
   bold?: boolean;
 }
 
+/** Original raster; matrix maps its top-left unit square into physical millimetres. */
+export interface DrawImage {
+  fileId: string;
+  name: string;
+  matrix: Mat;
+}
+
+export function imageCorners(image: DrawImage): Pt[] {
+  return [{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:1}].map(point=>matApply(image.matrix,point));
+}
+
 export interface Drawable {
   id: string;
   name: string;
   paths: DrawPath[];
   labels: DrawLabel[];
+  images?: DrawImage[];
   /** Flechas de hilo (doble punta). */
   grains: { a: Pt; b: Pt }[];
   bbox: BBox;
@@ -88,8 +100,8 @@ export function wrapLabelText(text:string,size:number,width:number,bold=false):s
   return lines;
 }
 
-export function drawableBBox(paths: DrawPath[], labels: DrawLabel[]): BBox {
-  const pts: Pt[] = [];
+export function drawableBBox(paths: DrawPath[], labels: DrawLabel[], images: DrawImage[] = []): BBox {
+  const pts: Pt[] = images.flatMap(imageCorners);
   for (const p of paths) {
     const b = cmdsBBox(p.cmds);
     if (Number.isFinite(b.minX)) pts.push({ x: b.minX, y: b.minY }, { x: b.maxX, y: b.maxY });
@@ -236,6 +248,7 @@ export function translateDrawable(d: Drawable, dx: number, dy: number): Drawable
   return {
     ...d,
     paths: d.paths.map((p) => ({ ...p, cmds: transformCmds(p.cmds, m) })),
+    ...(d.images ? { images: d.images.map(image=>({...image,matrix:matMul(m,image.matrix)})) } : {}),
     labels: d.labels.map((l) => ({ ...l, at: { x: l.at.x + dx, y: l.at.y + dy } })),
     grains: d.grains.map((g) => ({ a: { x: g.a.x + dx, y: g.a.y + dy }, b: { x: g.b.x + dx, y: g.b.y + dy } })),
     bbox: { minX: d.bbox.minX + dx, minY: d.bbox.minY + dy, maxX: d.bbox.maxX + dx, maxY: d.bbox.maxY + dy }

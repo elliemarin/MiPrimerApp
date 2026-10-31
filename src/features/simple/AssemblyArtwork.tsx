@@ -55,6 +55,7 @@ export function AssemblyArtwork({scene,project,fabrics,selectedId,onElementPoint
             const children=elements.filter(el=>rootOf(elements,el).id===root.id);
             const selected=selectedId===root.id||selectedId===componentIdForElement(root.id)||children.some(child=>child.id===selectedId);
             return <g key={root.id} transform={`matrix(${assemblyArtworkMatrix(surface,root).join(' ')})`} data-assembly-element={root.id} onPointerDown={event=>{event.stopPropagation();onElementPointerDown?.(event,root.id,surface);}} style={{cursor:onElementPointerDown?'grab':undefined}}>
+              {onElementPointerDown&&<polygon data-assembly-hit={root.id} points={elementCorners(root).map(p=>`${p.x},${p.y}`).join(' ')} fill="transparent" stroke="transparent" strokeWidth="24" vectorEffect="non-scaling-stroke" pointerEvents="all"/>}
               {children.map(el=><g key={el.id} data-assembly-part={el.id}><ElementSvg el={el} doc={doc} fabrics={fabrics} mode="apariencia" prefix={prefix}/></g>)}
               {selected&&<polygon points={elementCorners(root).map(p=>`${p.x},${p.y}`).join(' ')} fill="none" stroke="#18785c" strokeWidth="2" strokeDasharray="5 3" vectorEffect="non-scaling-stroke" pointerEvents="none"/>}
             </g>;

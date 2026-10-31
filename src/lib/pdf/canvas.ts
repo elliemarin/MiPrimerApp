@@ -2,6 +2,7 @@ import {
   PDFDocument,
   PDFFont,
   PDFPage,
+  PDFImage,
   StandardFonts,
   appendBezierCurve,
   clip,
@@ -25,12 +26,16 @@ import {
   LineJoinStyle,
   degrees,
   grayscale,
-  setFillingRgbColor
+  setFillingRgbColor,
+  concatTransformationMatrix,
+  drawObject
 } from 'pdf-lib';
 import { PT_PER_MM } from '../units';
 import type { PathCmd } from '../draw/paths';
 import type { LineStyle } from '../draw/drawable';
 import type { Pt } from '../geom/vec';
+import type { DrawImage } from '../draw/drawable';
+import { imageCorners } from '../draw/drawable';
 
 export interface StrokeSpec {
   width: number; // pt
@@ -76,6 +81,14 @@ export class PdfCanvas {
   }
   Y(mm: number) {
     return this.hPt - mm * PT_PER_MM;
+  }
+  /** Affine image placement in mm, preserving alpha, rotation and mirrored copies. */
+  image(image:PDFImage, placement:DrawImage, tx:(point:Pt)=>Pt=(point)=>point) {
+    const [a,b,,d]=imageCorners(placement).map(tx);
+    const key=this.page.node.newXObject('Image',image.ref);
+    this.page.pushOperators(pushGraphicsState(),concatTransformationMatrix(
+      this.X(b.x-a.x),-this.X(b.y-a.y),this.X(a.x-d.x),-this.X(a.y-d.y),this.X(d.x),this.Y(d.y)
+    ),drawObject(key),popGraphicsState());
   }
   push() {
     this.page.pushOperators(pushGraphicsState());

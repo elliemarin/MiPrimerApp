@@ -4,15 +4,26 @@ import { generateComponents } from '../../lib/pattern/components';
 import type { Piece } from '../../lib/pattern/types';
 import type { Pt } from '../../lib/geom/vec';
 
-/** SVG's screen CTM includes viewBox letterboxing and page scroll. */
-export function pointInPreview(svg: SVGSVGElement | null, x: number, y: number): Pt | undefined {
+/** SVG's screen CTM includes viewBox letterboxing and page scroll. Only an
+ * already captured move may continue outside; insert/drop keeps the default. */
+export function pointInPreview(svg: SVGSVGElement | null, x: number, y: number, allowOutside = false): Pt | undefined {
   if (!svg) return;
   const box = svg.getBoundingClientRect();
-  if (x < box.left || x > box.right || y < box.top || y > box.bottom) return;
+  if (!allowOutside && (x < box.left || x > box.right || y < box.top || y > box.bottom)) return;
   const matrix = svg.getScreenCTM();
   if (!matrix) return;
-  const point = new DOMPoint(x, y).matrixTransform(matrix.inverse());
-  return { x: point.x, y: point.y };
+  const inverse = matrix.inverse();
+  const point = { x: inverse.a * x + inverse.c * y + inverse.e, y: inverse.b * x + inverse.d * y + inverse.f };
+  return Number.isFinite(point.x) && Number.isFinite(point.y) ? point : undefined;
+}
+
+/** Convert a screen-pixel movement to SVG units without introducing an origin. */
+export function previewDelta(svg: SVGSVGElement | null, deltaPixels: Pt): Pt | undefined {
+  const matrix = svg?.getScreenCTM();
+  if (!matrix) return;
+  const inverse = matrix.inverse();
+  const delta = { x: inverse.a * deltaPixels.x + inverse.c * deltaPixels.y, y: inverse.b * deltaPixels.x + inverse.d * deltaPixels.y };
+  return Number.isFinite(delta.x) && Number.isFinite(delta.y) ? delta : undefined;
 }
 
 export function componentAtPoint(component: PatternComponent, view: DesignView, point: Pt): PatternComponent {

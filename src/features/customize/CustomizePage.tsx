@@ -5,20 +5,21 @@ import type { Project } from '../../store/types';
 import { COMPONENT_OPTIONS, makeComponent, optionsForProject, searchComponents } from '../../data/components';
 import { newPatternState } from '../../lib/pattern/engine';
 import { cameraWindowFor, type PatternComponent } from '../../lib/pattern/components';
-import type { Pt } from '../../lib/geom/vec';
+import { matApply, type Pt } from '../../lib/geom/vec';
 import { Button, Empty, Field, IconButton, LengthInput, Notice, Select, Sheet, TextInput } from '../../ui/components';
 import { ProjectJourney } from '../../ui/ProjectJourney';
 import { Icon } from '../../ui/Icon';
+import { SelectionMoveHandle } from '../../ui/SelectionMoveHandle';
 import { navigate } from '../../ui/router';
 import { formatLength } from '../../lib/units';
 import { StudioDefs, ViewBase, ElementSvg } from '../studio/render';
-import { newDesign, type DesignView } from '../studio/model';
+import { elementCorners, newDesign, type DesignView } from '../studio/model';
 import { basePanelPattern } from '../studio/panelWorkflow';
-import { componentIdForElement, syncComponentDesign } from './componentDesign';
-import { componentAtPoint, componentFits, componentPlacementProblem, firstFittingPosition, pointInPreview } from './placementDrag';
+import { componentElementId, componentGroupId, componentIdForElement, syncComponentDesign } from './componentDesign';
+import { componentAtPoint, componentFits, componentPlacementProblem, firstFittingPosition, pointInPreview, previewDelta } from './placementDrag';
 import { isBoughtTrim, isDecoration } from '../../lib/pattern/decorations';
 import { decorationFoldPath, decorationPath } from './decorationArt';
-import { buildAssembly, assemblyHit, assemblyPoint, inverseAssemblyPoint, assemblyComponentFits, firstFittingAssemblyPosition, type AssemblySurface } from '../simple/assembled';
+import { buildAssembly, assemblyArtworkMatrix, assemblySurfaceForElement, assemblyHit, assemblyPoint, inverseAssemblyPoint, assemblyComponentFits, firstFittingAssemblyPosition, type AssemblySurface } from '../simple/assembled';
 import { AssemblyArtwork } from '../simple/AssemblyArtwork';
 import type { ComponentOption } from '../../data/components';
 import './customize.css';
@@ -89,6 +90,13 @@ export function CustomizePage({ projectId }: { projectId: string }) {
   const liveProject = moving && project.pattern ? syncComponentDesign({ ...project, pattern: { ...project.pattern, components: liveComponents } }) : project;
   const doc = liveProject.design ?? sourceDoc;
   const displayedSelected = liveComponents.find(component => component.id === selectedId);
+  const selectedBody = selectedId ? doc.elements.find(element => element.id === componentElementId(selectedId, 'cuerpo')) : undefined;
+  const selectedRoot = selectedId ? doc.elements.find(element => element.id === componentGroupId(selectedId)) ?? selectedBody : undefined;
+  const selectedSurface = assembled && selectedRoot ? assemblySurfaceForElement(scene, liveProject, selectedRoot) : undefined;
+  const selectionVisible = !!selectedRoot && !selectedRoot.hidden && !selectedBody?.hidden
+    && (assembled ? !!selectedSurface : selectedRoot.viewId === view?.id);
+  const selectionLocked = !!(selectedRoot?.locked || selectedBody?.locked);
+  const selectedCorners = selectionVisible && selectedRoot ? elementCorners(selectedRoot).map(point => selectedSurface ? matApply(assemblyArtworkMatrix(selectedSurface, selectedRoot), point) : point) : [];
   const options = searchComponents(query, (filter === 'recomendados' ? recommended : COMPONENT_OPTIONS)
     .filter(option => filter !== 'bolsillos' || option.group === 'bolsillos' || option.group === 'cierres')
     .filter(option => filter !== 'herramientas' || option.group === 'herramientas' || option.group === 'trabillas')
@@ -154,44 +162,58 @@ export function CustomizePage({ projectId }: { projectId: string }) {
   };
   const updateDrag = (next?: Drag) => { dragRef.current = next; setDrag(next); };
   const startAdd = (event: React.PointerEvent<HTMLButtonElement>, presetId: string) => {
-    if (event.button !== 0) return;
+    if (event.button !== 0 || event.isPrimary === false || dragRef.current) return;
     event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId);
     updateDrag({ pointerId: event.pointerId, kind: 'add', presetId, start: { x: event.clientX, y: event.clientY }, client: { x: event.clientX, y: event.clientY } });
   };
-  const startMove = (event: React.PointerEvent<SVGGElement>, id: string, surface?: AssemblySurface) => {
-    if (event.button !== 0 || !view) return;
+  const startMove = (event: React.PointerEvent, id: string, surface?: AssemblySurface) => {
+    if (event.button !== 0 || event.isPrimary === false || dragRef.current || !view) return;
     const component = components.find(item => item.id === id); if (!component) return;
-    const body = sourceDoc.elements.find(element => componentIdForElement(element.id) === id && element.id.endsWith('--cuerpo'));
+    const body = sourceDoc.elements.find(element => element.id === componentElementId(id, 'cuerpo'));
+    const group = sourceDoc.elements.find(element => element.id === componentGroupId(id));
+    if (body?.hidden || group?.hidden) return;
+    event.preventDefault(); event.stopPropagation();
     setSelectedId(id);
-    if (body?.locked) { setMessage('Este extra está bloqueado en el diseño guardado.'); return; }
+    if (body?.locked || group?.locked) { setMessage('Este extra está bloqueado en el diseño guardado.'); return; }
     const point = pointInPreview(svgRef.current, event.clientX, event.clientY); if (!point) return;
-    event.preventDefault(); event.stopPropagation(); svgRef.current?.setPointerCapture(event.pointerId);
+    svgRef.current?.setPointerCapture(event.pointerId);
     const center = surface && component.placement ? assemblyPoint(surface, component.placement) : { x: component.placement?.x ?? point.x, y: component.placement?.y ?? point.y };
     if (surface && component.placement) setTarget({ surfaceId: surface.id, point: { x: component.placement.x, y: component.placement.y } });
     updateDrag({ pointerId: event.pointerId, kind: 'move', componentId: id, start: { x: event.clientX, y: event.clientY }, client: { x: event.clientX, y: event.clientY }, point: center, offset: { x: point.x - center.x, y: point.y - center.y } });
   };
   const movePointer = (event: React.PointerEvent<SVGSVGElement | HTMLButtonElement>) => {
     const current = dragRef.current; if (!current || current.pointerId !== event.pointerId) return;
-    const point = pointInPreview(svgRef.current, event.clientX, event.clientY);
+    const point = pointInPreview(svgRef.current, event.clientX, event.clientY, current.kind === 'move');
     updateDrag({ ...current, client: { x: event.clientX, y: event.clientY }, point: point ? { x: point.x - (current.offset?.x ?? 0), y: point.y - (current.offset?.y ?? 0) } : undefined });
+  };
+  const commitMove = (component: PatternComponent, point: Pt) => {
+    const anchor = anchorAt(point);
+    if (!anchor) { setMessage('Suelta el extra dentro de la prenda.'); return; }
+    const moved = position(component, anchor);
+    const movedSurface = anchor.surface ?? scenes.flatMap(item => item.surfaces).find(surface => surface.id === moved.placement?.assemblySurfaceId);
+    if (!componentFits(moved, anchor.view, base?.pieces ?? []) || (movedSurface && !assemblyComponentFits(movedSurface, moved))) { setMessage('El extra no cabe en esa zona. Conservamos su posición anterior.'); return; }
+    if (moved.placement?.viewId === component.placement?.viewId && moved.placement?.assemblySurfaceId === component.placement?.assemblySurfaceId
+      && Math.hypot((moved.placement?.x ?? 0) - (component.placement?.x ?? 0), (moved.placement?.y ?? 0) - (component.placement?.y ?? 0)) < .001) return;
+    save(items => items.map(item => item.id === moved.id ? moved : item)); setMessage('');
+  };
+  const nudgeSelected = (deltaPixels: Pt) => {
+    if (!selected?.placement || !selectionVisible || selectionLocked || dragRef.current) return;
+    const delta = previewDelta(svgRef.current, deltaPixels); if (!delta) return;
+    const center = selectedSurface ? assemblyPoint(selectedSurface, selected.placement) : selected.placement;
+    commitMove(selected, { x: center.x + delta.x, y: center.y + delta.y });
   };
   const finishPointer = (event: React.PointerEvent<SVGSVGElement | HTMLButtonElement>, cancel = false) => {
     const current = dragRef.current; if (!current || current.pointerId !== event.pointerId) return;
     updateDrag(undefined);
     if (cancel || !view) return;
-    const point = pointInPreview(svgRef.current, event.clientX, event.clientY);
+    const point = pointInPreview(svgRef.current, event.clientX, event.clientY, current.kind === 'move');
     if (current.kind === 'add' && current.presetId) {
       if (Math.hypot(event.clientX - current.start.x, event.clientY - current.start.y) < 6) add(current.presetId);
       else if (point) add(current.presetId, point, true);
       else setMessage('Suelta el extra sobre la prenda para añadirlo.');
     } else if (current.kind === 'move' && current.componentId && point) {
       const component = components.find(item => item.id === current.componentId); if (!component) return;
-      const anchor = anchorAt({ x: point.x - (current.offset?.x ?? 0), y: point.y - (current.offset?.y ?? 0) });
-      if (!anchor) { setMessage('Suelta el extra dentro de la prenda.'); return; }
-      const moved = position(component, anchor);
-      const movedSurface = anchor.surface ?? scenes.flatMap(item => item.surfaces).find(surface => surface.id === moved.placement?.assemblySurfaceId);
-      if (componentFits(moved, anchor.view, base?.pieces ?? []) && (!movedSurface || assemblyComponentFits(movedSurface, moved))) { save(items => items.map(item => item.id === moved.id ? moved : item)); setMessage(''); }
-      else setMessage('El extra no cabe en esa zona. Conservamos su posición anterior.');
+      commitMove(component, { x: point.x - (current.offset?.x ?? 0), y: point.y - (current.offset?.y ?? 0) });
     }
   };
   const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
@@ -226,16 +248,19 @@ export function CustomizePage({ projectId }: { projectId: string }) {
           {!assembled && <button className="icon-btn" aria-label="Mostrar cuadrícula" aria-pressed={grid} onClick={() => setGrid(!grid)} title="Cuadrícula de 1 cm"><Icon name="grid" /></button>}
         </div>
         {canvasView && view ? <div className={`customize-art${assembled ? ' customize-whole-look' : ''}${nativeDragging || drag?.kind === 'add' ? ' is-drop-target' : ''}`} onDragOver={event => { if (event.dataTransfer.types.includes(DRAG_TYPE)) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }} onDrop={onDrop}>
-          <svg ref={svgRef} viewBox={zoomBox ? `${zoomBox.x} ${zoomBox.y} ${zoomBox.width} ${zoomBox.height}` : `${canvasView.minX - 12} ${canvasView.minY - 12} ${canvasView.width + 24} ${canvasView.height + 24}`} role="img" aria-label={`${project.name}, ${assembled ? scene.label : viewName(view)}`} onPointerMove={movePointer} onPointerUp={event => finishPointer(event)} onPointerCancel={event => finishPointer(event, true)}>
+          <svg ref={svgRef} viewBox={zoomBox ? `${zoomBox.x} ${zoomBox.y} ${zoomBox.width} ${zoomBox.height}` : `${canvasView.minX - 12} ${canvasView.minY - 12} ${canvasView.width + 24} ${canvasView.height + 24}`} role="img" aria-label={`${project.name}, ${assembled ? scene.label : viewName(view)}`} onPointerMove={movePointer} onPointerUp={event => finishPointer(event)} onPointerCancel={event => finishPointer(event, true)} onLostPointerCapture={event => finishPointer(event, true)}>
             {assembled ? <AssemblyArtwork scene={scene} project={liveProject} fabrics={fabrics} selectedId={selectedId} onElementPointerDown={(event, elementId, surface) => { const id = componentIdForElement(elementId); if (id) startMove(event, id, surface); }} onSurfacePointerDown={(event, surface) => {
+              if (event.button !== 0 || event.isPrimary === false || dragRef.current) return;
               const point = pointInPreview(svgRef.current, event.clientX, event.clientY);
               if (point) { setTarget({ surfaceId: surface.id, point: inverseAssemblyPoint(surface, point) }); setSelectedId(undefined); setMessage(`${surface.label}: elige el extra que quieres añadir.`); }
             }}/> : <><StudioDefs doc={doc} view={view} fabrics={fabrics} prefix="customize-" />
             <ViewBase view={view} mode="apariencia" prefix="customize-" fabrics={fabrics} />
             {grid && <PlacementGrid view={view} />}
             {displayParts.map(element => { const id = componentIdForElement(element.id); return <g key={element.id} data-component-id={id} onPointerDown={id ? event => startMove(event, id) : undefined}><ElementSvg el={element} mode="apariencia" prefix="customize-" doc={doc} fabrics={fabrics} /></g>; })}
-            {displayedSelected?.placement?.viewId === view.id && <rect x={displayedSelected.placement.x - displayedSelected.width / 2 - 4} y={displayedSelected.placement.y - displayedSelected.height / 2 - 4} width={displayedSelected.width + 8} height={displayedSelected.height + 8} fill="none" stroke="#a26e00" strokeWidth={1.8} strokeDasharray="5 3" vectorEffect="non-scaling-stroke" pointerEvents="none" />}</>}
+            {selectionVisible && <polygon points={selectedCorners.map(point => `${point.x},${point.y}`).join(' ')} fill="none" stroke="#a26e00" strokeWidth={1.8} strokeDasharray="5 3" vectorEffect="non-scaling-stroke" pointerEvents="none" />}</>}
           </svg>
+          {displayedSelected && selectionVisible && <SelectionMoveHandle svgRef={svgRef} corners={selectedCorners} label="Mover extra seleccionado" disabled={selectionLocked}
+            onPointerDown={event => startMove(event, displayedSelected.id, selectedSurface)} onNudge={nudgeSelected} />}
           {grid && !assembled && <span className="customize-grid-note">Cada cuadro: 1 cm</span>}
           {(selected || zoomBox) && <button className="customize-zoom-btn" onClick={toggleZoom}>{zoomBox ? 'Ver diseño completo' : 'Acercar zona'}</button>}
         </div> : <div className="customize-no-view"><Icon name="patronaje" size={40} /><p>Elige una base para colocar sus extras.</p></div>}
@@ -255,7 +280,7 @@ export function CustomizePage({ projectId }: { projectId: string }) {
         <p className="customize-result-count">{options.length} opciones · Patrones de tela o metraje de mercería</p>
         <div className="customize-options">{options.slice(0, limit).map(option => <div key={option.id} className="customize-option">
           <button className="customize-option-add" aria-label={`Agregar ${option.name.toLowerCase()}`} onClick={() => add(option.id)} draggable onDragStart={event => { event.dataTransfer.setData(DRAG_TYPE, option.id); event.dataTransfer.effectAllowed = 'copy'; setNativeDragging(true); }} onDragEnd={() => setNativeDragging(false)}><ComponentIcon option={option} /><span><strong>{option.name}</strong><small>{formatLength(option.defaultWidth, unit)} × {formatLength(option.defaultHeight, unit)}{isBoughtTrim(option.kind)?' · Comprado':''}</small></span><Icon name="plus" size={17} /></button>
-          <button className="customize-drag-handle" aria-label={`Arrastrar ${option.name.toLowerCase()}`} title="Arrastrar sobre la pieza" onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); add(option.id); } }} onPointerDown={event => startAdd(event, option.id)} onPointerMove={movePointer} onPointerUp={event => finishPointer(event)} onPointerCancel={event => finishPointer(event, true)}><Icon name="move" size={17} /><span>Arrastrar</span></button>
+          <button className="customize-drag-handle" aria-label={`Arrastrar ${option.name.toLowerCase()}`} title="Arrastrar sobre la pieza" onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); add(option.id); } }} onPointerDown={event => startAdd(event, option.id)} onPointerMove={movePointer} onPointerUp={event => finishPointer(event)} onPointerCancel={event => finishPointer(event, true)} onLostPointerCapture={event => finishPointer(event, true)}><Icon name="move" size={17} /><span>Arrastrar</span></button>
         </div>)}</div>
         {!options.length && <p className="small muted">Prueba otro nombre o elige Todos.</p>}
         {options.length > limit && <Button block onClick={() => setLimit(limit + 24)}>Mostrar más extras</Button>}
