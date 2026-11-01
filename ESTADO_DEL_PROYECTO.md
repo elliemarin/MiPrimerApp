@@ -12,16 +12,32 @@ Actualízalo al terminar cada tarea.
 
 ```bash
 npm install
-npm test            # 3012 pruebas: catálogo, patrones, persistencia, PDF, proyector, logos y arrastre
+npm test            # 3031 pruebas: catálogo, patrones, persistencia, PDF, proyector, logos y arrastre
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Segundo lote de diseños digitalizados (2026-11-01)
+
+**Este es el relevo más reciente.** Ocho fotos más; detalle en
+`docs/DISENOS_DIGITALIZADOS.md` («Segundo lote»).
+
+- 4 generadores nuevos (`kidsBatch2.ts`): bonete de tres piezas con volante
+  (tela, doble o puntilla), delantal pichi de una pieza, mono y peto con
+  tirantes (formas pichi, pico y peto; corto o largo; volante o vuelta;
+  entrepierna con broches para bebé) y blusa trapecio con volante opcional.
+- Pantalón elástico con `corte` capri, bermuda o short calculado desde la
+  entrepierna; conjuntos `trapecio` y `vichy`. El chaleco de borreguito ya
+  existía.
+- Sin cintas al cuello ni en los hombros: botones, broches y lengüetas.
+- 13 recetas y 6 tarjetas nuevas; láminas `infantil-04/05`.
+  Validación: **3,031 pruebas en 70 archivos**.
+
 ## Diseños infantiles digitalizados desde fotos (2026-11-01)
 
-**Este es el relevo más reciente.** Detalle completo, imagen por imagen, en
+Relevo anterior. Detalle completo, imagen por imagen, en
 `docs/DISENOS_DIGITALIZADOS.md`.
 
 - La usuaria envió 16 fotos de diseños de niños y bebés con patrón. Se

@@ -5,6 +5,7 @@ import { bloomerDefaults, generateBloomers, generateBonnet, generateBooties, gen
 import { bowPieces } from './kidsBlocks';
 import { buttonTopDefaults, casingDressDefaults, generateButtonTop, generateCasingDress, generateHeadband, generatePeasant, generateRufflesRomper, headbandDefaults, peasantDefaults, rufflesRomperDefaults } from './kidsTops';
 import { generatePants, pantsDefaults } from './pants';
+import { generateTrapezeTop, trapezeTopDefaults } from './kidsBatch2';
 
 /* Más prendas de bebé: peto (pelele corto u overol largo) con tirantes y
  * abertura de broches en piernas y entrepierna, gorro de punto con orejitas,
@@ -261,7 +262,13 @@ export const SETS: Record<string, { name: string; parts: Part[] }> = {
     { prefix: 'short', label: 'Short', generate: generatePants, defaults: c => bubbleShortDefaults(c), params: {} }] },
   rayas: { name: 'Blusa con botones y pantalón bombacho', parts: [
     { prefix: 'blusa', label: 'Blusa', generate: generateButtonTop, defaults: buttonTopDefaults, params: {} },
-    { prefix: 'pantalon', label: 'Pantalón', generate: generatePants, defaults: c => ({ ...pantsDefaults(c), estilo: 'bombacho' }), params: {} }] }
+    { prefix: 'pantalon', label: 'Pantalón', generate: generatePants, defaults: c => ({ ...pantsDefaults(c), estilo: 'bombacho' }), params: {} }] },
+  trapecio: { name: 'Blusa trapecio y cubrepañal', parts: [
+    { prefix: 'blusa', label: 'Blusa', generate: generateTrapezeTop, defaults: trapezeTopDefaults, params: {} },
+    { prefix: 'cubrepanal', label: 'Cubrepañal', generate: generateBloomers, defaults: bloomerDefaults, params: {} }] },
+  vichy: { name: 'Blusa trapecio con volante y pantalón ancho capri', parts: [
+    { prefix: 'blusa', label: 'Blusa', generate: generateTrapezeTop, defaults: trapezeTopDefaults, params: { volanteBajo: 'si' } },
+    { prefix: 'pantalon', label: 'Pantalón', generate: generatePants, defaults: c => ({ ...pantsDefaults(c), estilo: 'ancho', corte: 'capri' }), params: {} }] }
 };
 
 /** Short bombacho: hem as wide as the leg, elastic casing with a small frill. */

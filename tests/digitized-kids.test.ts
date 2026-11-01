@@ -33,7 +33,12 @@ const CASES: [string, Record<string, string>[], PersonKind[], 'plano' | 'punto']
   ['pelele-volantes', [{ tirantes: 'si' }, { tirantes: 'no' }], ['bebe', 'toddler'], 'plano'],
   ['diadema-lazo', [{}], KIDS, 'punto'],
   ['gorro-duende', [{ forro: 'si' }, { forro: 'no' }], KIDS, 'plano'],
-  ['gorro-orejeras', [{ orejas: 'gato' }, { orejas: 'oso' }, { orejas: 'ninguna' }], KIDS, 'punto']
+  ['gorro-orejeras', [{ orejas: 'gato' }, { orejas: 'oso' }, { orejas: 'ninguna' }], KIDS, 'punto'],
+  // Second batch.
+  ['bonete-volante', [{ volante: 'tela' }, { volante: 'doble' }, { volante: 'encaje' }, { volante: 'ninguno' }], KIDS, 'plano'],
+  ['delantal-pichi-infantil', [{ volantes: 'si', bolsillo: 'si' }, { volantes: 'no', bolsillo: 'no' }], ['toddler', 'infantil'], 'plano'],
+  ['mono-tirantes-infantil', [{ forma: 'pichi' }, { forma: 'pico', bajo: 'volante', lazos: 'si' }, { forma: 'peto', largo: 'largo', bajo: 'vuelta' }, { forma: 'pichi', largo: 'largo', entrepierna: 'cerrada' }], KIDS, 'plano'],
+  ['blusa-trapecio-infantil', [{}, { volanteBajo: 'si' }], KIDS, 'plano']
 ];
 
 describe('diseños infantiles digitalizados desde fotos', () => {
@@ -100,8 +105,29 @@ describe('diseños infantiles digitalizados desde fotos', () => {
     expect(errors(barrel)).toEqual([]);
   });
 
+  it('corta pantalones a capri, bermuda o short desde la entrepierna de la talla', () => {
+    const kid = at('ref-infantil-estatura', 'E110', 'infantil'), full = run('pantalon-cintura-elastica', kid, { estilo: 'ancho' });
+    const lengths = ['capri', 'bermuda', 'short'].map(corte => run('pantalon-cintura-elastica', kid, { estilo: 'ancho', corte }).checks.find(c => c.key === 'largo')!.target);
+    expect(lengths[0]).toBeLessThan(full.checks.find(c => c.key === 'largo')!.target);
+    expect(lengths[0]).toBeGreaterThan(lengths[1]); expect(lengths[1]).toBeGreaterThan(lengths[2]);
+  });
+
+  it('mantiene botones y broches en lugar de cintas y pasa la cabeza por el escote del delantal', () => {
+    const kid = at('ref-infantil-estatura', 'E104', 'toddler');
+    expect(run('delantal-pichi-infantil', kid).notices.find(n => n.code === 'paso-cabeza')?.level).toBe('ok');
+    expect(run('delantal-pichi-infantil', kid).pieces.find(p => p.id === 'cinta')!.nodes[1].x).toBeLessThanOrEqual(300);
+    const pico = run('mono-tirantes-infantil', kid, { forma: 'pico' });
+    expect(pico.pieces.find(p => p.id === 'delantero')!.marks.some(m => m.kind === 'ojal')).toBe(true);
+    const peto = run('mono-tirantes-infantil', at('ref-bebe-meses', 'B12-18', 'bebe'), { forma: 'peto' });
+    expect(peto.pieces.find(p => p.id === 'tirante')!.marks.filter(m => m.kind === 'ojal')).toHaveLength(2);
+    expect(peto.materials.some(m => m.id === 'cinta-broches')).toBe(true);
+    const bonnet = run('bonete-volante', at('ref-bebe-meses', 'B3-6', 'bebe'));
+    expect(bonnet.pieces.map(p => p.id)).toEqual(expect.arrayContaining(['lateral', 'central', 'forro-lateral', 'forro-central', 'volante', 'barbiquejo']));
+    expect(errors(run('blusa-trapecio-infantil', at('ref-bebe-meses', 'B-RN', 'bebe'), { volanteBajo: 'si' }))).toEqual([]);
+  });
+
   it('reúne los conjuntos nuevos con ids únicos y patrones válidos', () => {
-    for (const set of ['vestido', 'pelele-diadema', 'campesino', 'rayas']) {
+    for (const set of ['vestido', 'pelele-diadema', 'campesino', 'rayas', 'trapecio', 'vichy']) {
       expect(SETS[set], set).toBeDefined();
       for (const code of ['B0-3', 'B12-18']) {
         const r = run('conjunto-bebe', at('ref-bebe-meses', code, 'bebe'), { conjunto: set });
@@ -113,7 +139,7 @@ describe('diseños infantiles digitalizados desde fotos', () => {
   });
 
   it('publica cada diseño como tarjeta experimental con patrón, dibujo e imagen propia', () => {
-    expect(DIGITIZED_KIDS_CATALOG).toHaveLength(24);
+    expect(DIGITIZED_KIDS_CATALOG).toHaveLength(37);
     for (const model of DIGITIZED_KIDS_CATALOG) {
       const live = CATALOG.find(m => m.id === model.id)!;
       expect(live.status, model.id).toBe('experimental');
@@ -122,6 +148,6 @@ describe('diseños infantiles digitalizados desde fotos', () => {
       expect(catalogImageFor(live), model.id).toBeDefined();
       expect(JSON.stringify(live).toLowerCase(), model.id).not.toMatch(/tinystitch|stitch & style/);
     }
-    expect(new Set(CATALOG.filter(m => m.collection === 'Infantil').map(m => m.designGroup?.id)).size).toBe(8);
+    expect(new Set(CATALOG.filter(m => m.collection === 'Infantil').map(m => m.designGroup?.id)).size).toBe(13);
   });
 });

@@ -9,7 +9,7 @@ import { experimentalNotice, isKid } from './kidsBlocks';
 
 const notKid = (code: string) => invalid(code, 'Este gorro usa proporciones infantiles. Elige una talla de bebé, 1–4 años o niñas y niños.');
 
-function chinTab(H: number, sa: number) {
+export function chinTab(H: number, sa: number) {
   const tab = rectangle('barbiquejo', 'Lengüeta de barbilla (dos caras)', H * .16, 2 * 16, [edge('a', 'Canto', 'costura', sa), edge('b', 'Extremo con broche', 'costura', sa), edge('c', 'Canto', 'costura', sa), edge('d', 'Extremo que se cose', 'costura', sa)], { qty: 2 }, true);
   tab.lines.push({ id: 'doblez', kind: 'doblez', a: P(0, 16), b: P(H * .16, 16), label: 'Doblar a lo largo' });
   tab.marks.push({ id: 'broche', kind: 'boton', at: P(H * .16 - 12, 16), label: 'Broche de presión (una mitad en cada lengüeta)' });

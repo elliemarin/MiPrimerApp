@@ -29,6 +29,8 @@ export const CATALOG_IMAGE_SHEETS: Record<string, readonly string[]> = {
   'infantil-01': ['tipo-chaleco-infantil','chaqueta-polar-infantil','chaqueta-acolchada-infantil','chaqueta-capucha-infantil','sudadera-canguro-infantil','tipo-blusa-campesina','blusa-botones-infantil','pantalon-bombacho-infantil','vestido-jareta-infantil'],
   'infantil-02': ['pelele-volantes','diadema-lazo','tipo-gorro-duende','tipo-gorro-orejeras'],
   'infantil-03': [],
+  'infantil-04': ['tipo-bonete-volante','tipo-delantal-pichi','tipo-mono-tirantes','peto-infantil','tipo-blusa-trapecio','pantalon-capri-infantil'],
+  'infantil-05': [],
 };
 
 export const CATALOG_IMAGES: Readonly<Record<string, CatalogImageSource>> = Object.fromEntries(
@@ -109,7 +111,14 @@ const VARIANT_IMAGES: Record<string, CatalogImageSource> = {
   'conjunto-vestido': { sheet: 'infantil-03', cell: 2 },
   'conjunto-pelele-diadema': { sheet: 'infantil-03', cell: 3 },
   'conjunto-campesino': { sheet: 'infantil-03', cell: 4 },
-  'conjunto-rayas': { sheet: 'infantil-03', cell: 5 }
+  'conjunto-rayas': { sheet: 'infantil-03', cell: 5 },
+  'bonete-volante-doble': { sheet: 'infantil-04', cell: 6 },
+  'delantal-pichi-liso': { sheet: 'infantil-04', cell: 7 },
+  'mono-pico-volantes': { sheet: 'infantil-04', cell: 8 },
+  'bonete-encaje': { sheet: 'infantil-05', cell: 0 },
+  'blusa-trapecio-volante': { sheet: 'infantil-05', cell: 1 },
+  'conjunto-trapecio': { sheet: 'infantil-05', cell: 2 },
+  'conjunto-vichy': { sheet: 'infantil-05', cell: 3 }
 };
 
 export function catalogImageFor(model: CatalogModel, recipient?: Recipient): CatalogImageSource | undefined {
@@ -121,7 +130,7 @@ export function catalogImageFor(model: CatalogModel, recipient?: Recipient): Cat
 }
 
 /** Sheets drawn as vectors from the real technical drawing, not AI images. */
-const DRAWN_SHEETS = new Set(['ninas-01', 'bebe-02', 'tendencia-01', 'tendencia-02', 'tendencia-03', 'infantil-01', 'infantil-02', 'infantil-03']);
+const DRAWN_SHEETS = new Set(['ninas-01', 'bebe-02', 'tendencia-01', 'tendencia-02', 'tendencia-03', 'infantil-01', 'infantil-02', 'infantil-03', 'infantil-04', 'infantil-05']);
 export function catalogImageCaption(source: CatalogImageSource): string {
   return DRAWN_SHEETS.has(source.sheet) ? 'Ilustración dibujada a partir del patrón real.' : 'Ilustración generada con IA.';
 }

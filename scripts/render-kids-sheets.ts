@@ -106,6 +106,25 @@ const SHEETS: Record<string, Cell[]> = {
     { key: 'conjunto-pelele-diadema', model: true, color: '#8a6047', accents: { 'pelele-lazo--1': '#f2b49b', 'pelele-lazo--2': '#f2b49b', 'diadema-banda': '#8a6047', 'diadema-lazo': '#f2b49b' } },
     { key: 'conjunto-campesino', model: true, color: '#e7a3a3' },
     { key: 'conjunto-rayas', model: true, color: '#d9a07e', accents: { 'blusa-delantero--1': '#e6c3a8', 'blusa-delantero--2': '#e6c3a8', 'pantalon-pretina': '#cf9573', 'pantalon-puno-a': '#cf9573', 'pantalon-puno-b': '#cf9573' } }
+  ],
+  // Second digitized batch (2026-11-01).
+  'infantil-04': [
+    { key: 'bonete-volante', model: true, color: '#efe5d3', accents: { volante: '#f6efe2', barbiquejo: '#e6dac4' } },
+    { key: 'delantal-pichi', model: true, color: '#e8a3a8', accents: { 'volante-bajo': '#f3ead9', 'volante-hombro--1': '#f3ead9', 'volante-hombro--2': '#f3ead9', bolsillo: '#e09398' } },
+    { key: 'mono-pichi-bolsillos', model: true, color: '#7f8a55', accents: { 'tirante--1': '#737d4b', 'tirante--2': '#737d4b', 'bolsillo--1': '#78834f', 'bolsillo--2': '#78834f' } },
+    { key: 'peto-infantil-largo', model: true, color: '#86a477', accents: { 'tirante--1': '#7a9a6b', 'tirante--2': '#7a9a6b', bolsillo: '#7d9b6e' } },
+    { key: 'blusa-trapecio', model: true, color: '#9ec0e3' },
+    { key: 'pantalon-capri-infantil', model: true, color: '#bcc9a0', accents: { pretina: '#b0bf93' } },
+    // Variant cells (6–8).
+    { key: 'bonete-volante-doble', model: true, color: '#2f6b4f', accents: { volante: '#e8c15a', barbiquejo: '#3a5d8f' } },
+    { key: 'delantal-pichi-liso', model: true, color: '#d9b343' },
+    { key: 'mono-pico-volantes', model: true, color: '#b8c97b', accents: { 'volante--1': '#adbf70', 'volante--2': '#adbf70', 'lazo--1': '#a6b86a', 'lazo--2': '#a6b86a' } }
+  ],
+  'infantil-05': [
+    { key: 'bonete-encaje', model: true, color: '#c9643f' },
+    { key: 'blusa-trapecio-volante', model: true, color: '#c4cfae', accents: { 'volante-bajo': '#b9c5a1' } },
+    { key: 'conjunto-trapecio', model: true, color: '#9ec0e3', accents: { 'cubrepanal-delantero': '#94b6da' } },
+    { key: 'conjunto-vichy', model: true, color: '#c4cfae', accents: { 'blusa-volante-bajo': '#b9c5a1', 'pantalon-pretina': '#b9c5a1' } }
   ]
 };
 const viewFor = (cell: Cell): FlatView => {

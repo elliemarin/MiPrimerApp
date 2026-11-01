@@ -41,14 +41,14 @@ const DESIGNS: Partial<Record<CatalogFamily, readonly string[]>> = {
   poncho: ['poncho-capucha-inspiracion', 'tipo-poncho'], ruana: ['tipo-ruana'],
   capa: ['capa-circular', 'capa-capucha', 'tipo-disfraz-capa'],
   camiseta: ['camiseta-basica', 'camiseta-larga', 'tipo-camiseta-oversize'], camisa: ['camisa-clasica', 'camisa-boxy'],
-  top: ['blusa-v', 'tunica-suelta', 'tipo-top-cuadrado', 'tipo-top-cuadrado-sin-mangas', 'tipo-blusa-campesina', 'blusa-botones-infantil'],
+  top: ['blusa-v', 'tunica-suelta', 'tipo-top-cuadrado', 'tipo-top-cuadrado-sin-mangas', 'tipo-blusa-campesina', 'blusa-botones-infantil', 'tipo-blusa-trapecio'],
   sueter: ['sueter-oversize', 'sueter-tortuga', 'sueter-corto'],
-  pantalon: ['tipo-pantalon-recto', 'tipo-pantalon-amplio', 'pantalon-baggy', 'pantalon-barrel', 'pantalon-cargo', 'pantalon-palazzo', 'pantalon-pinzas', 'pantalon-pitillo', 'pantalon-acampanado', 'jeans-recto', 'jeans-mom', 'jeans-ancho', 'pantalon-bombacho-infantil'],
+  pantalon: ['tipo-pantalon-recto', 'tipo-pantalon-amplio', 'pantalon-baggy', 'pantalon-barrel', 'pantalon-cargo', 'pantalon-palazzo', 'pantalon-pinzas', 'pantalon-pitillo', 'pantalon-acampanado', 'jeans-recto', 'jeans-mom', 'jeans-ancho', 'pantalon-bombacho-infantil', 'pantalon-capri-infantil'],
   jogger: ['tipo-jogger'], short: ['short-elastico'], pijama: ['pantalon-pijama', 'pijama-camisa'],
   falda: ['tipo-falda-fruncida', 'falda-recta', 'falda-a', 'tipo-falda-circular', 'falda-tableada', 'tipo-falda-tul', 'tipo-falda-olanes'],
-  vestido: ['vestido-camisero', 'tipo-vestido-trapecio', 'tipo-vestido-tirantes', 'vestido-jareta-infantil'], peto: ['overol', 'tipo-jumper-falda', 'peto-bermuda', 'peto-palazzo', 'tipo-peto-bebe'],
-  mono: ['mono-camisero', 'mono-mecanico', 'mono-palazzo', 'mono-cruzado', 'playsuit-camisero', 'mono-baggy', 'pelele-volantes'],
-  body: ['body-bebe'], mameluco: ['mameluco'], babero: ['babero', 'tipo-babero-bandana'], gorro: ['gorro', 'tipo-bonete', 'tipo-gorro-orejas', 'tipo-gorro-duende', 'tipo-gorro-orejeras'],
+  vestido: ['vestido-camisero', 'tipo-vestido-trapecio', 'tipo-vestido-tirantes', 'vestido-jareta-infantil'], peto: ['overol', 'tipo-jumper-falda', 'peto-bermuda', 'peto-palazzo', 'tipo-peto-bebe', 'peto-infantil'],
+  mono: ['mono-camisero', 'mono-mecanico', 'mono-palazzo', 'mono-cruzado', 'playsuit-camisero', 'mono-baggy', 'pelele-volantes', 'tipo-mono-tirantes'],
+  body: ['body-bebe'], mameluco: ['mameluco'], babero: ['babero', 'tipo-babero-bandana'], gorro: ['gorro', 'tipo-bonete', 'tipo-gorro-orejas', 'tipo-gorro-duende', 'tipo-gorro-orejeras', 'tipo-bonete-volante'],
   cubrepanal: ['tipo-cubrepanal'], patucos: ['tipo-patucos'], 'saco-dormir': ['tipo-saco-dormir'], toalla: ['tipo-toalla-capucha'], conjunto: ['tipo-conjunto-bebe'],
   tote: ['tipo-bolsa-tote'], 'bolsa-jareta': ['tipo-bolsa-jareta'], estuche: ['neceser', 'tipo-estuche-cierre'], bandolera: ['bandolera'],
   'funda-tecnologia': ['tipo-funda-portatil', 'tipo-funda-tableta', 'tipo-funda-telefono', 'tipo-funda-lector', 'tipo-funda-consola', 'tipo-funda-cables'],
@@ -56,7 +56,7 @@ const DESIGNS: Partial<Record<CatalogFamily, readonly string[]>> = {
   'funda-costura': ['tipo-funda-patrones', 'tipo-funda-bastidor', 'tipo-funda-muestrario'],
   'funda-lentes': ['tipo-funda-lentes'], cojin: ['tipo-cojin'], 'funda-bebida': ['tipo-funda-bebida'], 'funda-silla': ['funda-silla'],
   cabello: ['tipo-dona-cabello', 'tipo-banda-cabello', 'diadema-lazo'], bandana: ['tipo-bandana'],
-  delantal: ['tipo-delantal'], antifaz: ['tipo-antifaz'], banderin: ['tipo-banderin'],
+  delantal: ['tipo-delantal', 'tipo-delantal-pichi'], antifaz: ['tipo-antifaz'], banderin: ['tipo-banderin'],
   manteleria: ['tipo-textil-individual', 'tipo-textil-servilleta', 'tipo-textil-centro', 'tipo-textil-camino'],
   posavasos: ['tipo-textil-posavasos'],
   tapete: ['tipo-textil-maquina', 'tipo-textil-bandeja', 'tipo-textil-taza', 'tipo-textil-plato', 'tipo-textil-raton', 'tipo-textil-escritorio'],
@@ -173,6 +173,10 @@ function constructionFacets(model: CatalogModel): Pick<CatalogModel, 'difficulty
     case 'diadema-lazo': techniques = ['costura-recta', 'tejido-punto']; break;
     case 'gorro-duende': techniques = p.forro === 'no' ? ['costura-recta', 'bordado'] : ['costura-recta', 'forro']; break;
     case 'gorro-orejeras': difficulty = 2; techniques = ['costura-recta', 'forro']; break;
+    case 'bonete-volante': difficulty = 2; techniques = ['costura-recta', 'forro', ...(p.volante !== 'ninguno' ? ['frunces' as const] : [])]; break;
+    case 'delantal-pichi-infantil': difficulty = p.volantes === 'no' ? 1 : 2; techniques = ['costura-recta', ...(p.volantes !== 'no' ? ['frunces' as const] : []), ...(p.bolsillo !== 'no' ? ['bolsillos' as const] : [])]; break;
+    case 'mono-tirantes-infantil': difficulty = 2; techniques = ['costura-recta', 'botones', ...(p.bolsillos !== 'no' ? ['bolsillos' as const] : []), ...(p.bajo === 'volante' ? ['frunces' as const] : [])]; break;
+    case 'blusa-trapecio-infantil': difficulty = 2; techniques = ['costura-recta', 'botones', p.volanteBajo === 'si' ? 'frunces' : 'dobladillo']; break;
     default: return { difficulty: model.difficulty, techniques: model.techniques };
   }
   return { difficulty, techniques };

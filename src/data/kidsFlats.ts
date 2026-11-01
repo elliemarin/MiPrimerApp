@@ -13,6 +13,7 @@ import { generateBandanaBib, generateBloomers, generateBonnet, generateBooties, 
 import { generateEarHat, generateOverall } from '../lib/pattern/generators/babyMore';
 import { generateButtonTop, generateCasingDress, generatePeasant, generateRufflesRomper } from '../lib/pattern/generators/kidsTops';
 import { generateEarflap, generatePixie } from '../lib/pattern/generators/kidsHats';
+import { generatePinaforeApron, generateRuffleBonnet, generateStrapRomper, generateTrapezeTop } from '../lib/pattern/generators/kidsBatch2';
 
 /* Dibujos técnicos de la colección Niña y de la ampliación de Bebé.
  * Las siluetas salen de las piezas reales de una talla de referencia; cada
@@ -53,7 +54,21 @@ export const KIDS_SURFACE_PIECES: Record<string, Partial<Record<FlatViewKey, Kid
   'blusa-botones-infantil': { frente: [S('delantero--1', 'delantero'), S('delantero--2', 'delantero', true)], espalda: [S('espalda', 'espalda', false, true)] },
   'gorro-duende': { frente: [S('lateral'), S('barbiquejo')] },
   'gorro-orejeras': { frente: [S('lateral'), S('oreja')] },
-  'diadema-lazo': { frente: [S('banda'), S('lazo')] }
+  'diadema-lazo': { frente: [S('banda'), S('lazo')] },
+  // Second batch (2026-11-01).
+  'bonete-volante': { frente: [S('lateral'), S('volante'), S('barbiquejo')] },
+  'delantal-pichi-infantil': {
+    frente: [S('delantal', 'delantal', false, true), S('volante-bajo', 'volante-bajo', false, true), ...pair('volante-hombro'), S('bolsillo')],
+    espalda: [S('delantal', 'delantal', false, true), ...pair('volante-hombro')]
+  },
+  'mono-tirantes-infantil': {
+    frente: [S('delantero--1', 'delantero'), S('delantero--2', 'delantero', true), ...pair('tirante'), S('bolsillo--1', 'bolsillo'), S('bolsillo--2', 'bolsillo', true), S('bolsillo'), ...pair('volante'), ...pair('lazo')],
+    espalda: [S('espalda--1', 'espalda'), S('espalda--2', 'espalda', true), ...pair('tirante'), ...pair('volante')]
+  },
+  'blusa-trapecio-infantil': {
+    frente: [S('delantero', 'delantero', false, true), S('volante-bajo', 'volante-bajo', false, true)],
+    espalda: [...pair('espalda'), S('volante-bajo', 'volante-bajo', false, true)]
+  }
 };
 /** Parts drawn from real pieces whose generator also serves generic drawings elsewhere (only used inside sets). */
 const PART_BINDINGS: Record<string, Partial<Record<FlatViewKey, KidsSurface[]>>> = {
@@ -67,7 +82,8 @@ const SET_PARTS: Record<string, [string, string][]> = {
   verano: [['pelele', 'peto-bebe'], ['sombrero', 'sombrero-pescador']], invierno: [['overol', 'peto-bebe'], ['gorro', 'gorro-orejas']],
   'recien-nacido': [['bonete', 'bonete-bebe'], ['patucos', 'patucos-bebe'], ['babero', 'babero-bandana']],
   vestido: [['vestido', 'vestido-jareta-infantil'], ['cubrepanal', 'cubrepanal-bebe']], 'pelele-diadema': [['pelele', 'pelele-volantes'], ['diadema', 'diadema-lazo']],
-  campesino: [['blusa', 'blusa-campesina-infantil'], ['short', 'pantalones-bombacho']], rayas: [['blusa', 'blusa-botones-infantil'], ['pantalon', 'pantalones-bombacho']]
+  campesino: [['blusa', 'blusa-campesina-infantil'], ['short', 'pantalones-bombacho']], rayas: [['blusa', 'blusa-botones-infantil'], ['pantalon', 'pantalones-bombacho']],
+  trapecio: [['blusa', 'blusa-trapecio-infantil'], ['cubrepanal', 'cubrepanal-bebe']], vichy: [['blusa', 'blusa-trapecio-infantil'], ['pantalon', 'pantalones-bombacho']]
 };
 KIDS_SURFACE_PIECES['sombrero-pescador'] = { frente: [S('copa'), S('banda'), S('ala'), S('lazo')] };
 KIDS_SURFACE_PIECES['conjunto-bebe'] = { frente: Object.values(SET_PARTS).flatMap(parts => parts.flatMap(([prefix, gen]) =>
@@ -389,7 +405,9 @@ function compose(parts: { prefix: string; view: FlatView; height: number; row?: 
   return [view('frente', zones, details, dots, 'Conjunto')];
 }
 const front0 = (views: FlatView[]) => views.find(v => v.key === 'frente')!;
-function setFlat(set: 'verano' | 'invierno' | 'recien-nacido' | 'vestido' | 'pelele-diadema' | 'campesino' | 'rayas'): FlatView[] {
+function setFlat(set: 'verano' | 'invierno' | 'recien-nacido' | 'vestido' | 'pelele-diadema' | 'campesino' | 'rayas' | 'trapecio' | 'vichy'): FlatView[] {
+  if (set === 'trapecio') return compose([{ prefix: 'blusa', view: front0(trapezeTopFlat(false)), height: 260 }, { prefix: 'cubrepanal', view: front0(bloomerFlat(false)), height: 150 }]);
+  if (set === 'vichy') return compose([{ prefix: 'blusa', view: front0(trapezeTopFlat(true)), height: 280 }, { prefix: 'pantalon', view: front0(culotteFlat()), height: 330 }]);
   if (set === 'verano') return compose([{ prefix: 'pelele', view: front0(overallFlat(false)), height: 420 }, { prefix: 'sombrero', view: view('frente', bucketZones('', 0, 0, 1), [], [], ''), height: 150 }]);
   if (set === 'invierno') return compose([{ prefix: 'overol', view: front0(overallFlat(true)), height: 520 }, { prefix: 'gorro', view: front0(earHatFlat('oso')), height: 200 }]);
   if (set === 'vestido') return compose([{ prefix: 'vestido', view: front0(casingDressFlat()), height: 400 }, { prefix: 'cubrepanal', view: front0(bloomerFlat(true)), height: 150 }]);
@@ -500,12 +518,97 @@ function headbandFlat(): FlatView[] {
   return [view('frente', [zone('banda', 'Banda', 'base', band), zone('lazo', 'Lazo', 'otra', bowShape(0, by, 130))], bowDetails(0, by, 130), [], 'Banda')];
 }
 
+// ----------------------------------------------------------- Segundo lote digitalizado
+function culotteFlat(): FlatView[] {
+  return buildFlat('culotte', { family: 'pantalon', pants: { leg: 'ancho', length: 'capri', waist: 'elastica', pockets: 'ninguno' } }).views.filter(v => v.key === 'frente' || v.key === 'espalda');
+}
+
+function ruffleBonnetFlat(kind: 'tela' | 'doble' | 'encaje'): FlatView[] {
+  const r = generateRuffleBonnet(BABY(), { volante: kind }), side = piece(r, 'lateral'), m = scale(1, 1);
+  const h = side.nodes[3].y, vw = kind === 'doble' ? 30 : 22;
+  const frill = `M2 -6${Array.from({ length: 7 }, (_, i) => { const y0 = -6 + (h + 12) * i / 7, y1 = -6 + (h + 12) * (i + 1) / 7; return ` C${r1(-vw * 1.15)} ${r1(y0 + (y1 - y0) * .2)} ${r1(-vw * 1.15)} ${r1(y0 + (y1 - y0) * .8)} 2 ${r1(y1)}`; }).join('')} Z`;
+  const tip = side.nodes[3], tab = zone('barbiquejo', 'Lengüeta', 'otra', `M${r1(tip.x + 2)} ${r1(tip.y - 14)} L${r1(tip.x - 40)} ${r1(tip.y - 10)} C${r1(tip.x - 50)} ${r1(tip.y - 8)} ${r1(tip.x - 50)} ${r1(tip.y + 2)} ${r1(tip.x - 40)} ${r1(tip.y + 4)} L${r1(tip.x + 2)} ${r1(tip.y)} Z`);
+  const zones: Zone[] = [...(kind === 'encaje' ? [] : [zone('volante', 'Volante', 'otra', frill)]), zone('lateral', 'Bonete', 'base', outlineOf(side, m)), tab];
+  const details: Details = [{ d: shift(stroke(side, ['central-a', 'central-b'], m), -8, 6), style: 'pespunte' }, { d: shift(stroke(side, ['cuello'], m), 0, -6), style: 'pespunte' },
+    ...(kind === 'encaje' ? Array.from({ length: 9 }, (_, i) => ({ d: `M0 ${r1(i * h / 8)} C-14 ${r1(i * h / 8 - 6)} -18 ${r1(i * h / 8 + 6)} -4 ${r1(i * h / 8 + 10)}`, style: 'pliegue' as const })) : []),
+    ...(kind === 'doble' ? [{ d: `M-6 -2${Array.from({ length: 7 }, (_, i) => { const y0 = -2 + (h + 4) * i / 7, y1 = -2 + (h + 4) * (i + 1) / 7; return ` C${r1(-vw * .7)} ${r1(y0 + (y1 - y0) * .2)} ${r1(-vw * .7)} ${r1(y0 + (y1 - y0) * .8)} -6 ${r1(y1)}`; }).join('')}`, style: 'costura' as const }] : [])];
+  const appl = side.marks.find(mk => mk.id === 'aplique')!.at;
+  return [view('frente', zones, details, [{ x: r1(appl.x), y: r1(appl.y), r: 9 }], 'Cara')];
+}
+
+function apronFlat(ruffles: boolean): FlatView[] {
+  const r = generatePinaforeApron(TODDLER(), { volantes: ruffles ? 'si' : 'no', bolsillo: ruffles ? 'si' : 'no' }), a = piece(r, 'delantal');
+  const n = (i: number) => a.nodes[i], yS = n(3).y, sx = n(3).x, nw = n(8).x, Wq = n(2).x, Wb = n(1).x, Wf = n(5).x, yH = n(5).y, nf = n(7).y - yS, nb = yS - n(9).y, armD = n(4).y - yS;
+  const half = (pts: [number, number][], sign: number) => pts.map(([x, y]) => `${r1(sign * x)} ${r1(y)}`);
+  const frontPts: [number, number][] = [[nw, nf], [nw, 0], [sx, 0], [Wq, armD], [Wf, yH - yS], [0, yH - yS]];
+  const backPts: [number, number][] = [[nw, nb], [nw, 0], [sx, 0], [Wq, armD], [Wb, yS], [0, yS]];
+  const panel = (pts: [number, number][], top: number) => { const right = half(pts, 1), left = half([...pts].reverse(), -1); return `M0 ${r1(top)} L${right.join(' L')} L${left.join(' L')} L0 ${r1(top)} Z`; };
+  const wings = (): Zone[] => ruffles ? [-1, 1].map((sign, i) => zone(`volante-hombro--${i + 1}`, 'Volante del hombro', 'manga', `M${r1(sign * (nw + 4))} -4 C${r1(sign * (sx + 30))} -16 ${r1(sign * (Wq + 34))} ${r1(armD * .3)} ${r1(sign * (Wq + 10))} ${r1(armD * .8)} C${r1(sign * (Wq - 4))} ${r1(armD * .55)} ${r1(sign * (sx + 6))} ${r1(armD * .2)} ${r1(sign * sx)} 0 Z`)) : [];
+  const vh = ruffles ? piece(r, 'volante-bajo').nodes[2].y : 0, H = yH - yS;
+  const front: Zone[] = [...(ruffles ? [zone('volante-bajo', 'Volante del bajo', 'otra', `M${r1(-Wf)} ${r1(H)} L${r1(Wf)} ${r1(H)} L${r1(Wf * 1.12)} ${r1(H + vh)}${waves(Wf * 1.12, -Wf * 1.12, H + vh, 9, 8)} Z`)] : []), zone('delantal', 'Delantero', 'delantero', panel(frontPts, nf)), ...wings()];
+  if (ruffles) { const pk = piece(r, 'bolsillo'), line = a.lines.find(l => l.id === 'bolsillo')!; front.push(zone('bolsillo', 'Bolsillo', 'bolsillo', outlineOf(pk, scale(1, 1, line.a.x, line.a.y - yS)))); }
+  const tieY = (a.marks.find(mk => mk.id === 'cinta-delantera')!.at.y) - yS, tieX = a.marks.find(mk => mk.id === 'cinta-delantera')!.at.x;
+  const ties: Details = [-1, 1].flatMap(sign => [{ d: `M${r1(sign * tieX)} ${r1(tieY)} C${r1(sign * (tieX + 30))} ${r1(tieY - 10)} ${r1(sign * (tieX + 40))} ${r1(tieY + 20)} ${r1(sign * (tieX + 22))} ${r1(tieY + 50)}`, style: 'costura' as const }]);
+  return [
+    view('frente', front, [...ties, { d: `M${r1(-nw)} ${r1(nf)} L${r1(nw)} ${r1(nf)}`, style: 'costura' }], [], 'Hombro'),
+    view('espalda', [zone('delantal', 'Espalda', 'espalda', panel(backPts, nb)), ...wings()], ties.map(t => ({ ...t, d: t.d })), [], 'Hombro')
+  ];
+}
+
+function strapRomperFlat(form: 'pichi' | 'pico' | 'peto'): FlatView[] {
+  const params: Record<string, string> = form === 'pichi' ? { forma: 'pichi', bolsillos: 'si' } : form === 'pico' ? { forma: 'pico', bajo: 'volante', lazos: 'si', bolsillos: 'no' } : { forma: 'peto', largo: 'largo', bajo: 'vuelta', bolsillos: 'si' };
+  const r = generateStrapRomper(TODDLER(), { ...params, entrepierna: 'cerrada' }), f = piece(r, 'delantero'), b = piece(r, 'espalda'), m = scale(1, 1);
+  const pair2 = (p: Piece, id: string, label: string, type: ZoneType): Zone[] => [zone(`${id}--1`, `${label} derecho`, type, outlineOf(p, mirrorX(m))), zone(`${id}--2`, `${label} izquierdo`, type, outlineOf(p, m))];
+  const top = (p: Piece) => p.nodes[0];
+  const strapZones = (p: Piece, cross: boolean): Zone[] => {
+    if (form === 'pico') return [];
+    const tp = p.nodes[1], sw = 22, rise = 120;
+    return [-1, 1].map((sign, i) => { const x0 = sign * (tp.x - 18), x1 = cross ? -sign * (tp.x * .2) : sign * (tp.x - 22); return zone(`tirante--${i + 1}`, 'Tirante', 'otra', `M${r1(x0 - sw / 2)} ${r1(tp.y + 4)} L${r1(x0 + sw / 2)} ${r1(tp.y + 4)} L${r1(x1 + sw / 2)} ${r1(tp.y - rise)} L${r1(x1 - sw / 2)} ${r1(tp.y - rise)} Z`); });
+  };
+  const legs = (p: Piece) => { const e = p.edges.find(x => x.id === 'bajo')!, a = nodeById(p, e.from), z = nodeById(p, e.to); return { a, z }; };
+  const frontZones: Zone[] = [];
+  if (form === 'pico') {
+    const { a, z } = legs(f), vb = piece(r, 'volante').nodes[2].y;
+    for (const [i, sign] of [-1, 1].entries()) frontZones.push(zone(`volante--${i + 1}`, 'Volante', 'otra', `M${r1(sign * a.x)} ${r1(a.y)} L${r1(sign * z.x)} ${r1(z.y)} L${r1(sign * (z.x - 8))} ${r1(z.y + vb)}${waves(sign * (z.x - 8), sign * (a.x + 8), a.y + vb, 4, 6)} Z`));
+    const sp = f.nodes[1];
+    for (const [i, sign] of [-1, 1].entries()) frontZones.push(zone(`lazo--${i + 1}`, 'Lazo', 'otra', bowShape(sign * (sp.x + 14), sp.y + 4, 46)));
+  }
+  frontZones.unshift(...pair2(f, 'delantero', 'Delantero', 'delantero'));
+  frontZones.push(...strapZones(f, false));
+  const lines = f.lines.find(l => l.id === 'bolsillo');
+  if (lines && form === 'pichi') { const pk = piece(r, 'bolsillo'); frontZones.push(zone('bolsillo--1', 'Bolsillo', 'bolsillo', outlineOf(pk, mirrorX(scale(1, 1, lines.a.x, lines.a.y)))), zone('bolsillo--2', 'Bolsillo', 'bolsillo', outlineOf(pk, scale(1, 1, lines.a.x, lines.a.y)))); }
+  if (lines && form === 'peto') { const pk = piece(r, 'bolsillo'), w = pk.nodes[1].x; frontZones.push(zone('bolsillo', 'Bolsillo del peto', 'bolsillo', outlineOf(pk, scale(1, 1, -w / 2, lines.a.y)))); }
+  const backZones: Zone[] = [...pair2(b, 'espalda', 'Espalda', 'espalda'), ...strapZones(b, form === 'peto')];
+  if (form === 'pico') { const { a, z } = legs(b), vb = piece(r, 'volante').nodes[2].y; for (const [i, sign] of [-1, 1].entries()) backZones.push(zone(`volante--${i + 1}`, 'Volante', 'otra', `M${r1(sign * a.x)} ${r1(a.y)} L${r1(sign * z.x)} ${r1(z.y)} L${r1(sign * (z.x - 8))} ${r1(z.y + vb)}${waves(sign * (z.x - 8), sign * (a.x + 8), a.y + vb, 4, 6)} Z`)); }
+  const dots = (p: Piece) => p.marks.filter(mk => mk.kind === 'boton').flatMap(mk => [-1, 1].map(sign => ({ x: r1(sign * mk.at.x), y: r1(mk.at.y), r: 5 })));
+  const turn = (p: Piece): Details => { const l = p.lines.find(x => x.id === 'vuelta'); return l ? [-1, 1].map(sign => ({ d: `M${r1(sign * l.a.x)} ${r1(l.a.y)} L${r1(sign * l.b.x)} ${r1(l.b.y)}`, style: 'doblez' as const })) : []; };
+  void top;
+  return [view('frente', frontZones, [{ d: `M0 ${r1(f.nodes[0].y)} L0 ${r1(f.nodes[f.nodes.length - 1].y)}`, style: 'pespunte' }, ...turn(f)], dots(f), 'Canto superior'),
+    view('espalda', backZones, [{ d: `M0 ${r1(b.nodes[0].y)} L0 ${r1(b.nodes[b.nodes.length - 1].y)}`, style: 'pespunte' }, ...turn(b)], dots(b), 'Canto superior')];
+}
+
+function trapezeTopFlat(ruffle: boolean): FlatView[] {
+  const r = generateTrapezeTop(GIRL(), { volanteBajo: ruffle ? 'si' : 'no' }), f = piece(r, 'delantero'), b = piece(r, 'espalda'), m = scale(1, 1);
+  const q = f.nodes[4].x, H = f.nodes[6].y, hemX = f.nodes[5].x, vh = ruffle ? piece(r, 'volante-bajo').nodes[2].y : 0;
+  const ruffleZone = (): Zone[] => ruffle ? [zone('volante-bajo', 'Volante', 'otra', `M${r1(-hemX)} ${r1(f.nodes[5].y)} Q0 ${r1(H + 4)} ${r1(hemX)} ${r1(f.nodes[5].y)} L${r1(hemX * 1.1)} ${r1(H + vh)}${waves(hemX * 1.1, -hemX * 1.1, H + vh, 9, 7)} Z`)] : [];
+  const bias = (p: Piece, ids: string[]) => [false, true].map(mirror => ({ d: stroke(p, ids, m, mirror), style: 'costura' as const }));
+  const hemD: Details = ruffle ? gathers(-hemX + 6, hemX - 6, H - 2, 14, 12, 16) : [false, true].map(mirror => ({ d: shift(stroke(f, ['bajo'], m, mirror), 0, -12), style: 'pespunte' as const }));
+  void q;
+  return [
+    view('frente', [...ruffleZone(), zone('delantero', 'Delantero', 'delantero', unfold(f, 'centro', m))], [...bias(f, ['cuello']), ...bias(f, ['sisa-superior', 'sisa-inferior']), ...hemD], [], 'Hombro'),
+    view('espalda', [...ruffleZone(), zone('espalda--1', 'Espalda izquierda', 'espalda', outlineOf(b, mirrorX(m))), zone('espalda--2', 'Espalda derecha', 'espalda', outlineOf(b, m))], [...bias(b, ['cuello']), ...hemD], [{ x: 0, y: r1(b.nodes[0].y + 9), r: 4 }], 'Hombro')
+  ];
+}
+
 const BUILDERS: Record<string, () => FlatView[]> = {
   'peto-corto': () => overallFlat(false), 'peto-largo': () => overallFlat(true), 'gorro-oso': () => earHatFlat('oso'), 'gorro-gato': () => earHatFlat('gato'), 'gorro-conejo': () => earHatFlat('conejo'),
   'conjunto-verano': () => setFlat('verano'), 'conjunto-invierno': () => setFlat('invierno'), 'conjunto-recien-nacido': () => setFlat('recien-nacido'),
   'conjunto-vestido': () => setFlat('vestido'), 'conjunto-pelele-diadema': () => setFlat('pelele-diadema'), 'conjunto-campesino': () => setFlat('campesino'), 'conjunto-rayas': () => setFlat('rayas'),
   'vestido-jareta': casingDressFlat, 'pelele-volantes': romperFlat, 'blusa-campesina': () => peasantFlat(false), 'blusa-campesina-larga': () => peasantFlat(true), 'blusa-botones': buttonTopFlat,
-  'gorro-duende': () => pixieFlat(true), 'gorro-duende-fieltro': () => pixieFlat(false), 'gorro-orejeras-gato': () => earflapFlat('gato'), 'gorro-orejeras-oso': () => earflapFlat('oso'), diadema: headbandFlat,
+  'gorro-duende': () => pixieFlat(true), 'gorro-duende-fieltro': () => pixieFlat(false),
+  'bonete-volante': () => ruffleBonnetFlat('tela'), 'bonete-volante-doble': () => ruffleBonnetFlat('doble'), 'bonete-encaje': () => ruffleBonnetFlat('encaje'),
+  'delantal-pichi': () => apronFlat(true), 'delantal-pichi-liso': () => apronFlat(false), 'mono-pichi': () => strapRomperFlat('pichi'), 'mono-pico': () => strapRomperFlat('pico'), 'peto-infantil': () => strapRomperFlat('peto'),
+  'blusa-trapecio': () => trapezeTopFlat(false), 'blusa-trapecio-volante': () => trapezeTopFlat(true), 'conjunto-trapecio': () => setFlat('trapecio'), 'conjunto-vichy': () => setFlat('vichy'), 'gorro-orejeras-gato': () => earflapFlat('gato'), 'gorro-orejeras-oso': () => earflapFlat('oso'), diadema: headbandFlat,
   'vestido-trapecio': () => trapezeFlat(false), 'vestido-trapecio-volante': () => trapezeFlat(true), 'vestido-tirantes': sundressFlat,
   'falda-tul': tulleFlat, 'falda-olanes': tieredFlat, 'falda-circular': () => circleFlat(true), 'falda-medio-circulo': () => circleFlat(false),
   cubrepanal: () => bloomerFlat(false), 'cubrepanal-olanes': () => bloomerFlat(true), 'cubrepanal-tirantes': () => bloomerFlat(false, true), 'sombrero-lazo': bowBucketFlat, 'saco-dormir': sleepSackFlat,

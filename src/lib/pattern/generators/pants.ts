@@ -43,6 +43,7 @@ export function pantsDefaults(ctx: GeneratorContext): Params {
     altoPuno: kind === 'bebe' ? 35 : child ? 45 : 60,
     holguraPuno: child ? 10 : 20,
     volantito: 0,
+    corte: 'completo',
     proporcionElastico: kind === 'bebe' ? 0.95 : child ? 0.92 : 0.9
   };
 }
@@ -149,7 +150,7 @@ export function generatePants(ctx: GeneratorContext, P: Params): GeneratorResult
   const elastic = num(P, 'anchoElastico', 25);
   const casingDepth = elastic + 5;
   const casingAllowance = casingDepth + 10;
-  const L = num(P, 'largo');
+  const largoParam = num(P, 'largo');
   const hemCirc = style === 'jogger' ? num(P, 'bajoJogger') : num(P, 'bajo');
 
   // Holgura aplicada una sola vez: medida terminada = cuerpo + holgura (+ pañal).
@@ -157,6 +158,10 @@ export function generatePants(ctx: GeneratorContext, P: Params): GeneratorResult
   const He = H + hipEase;
   const riseEase = num(P, 'holguraTiro') + D;
   const R = CD + riseEase;
+  // Cropped cuts follow the body: the leg below the crotch is a share of the inseam.
+  const corte = str(P, 'corte', 'completo');
+  const CUT_SHARE: Record<string, number> = { capri: 0.62, bermuda: 0.38, short: 0.2 };
+  const L = corte in CUT_SHARE ? R + Math.max(45, (b.entrepierna ?? largoParam - CD) * CUT_SHARE[corte]) : largoParam;
   const Hq = He / 4;
   const shift = He * 0.01;
   const Fw = Hq - shift;
@@ -168,7 +173,8 @@ export function generatePants(ctx: GeneratorContext, P: Params): GeneratorResult
   const hemOffset = Math.min(10, hemCirc * 0.03);
   const hemWF = hemCirc / 2 - hemOffset;
   const hemWB = hemCirc / 2 + hemOffset;
-  const hasKnee = style !== 'ancho' && L - R > 200;
+  // Bermudas and shorts have no knee line: it would land on the hem.
+  const hasKnee = style !== 'ancho' && L - R > 200 && corte !== 'bermuda' && corte !== 'short';
   const legWF = Fw + Fe;
   const kneeFor = (legW: number, hemW: number): number | null => {
     if (!hasKnee) return null;
@@ -561,7 +567,8 @@ export const pantsGenerator: PatternGenerator = {
         { value: 'bombacho', label: 'Bombacho (elástico en el bajo)' }
       ]
     },
-    { key: 'largo', label: 'Largo terminado (cintura a bajo)', group: 'diseno', type: 'length', min: 80, max: 1400 },
+    { key: 'corte', label: 'Corte', group: 'diseno', type: 'choice', choices: [{ value: 'completo', label: 'Largo completo (eliges el largo)' }, { value: 'capri', label: 'Capri / culotte' }, { value: 'bermuda', label: 'Bermuda' }, { value: 'short', label: 'Short' }] },
+    { key: 'largo', label: 'Largo terminado (cintura a bajo)', group: 'diseno', type: 'length', min: 80, max: 1400, when: (p) => !p.corte || p.corte === 'completo' },
     { key: 'bajo', label: 'Contorno de bajo terminado', group: 'diseno', type: 'length', min: 100, max: 1200, when: (p) => p.estilo !== 'jogger' },
     { key: 'bajoJogger', label: 'Contorno de bajo antes del puño', group: 'diseno', type: 'length', min: 100, max: 800, when: (p) => p.estilo === 'jogger' },
     { key: 'altoPuno', label: 'Alto del puño terminado', group: 'diseno', type: 'length', min: 15, max: 150, when: (p) => p.estilo === 'jogger' },

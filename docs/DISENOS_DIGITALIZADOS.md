@@ -1,5 +1,7 @@
 # Diseños infantiles digitalizados desde fotos
 
+> Dos lotes: 16 imágenes en el primero y 8 en el segundo (al final de la primera tabla).
+
 Entrega de Claude del 2026-11-01. La usuaria envió 16 imágenes de diseños de
 niños y bebés con su patrón y pidió «digitalizarlos y estandarizarlos para poder
 cambiar de talla». Todo es **experimental**: nada se ha impreso ni cosido.
@@ -40,6 +42,24 @@ cambiar de talla». Todo es **experimental**: nada se ha impreso ni cosido.
 | 14 | Conjunto de vichy: blusa abullonada y short | `blusa-campesina`, `blusa-campesina-larga` (`blusa-campesina-infantil`) y `conjunto-campesino` | El short es el pantalón elástico con estilo nuevo `bombacho` y volantito. |
 | 15 | Conjunto de rayas: blusa con botones y pantalón | `blusa-botones-infantil`, `pantalon-bombacho-infantil` y `conjunto-rayas` | El panda es un aplique (pendiente como forma). |
 | 16 | Bombacho rosa con lazo | Ya existía (`cubrepanal-bebe`); ahora con opción `lazo` | — |
+
+## Segundo lote (8 imágenes)
+
+| # | Referencia | Resultado en Hilvana | Notas |
+| --- | --- | --- | --- |
+| 1 | Bonetes con volante y puntilla (variación C) | `bonete-volante`, `bonete-volante-doble`, `bonete-encaje` (generador `bonete-volante`) | Dos laterales y pieza central resueltos para que la unión mida igual; volante de tela, doble o puntilla. Las cintas se cambiaron por lengüeta con broche. El pájaro y las bellotas son apliques. |
+| 2 | Chaleco de borreguito con lazo (2T) | Ya existía: `chaleco-borrego` | Misma referencia de IA que en el primer lote (delantero de 30 cm para 54 cm de pecho). |
+| 3 | Delantal «para pequeños ayudantes» | `delantal-pichi`, `delantal-pichi-liso` (`delantal-pichi-infantil`) | Una sola pieza al doblez que pasa por los hombros; el escote cuadrado está en el doblez (sin agujeros sueltos). Cintas de 30 cm como máximo, solo en la cintura. |
+| 4 | Mono con bolsillos y tirantes atados (3–4 a) | `mono-pichi-bolsillos` (`mono-tirantes-infantil`, forma `pichi`) | Tirantes abotonados con dos posiciones en vez de lazos al hombro. |
+| 5 | Conjunto de blusa sin mangas y bombacho de rayas | `blusa-trapecio` (`blusa-trapecio-infantil`) y `conjunto-trapecio` | Usa el trapecio infantil existente con largo de blusa; el bombacho es el cubrepañal. No se usa el nombre comercial. |
+| 6 | Mono de vichy con hombros atados y volantes | `mono-pico-volantes` (forma `pico`, bajo `volante`) | Hombros con botón y ojal; los lazos son decorativos y cosidos. |
+| 7 | Blusa con volante y pantalón ancho de vichy | `blusa-trapecio-volante`, `pantalon-capri-infantil` y `conjunto-vichy` | La tabla de la foto daba 30–38 cm de «pecho» (medio contorno) y cinturas de 20–24 cm; no se copiaron. El pantalón usa la opción nueva `corte: capri`. |
+| 8 | Peto largo con bolsillo y botones laterales (3 años) | `peto-infantil-largo` (forma `peto`, largo, vuelta) | Tirantes cruzados con ojales y aberturas laterales abotonadas. |
+
+Opciones nuevas de este lote: `corte` en el pantalón elástico (`completo`, `capri`,
+`bermuda`, `short`; los cortes cortos no llevan línea de rodilla), conjuntos
+`trapecio` y `vichy`. Generadores en `src/lib/pattern/generators/kidsBatch2.ts`;
+láminas `infantil-04` e `infantil-05`.
 
 ## Archivos
 

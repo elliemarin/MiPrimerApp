@@ -102,5 +102,51 @@ export const DIGITIZED_KIDS_CATALOG: CatalogModel[] = [
     generatorId: 'conjunto-bebe', params: { conjunto: set }, flat: { family: 'accesorio', kids: `conjunto-${set}` },
     description: `${name}. Cada prenda conserva su patrón real, sus comprobaciones y sus pasos; todo sale en un solo PDF.`, recommendedFabrics: ['Algodón', 'Vichy', 'Seersucker'], materials: ['Elásticos', 'Broches o botones'],
     collection: BABY, searchTerms: ['conjunto', 'set', 'dos piezas', set], designGroup: { id: 'tipo-conjunto-bebe', name: 'Conjuntos de bebé' }
+  })),
+
+  // ---------------------------------------------------------- Segundo lote (2026-11-01)
+  ...([['tela', 'bonete-volante', 'Bonete de tres piezas con volante', 'Bonete forrado de dos laterales y pieza central con volante de tela doblado.'], ['doble', 'bonete-volante-doble', 'Bonete con volante doble', 'El mismo bonete con dos volantes superpuestos, como en la versión de dos telas.'], ['encaje', 'bonete-encaje', 'Bonete con puntilla', 'El bonete con puntilla comprada fruncida en el canto de la cara.']] as const).map(([kind, id, name, description], i) => model({
+    id, name, type: 'accesorios', sub: 'Gorros', recipients: babies, difficulty: 2, fabrics: ['plano'], stretch: 'ninguna', fits: ['regular'], techniques: ['costura-recta', 'forro', 'frunces'],
+    generatorId: 'bonete-volante', params: { volante: kind }, flat: { family: 'accesorio', kids: id === 'bonete-encaje' ? 'bonete-encaje' : id },
+    description: `${description} Cierre con lengüeta y broche (sin cintas). Un aplique o adorno (pájaro, bellotas) se añade en Bordados.`, recommendedFabrics: ['Lino', 'Algodón estampado', 'Pana fina'], materials: ['Forro de algodón', 'Broche', ...(kind === 'encaje' ? ['Puntilla'] : [])],
+    collection: BABY, searchTerms: ['bonete', 'capota', 'gorro de bebe', 'volante', 'puntilla', 'encaje', 'vintage'], designGroup: { id: 'tipo-bonete-volante', name: 'Bonete con volante', preferred: i === 0 }
+  })),
+  model({ id: 'delantal-pichi', name: 'Delantal pichi con volantes', type: 'accesorios', sub: 'Delantales infantiles', recipients: ['toddler', 'infantil'], difficulty: 2, fabrics: ['plano'], stretch: 'ninguna', fits: ['holgado'], techniques: ['costura-recta', 'frunces', 'bolsillos'],
+    generatorId: 'delantal-pichi-infantil', params: { volantes: 'si', bolsillo: 'si' }, flat: { family: 'accesorio', kids: 'delantal-pichi' },
+    description: 'Delantal de una sola pieza que pasa por encima de los hombros: escote cuadrado, volantes en hombros y bajo, bolsillo y cintas cortas en la cintura.', recommendedFabrics: ['Lino', 'Algodón grueso', 'Lona ligera'], materials: ['Bies', 'Tela de contraste'],
+    collection: KIDS, searchTerms: ['delantal', 'mandil', 'pichi', 'ayudante', 'cocina', 'pintura'], designGroup: { id: 'tipo-delantal-pichi', name: 'Delantal pichi infantil', preferred: true } }),
+  model({ id: 'delantal-pichi-liso', name: 'Delantal pichi liso', type: 'accesorios', sub: 'Delantales infantiles', recipients: ['toddler', 'infantil'], difficulty: 1, fabrics: ['plano'], stretch: 'ninguna', fits: ['holgado'], techniques: ['costura-recta'],
+    generatorId: 'delantal-pichi-infantil', params: { volantes: 'no', bolsillo: 'no' }, flat: { family: 'accesorio', kids: 'delantal-pichi-liso' },
+    description: 'El mismo delantal sin volantes ni bolsillo: una pieza ribeteada y cuatro cintas.', recommendedFabrics: ['Lona', 'Hule de algodón', 'Lino'], materials: ['Bies'],
+    collection: KIDS, searchTerms: ['delantal', 'mandil', 'pichi', 'liso'], designGroup: { id: 'tipo-delantal-pichi', name: 'Delantal pichi infantil' } }),
+  model({ id: 'mono-pichi-bolsillos', name: 'Mono corto con tirantes y bolsillos', type: 'monos', sub: 'Monos infantiles', recipients: kids, difficulty: 2, fabrics: ['plano'], stretch: 'ninguna', fits: ['holgado'], techniques: ['costura-recta', 'botones', 'bolsillos'],
+    generatorId: 'mono-tirantes-infantil', params: { forma: 'pichi', largo: 'corto', bajo: 'dobladillo', bolsillos: 'si' }, flat: { family: 'bebe', kids: 'mono-pichi' },
+    description: 'Mono de pierna corta con canto recto, tirantes abotonados (dos posiciones) y bolsillos de parche. En bebé, entrepierna con broches.', recommendedFabrics: ['Lino', 'Algodón-lino', 'Chambray', 'Mezclilla ligera'], materials: ['Botones', 'Bies'],
+    collection: KIDS, searchTerms: ['mono', 'romper', 'overol corto', 'jardinera', 'tirantes', 'bolsillos'], designGroup: { id: 'tipo-mono-tirantes', name: 'Mono infantil con tirantes', preferred: true } }),
+  model({ id: 'mono-pico-volantes', name: 'Mono de escote en pico con volantes', type: 'monos', sub: 'Monos infantiles', recipients: kids, difficulty: 2, fabrics: ['plano'], stretch: 'ninguna', fits: ['holgado'], techniques: ['costura-recta', 'botones', 'frunces'],
+    generatorId: 'mono-tirantes-infantil', params: { forma: 'pico', largo: 'corto', bajo: 'volante', bolsillos: 'no', lazos: 'si' }, flat: { family: 'bebe', kids: 'mono-pico' },
+    description: 'Mono de escote en pico con hombros abotonados (en vez de cintas), lazos decorativos cosidos y volante en las piernas.', recommendedFabrics: ['Vichy', 'Seersucker', 'Algodón'], materials: ['Botones', 'Bies'],
+    collection: KIDS, searchTerms: ['mono', 'romper', 'pico', 'volantes', 'vichy', 'hombros'], designGroup: { id: 'tipo-mono-tirantes', name: 'Mono infantil con tirantes' } }),
+  model({ id: 'peto-infantil-largo', name: 'Peto infantil de pierna larga', type: 'monos', sub: 'Petos infantiles', recipients: kids, difficulty: 2, fabrics: ['plano'], stretch: 'ninguna', fits: ['holgado'], techniques: ['costura-recta', 'botones', 'bolsillos'],
+    generatorId: 'mono-tirantes-infantil', params: { forma: 'peto', largo: 'largo', bajo: 'vuelta', bolsillos: 'si' }, flat: { family: 'bebe', kids: 'peto-infantil' },
+    description: 'Peto con bolsillo central, tirantes cruzados con botones, aberturas laterales con botón y pierna larga con vuelta.', recommendedFabrics: ['Sarga', 'Pana', 'Mezclilla ligera', 'Gabardina'], materials: ['Botones', 'Bies'],
+    collection: KIDS, searchTerms: ['peto', 'overol', 'jardinera', 'dungaree', 'tirantes', 'bolsillo'], designGroup: { id: 'peto-infantil', name: 'Peto infantil con tirantes', preferred: true } }),
+  model({ id: 'blusa-trapecio', name: 'Blusa trapecio sin mangas', type: 'superiores', sub: 'Blusas infantiles', recipients: kids, difficulty: 2, fabrics: ['plano'], stretch: 'ninguna', fits: ['holgado'], techniques: ['costura-recta', 'botones', 'dobladillo'],
+    generatorId: 'blusa-trapecio-infantil', params: { volanteBajo: 'no' }, flat: { family: 'top', kids: 'blusa-trapecio' },
+    description: 'Blusa en trapecio sin mangas con abertura y botón en la espalda; escote y sisas ribeteados.', recommendedFabrics: ['Algodón de rayas', 'Popelina', 'Lino'], materials: ['Botón', 'Bies'],
+    collection: KIDS, searchTerms: ['blusa', 'trapecio', 'sin mangas', 'rayas', 'top'], designGroup: { id: 'tipo-blusa-trapecio', name: 'Blusa trapecio infantil', preferred: true } }),
+  model({ id: 'blusa-trapecio-volante', name: 'Blusa trapecio con volante', type: 'superiores', sub: 'Blusas infantiles', recipients: kids, difficulty: 2, fabrics: ['plano'], stretch: 'ninguna', fits: ['holgado'], techniques: ['costura-recta', 'botones', 'frunces'],
+    generatorId: 'blusa-trapecio-infantil', params: { volanteBajo: 'si' }, flat: { family: 'top', kids: 'blusa-trapecio-volante' },
+    description: 'La blusa trapecio con volante fruncido en el bajo.', recommendedFabrics: ['Vichy', 'Algodón', 'Lino'], materials: ['Botón', 'Bies'],
+    collection: KIDS, searchTerms: ['blusa', 'trapecio', 'volante', 'peplum', 'vichy'], designGroup: { id: 'tipo-blusa-trapecio', name: 'Blusa trapecio infantil' } }),
+  model({ id: 'pantalon-capri-infantil', name: 'Pantalón ancho capri', type: 'inferiores', sub: 'Pantalones infantiles', recipients: kids, difficulty: 1, fabrics: ['plano'], stretch: 'ninguna', fits: ['holgado'], techniques: ['costura-recta', 'jareta', 'dobladillo'],
+    generatorId: 'pantalon-cintura-elastica', params: { estilo: 'ancho', corte: 'capri' }, flat: { family: 'pantalon', pants: { leg: 'ancho', length: 'capri', waist: 'elastica', pockets: 'ninguno' } },
+    description: 'Pantalón ancho de cintura elástica cortado a media pierna; el largo se calcula con la entrepierna de la talla.', recommendedFabrics: ['Vichy', 'Lino', 'Algodón'], materials: ['Elástico'],
+    collection: KIDS, searchTerms: ['culotte', 'capri', 'pantalon ancho', 'pescador', 'vichy'], designGroup: { id: 'pantalon-capri-infantil', name: 'Pantalón ancho capri infantil', preferred: true } }),
+  ...([['trapecio', 'Conjunto de blusa trapecio y cubrepañal'], ['vichy', 'Conjunto de blusa con volante y pantalón ancho capri']] as const).map(([set, name]) => model({
+    id: `conjunto-${set}`, name, type: 'bebe', sub: 'Conjuntos', recipients: babies, difficulty: 2, fabrics: ['plano'], stretch: 'ninguna', fits: ['regular'], techniques: ['costura-recta', 'jareta', 'botones'],
+    generatorId: 'conjunto-bebe', params: { conjunto: set }, flat: { family: 'accesorio', kids: `conjunto-${set}` },
+    description: `${name}. Cada prenda conserva su patrón real, sus comprobaciones y sus pasos; todo sale en un solo PDF.`, recommendedFabrics: ['Algodón de rayas', 'Vichy', 'Lino'], materials: ['Elásticos', 'Botón', 'Bies'],
+    collection: BABY, searchTerms: ['conjunto', 'set', 'dos piezas', set], designGroup: { id: 'tipo-conjunto-bebe', name: 'Conjuntos de bebé' }
   }))
 ];
