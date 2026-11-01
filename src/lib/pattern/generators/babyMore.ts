@@ -1,7 +1,10 @@
 import { num, round1, str, type GeneratorContext, type GeneratorResult, type Params, type PatternGenerator } from '../generator';
 import type { Issue, Piece, SeamRelation } from '../types';
 import { K, P, arc, bindingStrip, clamp, cm, copyPiece, edge, equal, finite, invalid, len, lens, outline, rectangle, solve, type EdgeDef } from './kidsShared';
-import { generateBonnet, generateBooties, generateBandanaBib } from './babyPlus';
+import { bloomerDefaults, generateBloomers, generateBonnet, generateBooties, generateBandanaBib } from './babyPlus';
+import { bowPieces } from './kidsBlocks';
+import { buttonTopDefaults, casingDressDefaults, generateButtonTop, generateCasingDress, generateHeadband, generatePeasant, generateRufflesRomper, headbandDefaults, peasantDefaults, rufflesRomperDefaults } from './kidsTops';
+import { generatePants, pantsDefaults } from './pants';
 
 /* Más prendas de bebé: peto (pelele corto u overol largo) con tirantes y
  * abertura de broches en piernas y entrepierna, gorro de punto con orejitas,
@@ -152,7 +155,7 @@ export const earHatGenerator: PatternGenerator = {
 // ------------------------------------------------------------ Sombrero pescador
 export function bucketDefaults(ctx: GeneratorContext): Params {
   const H = ctx.body.cabeza ?? 560, s = clamp(H / 570, .6, 1.1);
-  return { holgura: 15, altoCopa: round1(75 * s), anchoAla: round1(62 * s), caida: .75, barbiquejo: small(ctx) ? 'si' : 'no', margen: 7 };
+  return { holgura: 15, altoCopa: round1(75 * s), anchoAla: round1(62 * s), caida: .75, barbiquejo: small(ctx) ? 'si' : 'no', lazo: 'no', margen: 7 };
 }
 
 /** Cone sector (two arcs split in halves): inner/outer circumferences and slant width. */
@@ -190,6 +193,12 @@ export function generateBucket(ctx: GeneratorContext, params: Params): Generator
     tab.marks.push({ id: 'broche', kind: 'boton', at: P(H * .2 - 12, 12), label: 'Broche (una mitad en cada lado)' });
     pieces.push(tab);
   }
+  const bow = str(p, 'lazo', 'no') === 'si';
+  if (bow) {
+    const sb = clamp(H / 570, .6, 1.1);
+    pieces.push(...bowPieces('', 55 * sb, 18 * sb, sa, 'principal'));
+    band.marks.push({ id: 'lazo', kind: 'cruz', at: P(band.nodes[1].x, (band.nodes[1].y + band.nodes[4].y) / 2), label: 'Lazo decorativo cosido fijo (en un lado)' });
+  }
   const both = (id: string, ids: string[]) => ({ pieceId: id, edgeIds: ids, factor: 2 });
   return {
     pieces,
@@ -207,7 +216,8 @@ export function generateBucket(ctx: GeneratorContext, params: Params): Generator
     steps: [
       { id: 'cortar', title: 'Corta exterior y reverso', detail: 'Copa, dos mitades de banda y dos mitades de ala en cada tela; entretela en el ala exterior.', pieces: pieces.map(piece => piece.id) },
       { id: 'armar', title: 'Arma cada sombrero', detail: 'Une los lados de la banda y del ala. Cose la banda a la copa repartiendo por cuartos y después el ala a la banda. Repite con el reverso.', pieces: ['copa', 'banda', 'ala', 'copa-forro', 'banda-forro', 'ala-forro'], seams: ['copa', 'ala', 'banda-lados', 'ala-lados'] },
-      { id: 'unir', title: 'Une exterior y reverso', detail: `Mete un sombrero dentro del otro derecho con derecho${strap ? ' con el barbiquejo hilvanado a los lados' : ''}, cose el canto del ala dejando una abertura, voltea, cierra y pespuntea el ala en círculos cada 8–10 mm.`, pieces: ['ala', 'ala-forro', ...(strap ? ['barbiquejo'] : [])] }
+      { id: 'unir', title: 'Une exterior y reverso', detail: `Mete un sombrero dentro del otro derecho con derecho${strap ? ' con el barbiquejo hilvanado a los lados' : ''}, cose el canto del ala dejando una abertura, voltea, cierra y pespuntea el ala en círculos cada 8–10 mm.`, pieces: ['ala', 'ala-forro', ...(strap ? ['barbiquejo'] : [])] },
+      ...(bow ? [{ id: 'lazo', title: 'Lazo decorativo', detail: 'Arma el lazo y cóselo a mano sobre la banda, en un lado. El sombrero deja de ser reversible por ese lado.', pieces: ['lazo', 'lazo-colas', 'lazo-nudo', 'banda'] }] : [])
     ]
   };
 }
@@ -221,6 +231,7 @@ export const bucketGenerator: PatternGenerator = {
     { key: 'anchoAla', label: 'Ancho del ala', group: 'diseno', type: 'length', min: 30, max: 110 },
     { key: 'caida', label: 'Caída del ala', group: 'diseno', type: 'ratio', min: .5, max: .95 },
     { key: 'barbiquejo', label: 'Barbiquejo con broche', group: 'diseno', type: 'choice', choices: [{ value: 'no', label: 'Sin barbiquejo' }, { value: 'si', label: 'Con barbiquejo' }] },
+    { key: 'lazo', label: 'Lazo decorativo', group: 'diseno', type: 'choice', choices: [{ value: 'no', label: 'Sin lazo' }, { value: 'si', label: 'Con lazo' }] },
     { key: 'holgura', label: 'Holgura de cabeza', group: 'holgura', type: 'length', min: 0, max: 40 },
     { key: 'margen', label: 'Margen de costura', group: 'margenes', type: 'length', min: 5, max: 10 }
   ]
@@ -238,8 +249,28 @@ export const SETS: Record<string, { name: string; parts: Part[] }> = {
   'recien-nacido': { name: 'Conjunto de recién nacido: bonete, patucos y babero', parts: [
     { prefix: 'bonete', label: 'Bonete', generate: generateBonnet, defaults: () => ({}), params: {} },
     { prefix: 'patucos', label: 'Patucos', generate: generateBooties, defaults: () => ({}), params: {} },
-    { prefix: 'babero', label: 'Babero', generate: generateBandanaBib, defaults: () => ({}), params: {} }] }
+    { prefix: 'babero', label: 'Babero', generate: generateBandanaBib, defaults: () => ({}), params: {} }] },
+  vestido: { name: 'Conjunto de vestido con jaretas y cubrepañal con olanes', parts: [
+    { prefix: 'vestido', label: 'Vestido', generate: generateCasingDress, defaults: casingDressDefaults, params: { lazo: 'si' } },
+    { prefix: 'cubrepanal', label: 'Cubrepañal', generate: generateBloomers, defaults: bloomerDefaults, params: { olanes: 'si', lazo: 'si' } }] },
+  'pelele-diadema': { name: 'Pelele de volantes y diadema con lazo', parts: [
+    { prefix: 'pelele', label: 'Pelele', generate: generateRufflesRomper, defaults: rufflesRomperDefaults, params: { tirantes: 'si' } },
+    { prefix: 'diadema', label: 'Diadema', generate: generateHeadband, defaults: headbandDefaults, params: {}, ctx: { fabric: 'punto', stretch: 40 } }] },
+  campesino: { name: 'Blusa campesina y short abullonado', parts: [
+    { prefix: 'blusa', label: 'Blusa', generate: generatePeasant, defaults: peasantDefaults, params: { manga: 'corta', volante: 'si' } },
+    { prefix: 'short', label: 'Short', generate: generatePants, defaults: c => bubbleShortDefaults(c), params: {} }] },
+  rayas: { name: 'Blusa con botones y pantalón bombacho', parts: [
+    { prefix: 'blusa', label: 'Blusa', generate: generateButtonTop, defaults: buttonTopDefaults, params: {} },
+    { prefix: 'pantalon', label: 'Pantalón', generate: generatePants, defaults: c => ({ ...pantsDefaults(c), estilo: 'bombacho' }), params: {} }] }
 };
+
+/** Short bombacho: hem as wide as the leg, elastic casing with a small frill. */
+export function bubbleShortDefaults(ctx: GeneratorContext): Params {
+  const d = pantsDefaults(ctx), b = ctx.body, H = b.cadera ?? 500, he = H + num(d, 'holguraCadera') + num(d, 'panal') * 1.2;
+  // Leg length starts below the eased rise (with diaper): a minimum inseam keeps both legs drafted.
+  const rise = (b.tiro ?? 150) + num(d, 'holguraTiro') + num(d, 'panal');
+  return { ...d, estilo: 'bombacho', largo: round1(rise + Math.max(50, (b.entrepierna ?? 250) * .28)), bajo: round1(he * (.5 + 1 / 16 + 1 / 10) * .92), volantito: 12 };
+}
 
 /** Merges real patterns, prefixing every id so pieces, seams and steps stay traceable. */
 export function generateSet(ctx: GeneratorContext, params: Params): GeneratorResult {

@@ -113,7 +113,7 @@ describe('colección Niña y ampliación de Bebé', () => {
 
   it('enlaza cada zona de los dibujos con una pieza física del patrón', () => {
     const models = CATALOG.filter(m => m.flat.kids);
-    expect(models.length).toBe(22);
+    expect(models.length).toBe(38);
     for (const model of models) {
       const gen = getGenerator(model.generatorId!)!, kinds = SUPPORTED[gen.id] ?? ['bebe'];
       const kind = kinds[0] === 'bebe' ? 'bebe' : kinds.includes('infantil') ? 'infantil' : 'toddler';
@@ -132,9 +132,9 @@ describe('colección Niña y ampliación de Bebé', () => {
     }
   });
 
-  it('presenta cinco diseños de niña con patrón y tarjetas propias', () => {
+  it('presenta siete diseños de niña con patrón y tarjetas propias', () => {
     const girls = groupCatalog(CATALOG.filter(m => modelHasPattern(m) && m.collection === 'Niña'));
-    expect(girls.map(g => g.id).sort()).toEqual(['tipo-falda-circular', 'tipo-falda-olanes', 'tipo-falda-tul', 'tipo-vestido-tirantes', 'tipo-vestido-trapecio']);
+    expect(girls.map(g => g.id).sort()).toEqual(['tipo-blusa-campesina', 'tipo-falda-circular', 'tipo-falda-olanes', 'tipo-falda-tul', 'tipo-vestido-tirantes', 'tipo-vestido-trapecio', 'vestido-jareta-infantil']);
     expect(CATALOG.find(m => m.id === 'falda-circular')?.status).toBe('experimental');
   });
 });

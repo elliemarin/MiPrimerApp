@@ -6,22 +6,47 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-01 (Claude: tendencias de mezclilla y oversize, más bebé).
+- Última actualización: 2026-11-01 (Claude: diseños infantiles digitalizados desde fotos).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 2970 pruebas: catálogo, patrones, persistencia, PDF, proyector, logos y arrastre
+npm test            # 3012 pruebas: catálogo, patrones, persistencia, PDF, proyector, logos y arrastre
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Diseños infantiles digitalizados desde fotos (2026-11-01)
+
+**Este es el relevo más reciente.** Detalle completo, imagen por imagen, en
+`docs/DISENOS_DIGITALIZADOS.md`.
+
+- La usuaria envió 16 fotos de diseños de niños y bebés con patrón. Se
+  reconstruyeron como **12 generadores nuevos** desde medidas (cambian de talla
+  solos) más opciones en 5 existentes. No se copiaron imágenes, marcas ni
+  medidas: varias referencias eran de IA con medidas imposibles; las coherentes
+  sirvieron solo de comprobación.
+- Nuevos: chaleco de borreguito, chaqueta polar con cuello alto y cierre,
+  chaqueta acolchada reversible, chaqueta con capucha forrada y botones,
+  sudadera canguro, blusa campesina, blusa con botones, vestido con jaretas,
+  pelele de volantes, diadema con lazo, gorro duende, gorro con orejeras.
+  Opciones: pantalón `bombacho` (con volantito), cubrepañal con tirantes
+  cruzados y lazo, sombrero con lazo, barrel con bolsillos delanteros y cuatro
+  conjuntos más.
+- **Seguridad:** sin cordones ni cintas para atar (lazos cosidos fijos,
+  lengüetas con broche); escotes comprobados para pasar la cabeza.
+- Biblioteca: acceso nuevo **Infantil**; 24 recetas y 13 tarjetas nuevas;
+  láminas `infantil-01/02/03` dibujadas desde las piezas.
+- Validación: barrido de todas las tallas infantiles y variantes sin errores,
+  **3,012 pruebas en 70 archivos**.
+  **Pendiente:** coser muestras; formas de aplique «cerezas» y «panda».
+
 ## Tendencias (mezclilla y oversize) y más Bebé (2026-11-01)
 
-**Este es el relevo más reciente.** Detalle completo en `docs/TENDENCIAS_Y_BEBE.md`.
+Relevo anterior. Detalle completo en `docs/TENDENCIAS_Y_BEBE.md`.
 
 - **Pantalón de mezclilla** (`jeans.ts`, generador `pantalon-mezclilla`) con
   siete siluetas: recto, pitillo, mom, acampanado, ancho, baggy y barrel.

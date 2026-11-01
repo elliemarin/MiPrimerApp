@@ -74,6 +74,38 @@ const SHEETS: Record<string, Cell[]> = {
     { key: 'conjunto-invierno', color: '#8fa5bf', accents: { 'overol-tirante--1': '#7f96b1', 'overol-tirante--2': '#7f96b1', 'gorro-gorro': '#e3c9a8', 'gorro-oreja--1': '#d8b892', 'gorro-oreja--2': '#d8b892' } },
     { key: 'conjunto-recien-nacido', color: '#f1e4d3', accents: { 'babero-babero': '#d9e3d4', 'bonete-banda': '#e8d6bf' } },
     { key: 'baggy-bebe', model: true, color: '#9db3cf', accents: { pretina: '#93a9c5' } }
+  ],
+  // Designs digitized from reference photos (2026-11-01).
+  'infantil-01': [
+    { key: 'chaleco-borrego', model: true, color: '#efe6d6' },
+    { key: 'chaqueta-polar-cierre', model: true, color: '#cbbbe2', accents: { cuello: '#c2b1da', pretina: '#c2b1da', 'puno-a': '#c2b1da', 'puno-b': '#c2b1da' } },
+    { key: 'chaqueta-acolchada-reversible', model: true, color: '#3f5f4a' },
+    { key: 'chaqueta-capucha-botones', model: true, color: '#3d4f73', accents: { capucha: '#b5643c', 'bolsillo-a': '#b5643c', 'bolsillo-b': '#b5643c' } },
+    { key: 'sudadera-canguro-infantil', model: true, color: '#4a6f9c', accents: { pretina: '#41648f', 'puno-a': '#41648f', 'puno-b': '#41648f' } },
+    { key: 'blusa-campesina', model: true, color: '#e7a3a3', accents: { volante: '#e09797' } },
+    { key: 'blusa-botones-infantil', model: true, color: '#e6c3a8' },
+    { key: 'pantalon-bombacho-infantil', model: true, color: '#d9a07e' },
+    { key: 'vestido-jareta', model: true, color: '#f0c6cf', accents: { lazo: '#e8a9b6' } }
+  ],
+  'infantil-02': [
+    { key: 'pelele-volantes', model: true, color: '#8a6047', accents: { 'lazo--1': '#f2b49b', 'lazo--2': '#f2b49b', 'tirante--1': '#7a5340', 'tirante--2': '#7a5340', 'volante--1': '#93694f', 'volante--2': '#93694f' } },
+    { key: 'diadema-lazo', model: true, color: '#f2b49b', accents: { lazo: '#efa688' } },
+    { key: 'gorro-duende', model: true, color: '#c94b4b' },
+    { key: 'gorro-orejeras-gato', model: true, color: '#a8d5c4', accents: { oreja: '#98c9b6' } },
+    // Variant cells (4–8).
+    { key: 'chaleco-ribeteado', model: true, color: '#e3d9c7' },
+    { key: 'blusa-campesina-larga', model: true, color: '#b6cfe6', accents: { volante: '#a9c4de' } },
+    { key: 'barrel-infantil', model: true, color: '#d8a53a', accents: { pretina: '#cd9a30' } },
+    { key: 'cubrepanal-tirantes', model: true, color: '#b9c9b0', accents: { 'tirante--1': '#a9bba0', 'tirante--2': '#a9bba0' } },
+    { key: 'sombrero-pescador-lazo', model: true, color: '#f1e6d0', accents: { lazo: '#e9b7a4', ala: '#e9ddc5' } }
+  ],
+  'infantil-03': [
+    { key: 'gorro-orejeras-oso', model: true, color: '#e8d2b4', accents: { oreja: '#dcc29f' } },
+    { key: 'gorro-duende-fieltro', model: true, color: '#d65a5a' },
+    { key: 'conjunto-vestido', model: true, color: '#f0c6cf', accents: { 'vestido-lazo': '#e8a9b6', 'cubrepanal-delantero': '#e9b7c0' } },
+    { key: 'conjunto-pelele-diadema', model: true, color: '#8a6047', accents: { 'pelele-lazo--1': '#f2b49b', 'pelele-lazo--2': '#f2b49b', 'diadema-banda': '#8a6047', 'diadema-lazo': '#f2b49b' } },
+    { key: 'conjunto-campesino', model: true, color: '#e7a3a3' },
+    { key: 'conjunto-rayas', model: true, color: '#d9a07e', accents: { 'blusa-delantero--1': '#e6c3a8', 'blusa-delantero--2': '#e6c3a8', 'pantalon-pretina': '#cf9573', 'pantalon-puno-a': '#cf9573', 'pantalon-puno-b': '#cf9573' } }
   ]
 };
 const viewFor = (cell: Cell): FlatView => {

@@ -4,7 +4,7 @@ import { formatLength } from '../../units';
 import type { Issue, MeasureCheck, Notch, PEdge, Piece, PNode, SeamRelation } from '../types';
 import { GeneratorContext, GeneratorResult, Params, PatternGenerator, isChild, num, round1, str } from '../generator';
 
-type Style = 'recto' | 'ancho' | 'jogger';
+type Style = 'recto' | 'ancho' | 'jogger' | 'bombacho';
 
 const EASE_FACTOR: Record<'plano' | 'punto', Record<string, number>> = {
   plano: { ajustado: 0.06, regular: 0.1, holgado: 0.16, oversize: 0.24 },
@@ -42,6 +42,7 @@ export function pantsDefaults(ctx: GeneratorContext): Params {
     dobladillo: kind === 'bebe' ? 20 : child ? 25 : 30,
     altoPuno: kind === 'bebe' ? 35 : child ? 45 : 60,
     holguraPuno: child ? 10 : 20,
+    volantito: 0,
     proporcionElastico: kind === 'bebe' ? 0.95 : child ? 0.92 : 0.9
   };
 }
@@ -65,7 +66,7 @@ function buildLeg(opts: {
   kneeY?: number;
   seam: number;
   hemAllowance: number;
-  hemFinish: 'dobladillo' | 'costura';
+  hemFinish: 'dobladillo' | 'costura' | 'jareta';
 }): Leg {
   const { tip, sideAtCrotch, crease, yCrotch, L, hemW, kneeW, seam, hemAllowance, hemFinish } = opts;
   const hIn: Pt = { x: crease + hemW / 2, y: L };
@@ -172,10 +173,14 @@ export function generatePants(ctx: GeneratorContext, P: Params): GeneratorResult
   const kneeFor = (legW: number, hemW: number): number | null => {
     if (!hasKnee) return null;
     if (style === 'jogger') return hemW + (legW - hemW) * 0.45;
+    if (style === 'bombacho') return hemW + (legW - hemW) * 0.6;
     return Math.min(hemW, legW);
   };
-  const hemFinish = style === 'jogger' ? 'costura' : 'dobladillo';
-  const hemAllowance = style === 'jogger' ? SA : hemA;
+  // Bombacho: the hem folds into a casing for an elastic; an optional frill stays below it.
+  const frill = style === 'bombacho' ? num(P, 'volantito', 0) : 0;
+  const ankleElastic = 6;
+  const hemFinish = style === 'jogger' ? 'costura' : style === 'bombacho' ? 'jareta' : 'dobladillo';
+  const hemAllowance = style === 'jogger' ? SA : style === 'bombacho' ? frill + ankleElastic + 4 + 10 : hemA;
 
   // ---------- Delantero ----------
   const hF = Math.min(Fe * 1.3, R * 0.45);
@@ -494,6 +499,12 @@ export function generatePants(ctx: GeneratorContext, P: Params): GeneratorResult
       notices.push({ level: 'aviso', code: 'sin-talon', message: 'Sin medida de talón–empeine: comprueba que el puño pase por el pie.' });
     }
   }
+  const hemElastic = hasKnee ? (b.tobillo ?? hemCirc / 1.6) + 25 : (b.muslo ?? hemCirc / 1.3) + 30;
+  if (style === 'bombacho') {
+    const foot = b.talon ?? (b.tobillo ? b.tobillo * 1.45 : 0);
+    if (hasKnee && foot && hemCirc < foot + 10) notices.push({ level: 'error', code: 'bombacho-pie', message: `El bajo (${formatLength(hemCirc, 'cm')}) no deja pasar el pie. Aumenta el contorno de bajo.` });
+    else notices.push({ level: 'ok', code: 'bombacho-elastico', message: `Bajo de ${formatLength(hemCirc, 'cm')} recogido con ${formatLength(hemElastic, 'cm')} de elástico.` });
+  }
   if (!hasKnee && style !== 'ancho') notices.push({ level: 'aviso', code: 'corto', message: 'Largo corto: se construye sin línea de rodilla (short).' });
 
   const elasticLen = W * num(P, 'proporcionElastico', 0.9) + 20;
@@ -501,6 +512,7 @@ export function generatePants(ctx: GeneratorContext, P: Params): GeneratorResult
     { id: 'elastico', label: `Elástico de ${formatLength(elastic, 'cm')}`, qty: formatLength(elasticLen, 'cm'), note: `Cintura × ${num(P, 'proporcionElastico', 0.9)} + 2 cm de traslape. Pruébalo sobre el cuerpo antes de cerrarlo.` },
     { id: 'hilo', label: 'Hilo de coser', qty: '1 carrete', note: 'Del color de la tela principal.' }
   ];
+  if (style === 'bombacho') materials.push({ id: 'elastico-bajo', label: `Elástico de ${formatLength(ankleElastic, 'cm')} para los bajos`, qty: `2 × ${formatLength(hemElastic + 20, 'cm')}`, note: 'Pruébalo: no debe marcar la piel.' });
   if (style === 'jogger') materials.push({ id: 'rib', label: 'Punto elástico (rib) para puños', qty: `2 × ${formatLength(cuffLen + 2 * SA, 'cm')} × ${formatLength(cuffH * 2 + 2 * SA, 'cm')}`, note: 'Elasticidad a lo largo del puño.' });
 
   const assumptions = [
@@ -518,7 +530,9 @@ export function generatePants(ctx: GeneratorContext, P: Params): GeneratorResult
     { id: 'entrepiernas', title: 'Cose las entrepiernas', detail: 'Une delantero y trasero por la entrepierna, de la punta del tiro al bajo, con los piquetes de rodilla coincidiendo.', pieces: ['delantero', 'trasero'], seams: ['entrepierna'] },
     { id: 'tiro', title: 'Une las piernas por el tiro', detail: 'Voltea una pierna al derecho y métela dentro de la otra. Cose la curva de tiro del centro delantero al centro trasero, haciendo coincidir las costuras de entrepierna. Refuerza la curva con una segunda pasada.', pieces: ['delantero', 'trasero'] },
     { id: 'jareta', title: 'Haz la jareta de la cintura', detail: `Dobla 1 cm hacia el revés y luego por la línea de cintura. Pespuntea sobre la línea marcada dejando 3 cm abiertos. Pasa ${formatLength(elasticLen, 'cm')} de elástico, cóselo traslapado y cierra la abertura.`, pieces: ['delantero', 'trasero'] },
-    style === 'jogger'
+    style === 'bombacho'
+      ? { id: 'bajo', title: 'Jareta del bajo', detail: `Dobla 1 cm y luego el resto del margen del bajo. Pespuntea a ${formatLength(frill, 'cm')} y a ${formatLength(frill + ankleElastic + 4, 'cm')} del doblez${frill ? ' (el volantito queda debajo)' : ''}, dejando una abertura junto a la entrepierna. Pasa el elástico, únelo y cierra.`, pieces: ['delantero', 'trasero'] }
+      : style === 'jogger'
       ? { id: 'punos', title: 'Coloca los puños', detail: 'Cierra cada puño en anillo, dóblalo a lo largo y cóselo al bajo estirándolo de piquete a piquete.', pieces: ['puno', 'delantero', 'trasero'], seams: ['bajo-puno'] }
       : { id: 'bajo', title: 'Haz el dobladillo', detail: `Dobla el margen de ${formatLength(hemA, 'cm')} por la línea de bajo (las esquinas en espejo coinciden con el costado) y cose.`, pieces: ['delantero', 'trasero'] },
     { id: 'prueba', title: 'Prueba y revisa', detail: 'Comprueba tiro, cadera y largo con la persona. Anota los cambios en el proyecto antes de cortar la versión definitiva.', pieces: [] }
@@ -543,7 +557,8 @@ export const pantsGenerator: PatternGenerator = {
       choices: [
         { value: 'recto', label: 'Recta' },
         { value: 'ancho', label: 'Ancha' },
-        { value: 'jogger', label: 'Jogger con puño' }
+        { value: 'jogger', label: 'Jogger con puño' },
+        { value: 'bombacho', label: 'Bombacho (elástico en el bajo)' }
       ]
     },
     { key: 'largo', label: 'Largo terminado (cintura a bajo)', group: 'diseno', type: 'length', min: 80, max: 1400 },
@@ -557,7 +572,8 @@ export const pantsGenerator: PatternGenerator = {
     { key: 'anchoElastico', label: 'Ancho del elástico', group: 'diseno', type: 'length', min: 5, max: 60 },
     { key: 'proporcionElastico', label: 'Largo de elástico / cintura', group: 'diseno', type: 'ratio', min: 0.7, max: 1 },
     { key: 'margen', label: 'Margen de costura', group: 'margenes', type: 'length', min: 0, max: 30 },
-    { key: 'dobladillo', label: 'Dobladillo', group: 'margenes', type: 'length', min: 0, max: 80, when: (p) => p.estilo !== 'jogger' }
+    { key: 'volantito', label: 'Volantito bajo el elástico', group: 'diseno', type: 'length', min: 0, max: 40, when: (p) => p.estilo === 'bombacho' },
+    { key: 'dobladillo', label: 'Dobladillo', group: 'margenes', type: 'length', min: 0, max: 80, when: (p) => p.estilo !== 'jogger' && p.estilo !== 'bombacho' }
   ],
   defaults: pantsDefaults,
   generate: generatePants

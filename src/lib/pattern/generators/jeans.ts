@@ -74,7 +74,7 @@ export function generateJeans(ctx: GeneratorContext, params: Params): GeneratorR
   const Kc = He * S.knee + num(p, 'anchoRodillaExtra'), Hm = He * S.hem + num(p, 'anchoBajoExtra');
   const bw = num(p, 'anchoPretina'), ew = num(p, 'anchoElastico');
   if (!finite(H, W, CD, He, R, L, Kc, Hm, sa, hem, bw, ew) || H < 300 || H > 1700 || W < 280 || W > H * 1.15 || CD < 90 || L < R + (small ? 80 : 120) || L > 1400
-    || Hm < He * .2 || Kc < Hm * .55 || Kc > He * .9 || Hm > He * .9 || sa < 6 || sa > 15 || hem < 15 || hem > 50 || bw < 20 || bw > 60 || ew < 10 || ew > 50 || !['pretina', 'elastica'].includes(str(p, 'cintura')) || !['cinco', 'cargo', 'parche', 'ninguno'].includes(pockets))
+    || Hm < He * .2 || Kc < Hm * .55 || Kc > He * .9 || Hm > He * .9 || sa < 6 || sa > 15 || hem < 15 || hem > 50 || bw < 20 || bw > 60 || ew < 10 || ew > 50 || !['pretina', 'elastica'].includes(str(p, 'cintura')) || !['cinco', 'cargo', 'parche', 'frontales', 'ninguno'].includes(pockets))
     return invalid('jeans-medidas', 'Revisa cintura, cadera, tiro, largo y los ajustes de rodilla y bajo: el largo debe pasar al menos 12 cm del tiro.');
 
   // Babies keep the basic crotch extensions: their short legs cannot absorb a baggy seat.
@@ -240,6 +240,16 @@ export function generateJeans(ctx: GeneratorContext, params: Params): GeneratorR
     pieces.push(pocket);
     } else notices.push({ level: 'aviso', code: 'sin-bolsillo-trasero', message: 'En esta talla no cabe un bolsillo trasero de parche: se omite.' });
   }
+  if (pockets === 'frontales') {
+    // Slanted front patch pockets beside the side seam (kids' barrel reference).
+    const pw = clamp(Fw * .5, 45, 130), sl = pw * .35, ph = clamp(R * .62, pw * .9, R - (elastic ? ew + 20 * s : 25 * s));
+    const fp = outline('bolsillo-delantero', 'Bolsillo delantero de parche', [P(0, 0), P(pw, sl), P(pw, ph), P(0, ph)], [
+      edge('boca', 'Boca inclinada (doblar 1,5 cm dos veces)', 'costura', 15), edge('lado-der', 'Lado (doblar hacia dentro)', 'costura', 8),
+      edge('fondo', 'Fondo (doblar hacia dentro)', 'costura', 8), edge('lado-izq', 'Lado (doblar hacia dentro)', 'costura', 8)], { qty: 2, mirrorPairs: true });
+    const y0 = elastic ? ew + 25 * s : 30 * s, x0 = Math.max(0, xSide(y0)) + 18 * s;
+    front.lines.push({ id: 'bolsillo-delantero', kind: 'colocacion', a: P(x0, y0), b: P(x0 + pw, y0 + sl), label: 'Bolsillo delantero: boca inclinada' });
+    pieces.push(fp);
+  }
   if (pockets === 'cargo') {
     const cw = clamp(Fw * .62, 90 * s, 200), ch = cw * 1.18, g = 25 * s;
     const cargo = rectangle('bolsillo-cargo', 'Bolsillo cargo con fuelle', cw + 2 * g, ch + g, [edge('boca', 'Boca (doble doblez)', 'dobladillo', 25), edge('lado-der', 'Lado', 'costura', 8), edge('fondo', 'Fondo', 'costura', 8), edge('lado-izq', 'Lado', 'costura', 8)], { qty: 2 });
@@ -278,6 +288,7 @@ export function generateJeans(ctx: GeneratorContext, params: Params): GeneratorR
   if (yoke) steps.push({ id: 'canesu', title: 'Canesú y centro trasero', detail: 'Une cada canesú a su trasero, carga el margen hacia arriba y haz doble pespunte. Después une los dos traseros por el centro (canesú incluido) con costura cargada.', pieces: ['canesu', 'trasero'], seams: ['canesu'] });
   if (frontPockets) steps.push({ id: 'bolsillos-delanteros', title: 'Bolsillos delanteros', detail: `${pockets === 'cinco' ? 'Cose la relojera sobre la vista derecha. ' : ''}Cose la vista sobre la capa trasera de la bolsa. Une la capa delantera a la boca del delantero, voltea, plancha y pespuntea. Cierra el fondo de la bolsa con costura francesa e hilvana bolsa y vista al costado y a la cintura.`, pieces: ['delantero', 'vista-bolsillo', 'forro-bolsillo', ...(pockets === 'cinco' ? ['relojera'] : [])] });
   if (!elastic) steps.push({ id: 'bragueta', title: 'Bragueta con cierre', detail: 'Sobrehila las vistas de bragueta. Une el centro delantero desde el tope del cierre hasta la entrepierna. Cose el cierre a la vista derecha y la tapeta debajo; luego cose la otra cinta a la vista izquierda y pespuntea la J desde el derecho, sin atrapar la tapeta.', pieces: ['delantero', 'tapeta'] });
+  if (pockets === 'frontales') steps.push({ id: 'bolsillos-delanteros', title: 'Bolsillos delanteros de parche', detail: 'Dobla dos veces la boca inclinada y pespuntea. Dobla lados y fondo y cose cada bolsillo sobre su línea, con la boca hacia el costado; remata las esquinas superiores.', pieces: ['bolsillo-delantero', 'delantero'] });
   if (pockets === 'cargo') steps.push({ id: 'cargo', title: 'Bolsillos cargo', detail: 'Dobladilla la boca, plancha los fuelles y cose cada bolsillo sobre su línea. Arma las carteras (exterior y vista), voltea, pespuntea y cósalas boca abajo sobre su línea; dóblalas y pespuntea para que queden planas.', pieces: ['bolsillo-cargo', 'cartera', 'delantero'] });
   steps.push({ id: 'entrepierna', title: 'Entrepierna', detail: 'Une delanteros y traseros por la entrepierna de un bajo al otro, haciendo coincidir el cruce del tiro. Carga el margen y haz doble pespunte.', pieces: ['delantero', 'trasero'], seams: ['entrepierna'] });
   steps.push({ id: 'costados', title: 'Costados', detail: 'Cose los costados de cintura a bajo, sobrehila y plancha hacia atrás. Prueba el ajuste antes de la pretina.', pieces: ['delantero', 'trasero', ...(yoke ? ['canesu'] : []), ...(facing ? ['vista-bolsillo'] : [])], seams: ['costado'] });
@@ -302,7 +313,7 @@ export const jeansGenerator: PatternGenerator = {
   params: [
     { key: 'silueta', label: 'Silueta', group: 'diseno', type: 'choice', choices: (Object.keys(SILHOUETTES) as Silhouette[]).map(value => ({ value, label: SILHOUETTES[value].label })) },
     { key: 'cintura', label: 'Cintura', group: 'diseno', type: 'choice', choices: [{ value: 'pretina', label: 'Pretina con bragueta y botón' }, { value: 'elastica', label: 'Elástica (sin bragueta)' }] },
-    { key: 'bolsillos', label: 'Bolsillos', group: 'diseno', type: 'choice', choices: [{ value: 'cinco', label: 'Cinco bolsillos' }, { value: 'cargo', label: 'Cargo con fuelle' }, { value: 'parche', label: 'Solo traseros de parche' }, { value: 'ninguno', label: 'Sin bolsillos' }] },
+    { key: 'bolsillos', label: 'Bolsillos', group: 'diseno', type: 'choice', choices: [{ value: 'cinco', label: 'Cinco bolsillos' }, { value: 'cargo', label: 'Cargo con fuelle' }, { value: 'parche', label: 'Solo traseros de parche' }, { value: 'frontales', label: 'Delanteros inclinados y traseros de parche' }, { value: 'ninguno', label: 'Sin bolsillos' }] },
     { key: 'tiro', label: 'Altura de cintura', group: 'diseno', type: 'choice', choices: [{ value: 'alto', label: 'Tiro alto (cintura natural)' }, { value: 'medio', label: 'Tiro medio' }] },
     { key: 'largo', label: 'Largo exterior desde la cintura natural', group: 'diseno', type: 'length', min: 250, max: 1400 },
     { key: 'anchoRodillaExtra', label: 'Ajuste del ancho en la rodilla', group: 'diseno', type: 'length', min: -150, max: 300 },

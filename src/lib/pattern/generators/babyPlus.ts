@@ -1,6 +1,7 @@
 import { num, round1, str, type GeneratorContext, type GeneratorResult, type Params, type PatternGenerator } from '../generator';
 import type { Issue, Piece, SeamRelation } from '../types';
 import { K, P, arc, bindingStrip, clamp, cm, copyPiece, cubicPoint, edge, equal, finite, invalid, len, lens, outline, rectangle, solve } from './kidsShared';
+import { bowPieces } from './kidsBlocks';
 
 /* Colección de bebé: prendas y accesorios con construcción propia.
  * Medidas sobre pañal; sin cordones largos ni piezas pequeñas sueltas. */
@@ -12,7 +13,7 @@ const allEdges = (piece: Piece) => piece.edges.map(e => e.id);
 
 // ------------------------------------------------------------- Cubrepañal
 export function bloomerDefaults(ctx: GeneratorContext): Params {
-  return { olanes: 'no', holgura: 80, anchoEntrepierna: ctx.kind === 'bebe' ? 70 : 80, anchoElasticoCintura: 15, anchoElasticoPierna: 6, proporcionElastico: .92, margen: 8 };
+  return { olanes: 'no', tirantes: 'no', lazo: 'no', holgura: 80, anchoEntrepierna: ctx.kind === 'bebe' ? 70 : 80, anchoElasticoCintura: 15, anchoElasticoPierna: 6, proporcionElastico: .92, margen: 8 };
 }
 
 export function generateBloomers(ctx: GeneratorContext, params: Params): GeneratorResult {
@@ -64,6 +65,18 @@ export function generateBloomers(ctx: GeneratorContext, params: Params): Generat
       pieces.push(ruffle);
     }
   }
+  const straps = str(p, 'tirantes', 'no') === 'cruzados', bow = str(p, 'lazo', 'no') === 'si', sc = clamp(hips / 480, .8, 1.3);
+  if (straps) {
+    // Detachable crossed suspenders: buttonholes at both ends, buttons on the casing.
+    const strapL = (b.talleEspalda ?? hips * .43) * 2.15 + 60 * sc, sw = 16 * sc;
+    const strap = rectangle('tirante', 'Tirante cruzado desmontable', strapL, 2 * sw, [edge('a', 'Canto', 'costura', sa), edge('b', 'Extremo con ojales', 'costura', sa), edge('c', 'Canto', 'costura', sa), edge('d', 'Extremo con ojales', 'costura', sa)], { qty: 2 }, true);
+    strap.lines.push({ id: 'doblez', kind: 'doblez', a: P(0, sw), b: P(strapL, sw), label: 'Doblar a lo largo' });
+    for (const [i, x] of [12 * sc, 32 * sc, strapL - 32 * sc, strapL - 12 * sc].entries()) strap.marks.push({ id: `ojal-${i + 1}`, kind: 'ojal', at: P(x, sw / 2), label: 'Ojal (dos posiciones para crecer)' });
+    front.marks.push({ id: 'boton-tirante', kind: 'boton', at: P(halfF * .55, casing / 2), label: 'Botón del tirante (sin atrapar el elástico)' });
+    back.marks.push({ id: 'boton-tirante', kind: 'boton', at: P(halfB * .3, casing / 2), label: 'Botón del tirante (se cruzan en la espalda)' });
+    pieces.push(strap);
+  }
+  if (bow) { pieces.push(...bowPieces('', 30 * sc, 11 * sc, 6)); front.marks.push({ id: 'lazo', kind: 'cruz', at: P(0, casing / 2), label: 'Lazo decorativo cosido fijo' }); }
   const legElastic = Math.min(thigh + 15, legLoop * .9);
   return {
     pieces, seams, checks,
@@ -73,6 +86,7 @@ export function generateBloomers(ctx: GeneratorContext, params: Params): Generat
       { id: 'elastico-cintura', label: `Elástico suave de ${cm(ew)}`, qty: cm(waist * er + 20) },
       { id: 'elastico-pierna', label: `Elástico suave de ${cm(lw)}`, qty: `2 tramos de ${cm(legElastic)}`, note: 'No debe marcar la piel: pruébalo sobre el muslo.' },
       ...(ruffles ? [{ id: 'olanes', label: 'Tela de contraste ligera para olanes', qty: '3 tiras' }] : []),
+      ...(straps ? [{ id: 'botones', label: 'Botones planos de 12–15 mm', qty: '4' }] : []),
       { id: 'hilo', label: 'Hilo de coser', qty: '1 carrete' }
     ],
     assumptions: ['Cadera y tiro medidos sobre el pañal. La espalda es 2,5 cm más profunda para cubrirlo.', 'Las piernas se rematan con bies que hace de canal del elástico: el borde no lleva margen.', ruffles ? 'Los olanes se fruncen a 1,8 veces el ancho de la espalda en su línea y sus extremos quedan atrapados en el bies.' : 'Sin olanes: espalda lisa.'],
@@ -82,7 +96,9 @@ export function generateBloomers(ctx: GeneratorContext, params: Params): Generat
       { id: 'costados', title: 'Cose los costados', detail: 'Une delantero y espalda por los costados y termina los márgenes.', pieces: ['delantero', 'espalda'], seams: ['costados'] },
       { id: 'piernas', title: 'Ribetea las piernas', detail: 'Cose cada bies a la abertura de pierna, desde la entrepierna delantera hasta la trasera, y dóblalo formando un canal. Pasa el elástico y fíjalo en los dos extremos.', pieces: ['delantero', 'espalda', 'bies-pierna'], seams: ['ribete-pierna'] },
       { id: 'entrepierna', title: 'Cierra la entrepierna', detail: 'Cose la entrepierna atrapando los extremos de bies y elástico. Remata dos veces.', pieces: ['delantero', 'espalda'], seams: ['entrepierna'] },
-      { id: 'cintura', title: 'Jareta de cintura', detail: 'Dobla la jareta, pespuntea dejando 3 cm abiertos, pasa el elástico, únelo y cierra.', pieces: ['delantero', 'espalda'] }
+      { id: 'cintura', title: 'Jareta de cintura', detail: 'Dobla la jareta, pespuntea dejando 3 cm abiertos, pasa el elástico, únelo y cierra.', pieces: ['delantero', 'espalda'] },
+      ...(straps ? [{ id: 'tirantes', title: 'Tirantes desmontables', detail: 'Cose cada tirante en tubo, voltea, pespuntea y haz los ojales de los extremos. Cose los botones en la jareta por fuera, sin atrapar el elástico; los tirantes se cruzan en la espalda.', pieces: ['tirante', 'delantero', 'espalda'] }] : []),
+      ...(bow ? [{ id: 'lazo', title: 'Lazo decorativo', detail: 'Arma el lazo y cóselo fijo en el centro delantero de la cintura.', pieces: ['lazo', 'lazo-colas', 'lazo-nudo', 'delantero'] }] : [])
     ]
   };
 }
@@ -94,6 +110,8 @@ export const bloomerGenerator: PatternGenerator = {
   defaults: bloomerDefaults, generate: generateBloomers,
   params: [
     { key: 'olanes', label: 'Olanes traseros', group: 'diseno', type: 'choice', choices: [{ value: 'no', label: 'Sin olanes' }, { value: 'si', label: 'Tres olanes' }] },
+    { key: 'tirantes', label: 'Tirantes', group: 'diseno', type: 'choice', choices: [{ value: 'no', label: 'Sin tirantes' }, { value: 'cruzados', label: 'Cruzados y desmontables' }] },
+    { key: 'lazo', label: 'Lazo decorativo', group: 'diseno', type: 'choice', choices: [{ value: 'no', label: 'No' }, { value: 'si', label: 'Sí, cosido fijo' }] },
     { key: 'anchoEntrepierna', label: 'Ancho de entrepierna', group: 'diseno', type: 'length', min: 50, max: 120 },
     { key: 'holgura', label: 'Holgura sobre pañal', group: 'holgura', type: 'length', min: 40, max: 160 },
     { key: 'anchoElasticoCintura', label: 'Elástico de cintura', group: 'diseno', type: 'length', min: 10, max: 25 },

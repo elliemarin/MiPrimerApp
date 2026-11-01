@@ -32,30 +32,30 @@ export type CatalogFamily = keyof typeof FAMILY_LABEL;
 /** Reviewed construction IDs, including inspirations with no pattern engine.
  * Adding a design requires classifying it here; the audit test rejects omissions. */
 const DESIGNS: Partial<Record<CatalogFamily, readonly string[]>> = {
-  hoodie: ['hoodie', 'tipo-hoodie'],
+  hoodie: ['hoodie', 'tipo-hoodie', 'sudadera-canguro-infantil'],
   sudadera: ['sudadera', 'tipo-sudadera'],
-  chaqueta: ['chaqueta-cierre', 'tipo-bomber', 'cazadora-mezclilla', 'cazadora-denim-corta', 'tipo-sobrecamisa', 'chaqueta-trabajo', 'chaqueta-acolchada', 'chaqueta-biker', 'chaqueta-safari', 'chaqueta-varsity', 'anorak-canguro', 'bolero-corto', 'tipo-chaqueta-hombro-caido', 'chaqueta-collage-bandas', 'chaqueta-patchwork-franjas', 'chaqueta-patchwork-cuadros', 'chaqueta-canesu-diagonal', 'chaqueta-collage-irregular'],
-  chaleco: ['chaleco', 'chaleco-acolchado', 'chaleco-punto-v', 'tipo-chaleco-abierto'],
+  chaqueta: ['chaqueta-cierre', 'tipo-bomber', 'cazadora-mezclilla', 'cazadora-denim-corta', 'tipo-sobrecamisa', 'chaqueta-trabajo', 'chaqueta-acolchada', 'chaqueta-biker', 'chaqueta-safari', 'chaqueta-varsity', 'anorak-canguro', 'bolero-corto', 'tipo-chaqueta-hombro-caido', 'chaqueta-collage-bandas', 'chaqueta-patchwork-franjas', 'chaqueta-patchwork-cuadros', 'chaqueta-canesu-diagonal', 'chaqueta-collage-irregular', 'chaqueta-polar-infantil', 'chaqueta-acolchada-infantil', 'chaqueta-capucha-infantil'],
+  chaleco: ['chaleco', 'chaleco-acolchado', 'chaleco-punto-v', 'tipo-chaleco-abierto', 'tipo-chaleco-infantil'],
   cardigan: ['tipo-cardigan-abierto'],
   abrigo: ['abrigo', 'gabardina-cruzada', 'trench-corto', 'abrigo-acolchado-largo', 'parka-capucha'],
   poncho: ['poncho-capucha-inspiracion', 'tipo-poncho'], ruana: ['tipo-ruana'],
   capa: ['capa-circular', 'capa-capucha', 'tipo-disfraz-capa'],
   camiseta: ['camiseta-basica', 'camiseta-larga', 'tipo-camiseta-oversize'], camisa: ['camisa-clasica', 'camisa-boxy'],
-  top: ['blusa-v', 'tunica-suelta', 'tipo-top-cuadrado', 'tipo-top-cuadrado-sin-mangas'],
+  top: ['blusa-v', 'tunica-suelta', 'tipo-top-cuadrado', 'tipo-top-cuadrado-sin-mangas', 'tipo-blusa-campesina', 'blusa-botones-infantil'],
   sueter: ['sueter-oversize', 'sueter-tortuga', 'sueter-corto'],
-  pantalon: ['tipo-pantalon-recto', 'tipo-pantalon-amplio', 'pantalon-baggy', 'pantalon-barrel', 'pantalon-cargo', 'pantalon-palazzo', 'pantalon-pinzas', 'pantalon-pitillo', 'pantalon-acampanado', 'jeans-recto', 'jeans-mom', 'jeans-ancho'],
+  pantalon: ['tipo-pantalon-recto', 'tipo-pantalon-amplio', 'pantalon-baggy', 'pantalon-barrel', 'pantalon-cargo', 'pantalon-palazzo', 'pantalon-pinzas', 'pantalon-pitillo', 'pantalon-acampanado', 'jeans-recto', 'jeans-mom', 'jeans-ancho', 'pantalon-bombacho-infantil'],
   jogger: ['tipo-jogger'], short: ['short-elastico'], pijama: ['pantalon-pijama', 'pijama-camisa'],
   falda: ['tipo-falda-fruncida', 'falda-recta', 'falda-a', 'tipo-falda-circular', 'falda-tableada', 'tipo-falda-tul', 'tipo-falda-olanes'],
-  vestido: ['vestido-camisero', 'tipo-vestido-trapecio', 'tipo-vestido-tirantes'], peto: ['overol', 'tipo-jumper-falda', 'peto-bermuda', 'peto-palazzo', 'tipo-peto-bebe'],
-  mono: ['mono-camisero', 'mono-mecanico', 'mono-palazzo', 'mono-cruzado', 'playsuit-camisero', 'mono-baggy'],
-  body: ['body-bebe'], mameluco: ['mameluco'], babero: ['babero', 'tipo-babero-bandana'], gorro: ['gorro', 'tipo-bonete', 'tipo-gorro-orejas'],
+  vestido: ['vestido-camisero', 'tipo-vestido-trapecio', 'tipo-vestido-tirantes', 'vestido-jareta-infantil'], peto: ['overol', 'tipo-jumper-falda', 'peto-bermuda', 'peto-palazzo', 'tipo-peto-bebe'],
+  mono: ['mono-camisero', 'mono-mecanico', 'mono-palazzo', 'mono-cruzado', 'playsuit-camisero', 'mono-baggy', 'pelele-volantes'],
+  body: ['body-bebe'], mameluco: ['mameluco'], babero: ['babero', 'tipo-babero-bandana'], gorro: ['gorro', 'tipo-bonete', 'tipo-gorro-orejas', 'tipo-gorro-duende', 'tipo-gorro-orejeras'],
   cubrepanal: ['tipo-cubrepanal'], patucos: ['tipo-patucos'], 'saco-dormir': ['tipo-saco-dormir'], toalla: ['tipo-toalla-capucha'], conjunto: ['tipo-conjunto-bebe'],
   tote: ['tipo-bolsa-tote'], 'bolsa-jareta': ['tipo-bolsa-jareta'], estuche: ['neceser', 'tipo-estuche-cierre'], bandolera: ['bandolera'],
   'funda-tecnologia': ['tipo-funda-portatil', 'tipo-funda-tableta', 'tipo-funda-telefono', 'tipo-funda-lector', 'tipo-funda-consola', 'tipo-funda-cables'],
   'funda-lectura': ['tipo-funda-libro', 'tipo-funda-cuaderno', 'tipo-funda-tarjetas', 'tipo-funda-pasaporte'],
   'funda-costura': ['tipo-funda-patrones', 'tipo-funda-bastidor', 'tipo-funda-muestrario'],
   'funda-lentes': ['tipo-funda-lentes'], cojin: ['tipo-cojin'], 'funda-bebida': ['tipo-funda-bebida'], 'funda-silla': ['funda-silla'],
-  cabello: ['tipo-dona-cabello', 'tipo-banda-cabello'], bandana: ['tipo-bandana'],
+  cabello: ['tipo-dona-cabello', 'tipo-banda-cabello', 'diadema-lazo'], bandana: ['tipo-bandana'],
   delantal: ['tipo-delantal'], antifaz: ['tipo-antifaz'], banderin: ['tipo-banderin'],
   manteleria: ['tipo-textil-individual', 'tipo-textil-servilleta', 'tipo-textil-centro', 'tipo-textil-camino'],
   posavasos: ['tipo-textil-posavasos'],
@@ -108,7 +108,7 @@ function constructionFacets(model: CatalogModel): Pick<CatalogModel, 'difficulty
   switch (model.generatorId) {
     case 'pantalon-cintura-elastica':
       difficulty = p.estilo === 'jogger' ? 2 : 1;
-      techniques = p.estilo === 'jogger' ? ['costura-recta', 'jareta', 'puno', 'tejido-punto'] : ['costura-recta', 'jareta', 'dobladillo']; break;
+      techniques = p.estilo === 'jogger' ? ['costura-recta', 'jareta', 'puno', 'tejido-punto'] : p.estilo === 'bombacho' ? ['costura-recta', 'jareta'] : ['costura-recta', 'jareta', 'dobladillo']; break;
     case 'falda-fruncida-elastica': techniques = ['costura-recta', 'jareta', 'frunces', 'dobladillo']; break;
     case 'chaqueta-hombro-caido':
     case 'top-hombro-caido':
@@ -161,6 +161,18 @@ function constructionFacets(model: CatalogModel): Pick<CatalogModel, 'difficulty
     case 'gorro-orejas': techniques = ['tejido-punto']; break;
     case 'sombrero-pescador': difficulty = 2; techniques = ['costura-recta', 'forro']; break;
     case 'conjunto-bebe': difficulty = 2; techniques = ['costura-recta', 'botones']; break;
+    case 'chaleco-infantil': difficulty = p.acabado === 'ribete' ? 1 : 2; techniques = ['costura-recta', p.acabado === 'ribete' ? 'dobladillo' : 'forro', ...(p.cierre === 'broches' ? ['botones' as const] : [])]; break;
+    case 'chaqueta-cierre-infantil': difficulty = 2; techniques = ['costura-recta', 'cierre', 'puno']; break;
+    case 'chaqueta-acolchada-infantil': difficulty = 2; techniques = ['costura-recta', 'botones', ...(p.bolsillos !== 'no' ? ['bolsillos' as const] : [])]; break;
+    case 'chaqueta-capucha-infantil': difficulty = 3; techniques = ['costura-recta', 'forro', 'botones', ...(p.bolsillos !== 'no' ? ['bolsillos' as const] : [])]; break;
+    case 'sudadera-canguro-infantil': difficulty = 2; techniques = ['tejido-punto', 'puno', ...(p.bolsillo !== 'no' ? ['bolsillos' as const] : [])]; break;
+    case 'blusa-campesina-infantil': difficulty = 2; techniques = ['costura-recta', 'jareta', 'frunces']; break;
+    case 'blusa-botones-infantil': difficulty = 2; techniques = ['costura-recta', 'botones', 'dobladillo']; break;
+    case 'vestido-jareta-infantil': techniques = ['costura-recta', 'jareta', 'dobladillo']; break;
+    case 'pelele-volantes': difficulty = 3; techniques = ['costura-recta', 'frunces', 'jareta', 'botones']; break;
+    case 'diadema-lazo': techniques = ['costura-recta', 'tejido-punto']; break;
+    case 'gorro-duende': techniques = p.forro === 'no' ? ['costura-recta', 'bordado'] : ['costura-recta', 'forro']; break;
+    case 'gorro-orejeras': difficulty = 2; techniques = ['costura-recta', 'forro']; break;
     default: return { difficulty: model.difficulty, techniques: model.techniques };
   }
   return { difficulty, techniques };

@@ -1,4 +1,4 @@
-import type { FlatDef, FlatView, FlatViewKey } from './flats';
+import { buildFlat, type FlatDef, type FlatView, type FlatViewKey } from './flats';
 import type { Zone, ZoneType } from '../features/studio/model';
 import { findSize } from '../lib/sizes/tables';
 import { cmdsBBox, cmdsToSvg, pieceSeamCmds, transformCmds, type PathCmd } from '../lib/draw/paths';
@@ -11,6 +11,8 @@ import { cubicPoint, solve } from '../lib/pattern/generators/kidsShared';
 import { generateCircle, generateSundress, generateTiered, generateTrapeze, generateTulle } from '../lib/pattern/generators/girls';
 import { generateBandanaBib, generateBloomers, generateBonnet, generateBooties, generateSleepSack, generateTowel } from '../lib/pattern/generators/babyPlus';
 import { generateEarHat, generateOverall } from '../lib/pattern/generators/babyMore';
+import { generateButtonTop, generateCasingDress, generatePeasant, generateRufflesRomper } from '../lib/pattern/generators/kidsTops';
+import { generateEarflap, generatePixie } from '../lib/pattern/generators/kidsHats';
 
 /* Dibujos técnicos de la colección Niña y de la ampliación de Bebé.
  * Las siluetas salen de las piezas reales de una talla de referencia; cada
@@ -30,23 +32,46 @@ export const KIDS_SURFACE_PIECES: Record<string, Partial<Record<FlatViewKey, Kid
   'falda-tul-elastica': { frente: [S('capa-tul'), S('pretina')], espalda: [S('capa-tul'), S('pretina')] },
   'falda-olanes-escalonada': { frente: [S('olan-1'), S('olan-2'), S('olan-3')], espalda: [S('olan-1'), S('olan-2'), S('olan-3')] },
   'falda-circular-elastica': { frente: [S('falda-delantera', 'falda-delantera', false, true), S('pretina')], espalda: [S('falda-trasera', 'falda-trasera', false, true), S('pretina')] },
-  'cubrepanal-bebe': { frente: [S('delantero', 'delantero', false, true)], espalda: [S('espalda', 'espalda', false, true), S('olan-1'), S('olan-2'), S('olan-3')] },
+  'cubrepanal-bebe': { frente: [S('delantero', 'delantero', false, true), ...pair('tirante')], espalda: [S('espalda', 'espalda', false, true), S('olan-1'), S('olan-2'), S('olan-3'), ...pair('tirante')] },
   'saco-dormir-bebe': { frente: pair('delantero'), espalda: [S('espalda', 'espalda', false, true)] },
   'bonete-bebe': { frente: [S('banda'), S('trasera'), S('lengueta')] },
   'patucos-bebe': { frente: [...pair('talonera'), ...pair('empeine'), ...pair('suela')] },
   'toalla-capucha': { frente: [S('toalla'), S('capucha')] },
   'babero-bandana': { frente: [S('babero')] },
   'peto-bebe': { frente: [S('delantero', 'delantero', false, true), ...pair('tirante')], espalda: [S('espalda', 'espalda', false, true), ...pair('tirante')] },
-  'gorro-orejas': { frente: [S('gorro'), ...pair('oreja')] }
+  'gorro-orejas': { frente: [S('gorro'), ...pair('oreja')] },
+  // Designs digitized from reference photos (2026-11-01).
+  'vestido-jareta-infantil': { frente: [S('delantero', 'delantero', false, true), S('lazo')], espalda: [S('espalda', 'espalda', false, true)] },
+  'pelele-volantes': {
+    frente: [S('cuerpo-delantero', 'cuerpo-delantero', false, true), S('short-delantero', 'short-delantero', false, true), ...pair('volante'), ...pair('tirante'), ...pair('lazo')],
+    espalda: [...pair('cuerpo-espalda'), S('short-espalda', 'short-espalda', false, true), ...pair('volante')]
+  },
+  'blusa-campesina-infantil': {
+    frente: [S('delantero', 'delantero', false, true), ...pair('manga'), S('volante', 'volante', false, true)],
+    espalda: [S('espalda', 'espalda', false, true), ...pair('manga'), S('volante', 'volante', false, true)]
+  },
+  'blusa-botones-infantil': { frente: [S('delantero--1', 'delantero'), S('delantero--2', 'delantero', true)], espalda: [S('espalda', 'espalda', false, true)] },
+  'gorro-duende': { frente: [S('lateral'), S('barbiquejo')] },
+  'gorro-orejeras': { frente: [S('lateral'), S('oreja')] },
+  'diadema-lazo': { frente: [S('banda'), S('lazo')] }
+};
+/** Parts drawn from real pieces whose generator also serves generic drawings elsewhere (only used inside sets). */
+const PART_BINDINGS: Record<string, Partial<Record<FlatViewKey, KidsSurface[]>>> = {
+  'pantalones-bombacho': {
+    frente: [S('pierna-a', 'delantero'), S('pierna-b', 'delantero', true), S('pretina', 'delantero'), S('puno-a', 'delantero'), S('puno-b', 'delantero', true)],
+    espalda: [S('pierna-a', 'trasero'), S('pierna-b', 'trasero', true), S('pretina', 'trasero'), S('puno-a', 'trasero'), S('puno-b', 'trasero', true)]
+  }
 };
 /** Sets reuse the bindings of each part, with the part prefix on zones and pieces. */
 const SET_PARTS: Record<string, [string, string][]> = {
   verano: [['pelele', 'peto-bebe'], ['sombrero', 'sombrero-pescador']], invierno: [['overol', 'peto-bebe'], ['gorro', 'gorro-orejas']],
-  'recien-nacido': [['bonete', 'bonete-bebe'], ['patucos', 'patucos-bebe'], ['babero', 'babero-bandana']]
+  'recien-nacido': [['bonete', 'bonete-bebe'], ['patucos', 'patucos-bebe'], ['babero', 'babero-bandana']],
+  vestido: [['vestido', 'vestido-jareta-infantil'], ['cubrepanal', 'cubrepanal-bebe']], 'pelele-diadema': [['pelele', 'pelele-volantes'], ['diadema', 'diadema-lazo']],
+  campesino: [['blusa', 'blusa-campesina-infantil'], ['short', 'pantalones-bombacho']], rayas: [['blusa', 'blusa-botones-infantil'], ['pantalon', 'pantalones-bombacho']]
 };
-KIDS_SURFACE_PIECES['sombrero-pescador'] = { frente: [S('copa'), S('banda'), S('ala')] };
+KIDS_SURFACE_PIECES['sombrero-pescador'] = { frente: [S('copa'), S('banda'), S('ala'), S('lazo')] };
 KIDS_SURFACE_PIECES['conjunto-bebe'] = { frente: Object.values(SET_PARTS).flatMap(parts => parts.flatMap(([prefix, gen]) =>
-  (KIDS_SURFACE_PIECES[gen]?.frente ?? []).map(b => ({ ...b, zoneId: `${prefix}-${b.zoneId}`, pieceId: `${prefix}-${b.pieceId}` })))) };
+  ((KIDS_SURFACE_PIECES[gen] ?? PART_BINDINGS[gen])?.frente ?? []).map(b => ({ ...b, zoneId: `${prefix}-${b.zoneId}`, pieceId: `${prefix}-${b.pieceId}` })))) };
 
 type Details = FlatView['details'];
 const P = (x: number, y: number): Pt => ({ x, y });
@@ -57,6 +82,7 @@ const piece = (r: GeneratorResult, id: string) => r.pieces.find(p => p.id === id
 const ctx = (table: string, code: string, kind: GeneratorContext['kind']): GeneratorContext => ({ body: findSize(table, code)!.values, kind, fabric: 'plano', stretch: 0, fit: 'regular' });
 const GIRL = () => ctx('ref-infantil-estatura', 'E116', 'infantil');
 const BABY = () => ctx('ref-bebe-meses', 'B0-3', 'bebe');
+const TODDLER = () => ctx('ref-infantil-estatura', 'E92', 'toddler');
 const scale = (sx: number, sy: number, dx = 0, dy = 0): Mat => [sx, 0, 0, sy, dx, dy];
 const mirrorX = (m: Mat): Mat => [-m[0], m[1], -m[2], m[3], -m[4], m[5]];
 
@@ -203,8 +229,8 @@ function circleFlat(full: boolean): FlatView[] {
 }
 
 // ----------------------------------------------------------------- Bebé
-function bloomerFlat(ruffles: boolean): FlatView[] {
-  const r = generateBloomers(BABY(), { olanes: ruffles ? 'si' : 'no' }), front = piece(r, 'delantero'), back = piece(r, 'espalda'), m = scale(1, 1);
+function bloomerFlat(ruffles: boolean, straps = false): FlatView[] {
+  const r = generateBloomers(BABY(), { olanes: ruffles ? 'si' : 'no', tirantes: straps ? 'cruzados' : 'no' }), front = piece(r, 'delantero'), back = piece(r, 'espalda'), m = scale(1, 1);
   const casing = 20, waist = (p: Piece): Details => [{ d: `M${-p.nodes[1].x} ${casing} L${p.nodes[1].x} ${casing}`, style: 'pespunte' as const },
     ...Array.from({ length: 14 }, (_, i) => { const x = -p.nodes[1].x + (i + .5) * 2 * p.nodes[1].x / 14; return { d: `M${r1(x)} 4 L${r1(x + 1)} ${casing - 4}`, style: 'pliegue' as const }; })];
   const legs = (p: Piece): Details => [false, true].map(mirror => ({ d: shift(stroke(p, ['pierna'], m, mirror), mirror ? 3 : -3, -4), style: 'pespunte' as const }));
@@ -217,10 +243,22 @@ function bloomerFlat(ruffles: boolean): FlatView[] {
       zones.push(zone(line.id, `Olán ${line.id.slice(-1)}`, 'otra', `M${r1(-x)} ${r1(y)} L${r1(x)} ${r1(y)} L${r1(xb)} ${r1(y + 30)}${waves(xb, -xb, y + 30, 6, 6)} Z`));
     }
   }
+  // Detachable suspenders: straight up from the front buttons, crossed over the back.
+  const strapZones = (w: number, cross: boolean): Zone[] => straps ? [-1, 1].map((sign, i) => {
+    const x0 = sign * w * (cross ? .3 : .55), x1 = sign * (cross ? -w * .62 : w * .5), top = -150, sw = 15;
+    return zone(`tirante--${i + 1}`, sign < 0 ? 'Tirante izquierdo' : 'Tirante derecho', 'otra', `M${r1(x0 - sw / 2)} 8 L${r1(x0 + sw / 2)} 8 L${r1(x1 + sw / 2)} ${top} L${r1(x1 - sw / 2)} ${top} Z`);
+  }) : [];
+  const buttons = (w: number, k: number) => straps ? [-1, 1].map(sign => ({ x: r1(sign * w * k), y: 10, r: 4 })) : [];
   return [
-    view('frente', [zone('delantero', 'Delantero', 'delantero', unfold(front, 'centro', m))], [...waist(front), ...legs(front)], [], 'Cintura', { left: -front.nodes[1].x, right: front.nodes[1].x, center: 0 }),
-    view('espalda', zones, [...waist(back), ...legs(back)], [], 'Cintura', { left: -back.nodes[1].x, right: back.nodes[1].x, center: 0 })
+    view('frente', [zone('delantero', 'Delantero', 'delantero', unfold(front, 'centro', m)), ...strapZones(front.nodes[1].x, false)], [...waist(front), ...legs(front)], buttons(front.nodes[1].x, .55), 'Cintura', { left: -front.nodes[1].x, right: front.nodes[1].x, center: 0 }),
+    view('espalda', [...zones, ...strapZones(back.nodes[1].x, true)], [...waist(back), ...legs(back)], buttons(back.nodes[1].x, .3), 'Cintura', { left: -back.nodes[1].x, right: back.nodes[1].x, center: 0 })
   ];
+}
+
+/** Bucket hat with the decorative bow on one side. */
+function bowBucketFlat(): FlatView[] {
+  const k = 1.6, zones = bucketZones('', 0, 0, k);
+  return [view('frente', [...zones, zone('lazo', 'Lazo', 'otra', bowShape(150 * k * .3, 60 * k * .5, 70 * k))], bowDetails(150 * k * .3, 60 * k * .5, 70 * k), [], 'Ala')];
 }
 
 function sleepSackFlat(): FlatView[] {
@@ -351,18 +389,126 @@ function compose(parts: { prefix: string; view: FlatView; height: number; row?: 
   return [view('frente', zones, details, dots, 'Conjunto')];
 }
 const front0 = (views: FlatView[]) => views.find(v => v.key === 'frente')!;
-function setFlat(set: 'verano' | 'invierno' | 'recien-nacido'): FlatView[] {
+function setFlat(set: 'verano' | 'invierno' | 'recien-nacido' | 'vestido' | 'pelele-diadema' | 'campesino' | 'rayas'): FlatView[] {
   if (set === 'verano') return compose([{ prefix: 'pelele', view: front0(overallFlat(false)), height: 420 }, { prefix: 'sombrero', view: view('frente', bucketZones('', 0, 0, 1), [], [], ''), height: 150 }]);
   if (set === 'invierno') return compose([{ prefix: 'overol', view: front0(overallFlat(true)), height: 520 }, { prefix: 'gorro', view: front0(earHatFlat('oso')), height: 200 }]);
+  if (set === 'vestido') return compose([{ prefix: 'vestido', view: front0(casingDressFlat()), height: 400 }, { prefix: 'cubrepanal', view: front0(bloomerFlat(true)), height: 150 }]);
+  if (set === 'pelele-diadema') return compose([{ prefix: 'pelele', view: front0(romperFlat()), height: 360 }, { prefix: 'diadema', view: front0(headbandFlat()), height: 120 }]);
+  if (set === 'campesino') return compose([{ prefix: 'blusa', view: front0(peasantFlat(false)), height: 280 }, { prefix: 'short', view: front0(bombachoFlat(true)), height: 190 }]);
+  if (set === 'rayas') return compose([{ prefix: 'blusa', view: front0(buttonTopFlat()), height: 280 }, { prefix: 'pantalon', view: front0(bombachoFlat(false)), height: 400 }]);
   return compose([{ prefix: 'bonete', view: front0(bonnetFlat()), height: 160 }, { prefix: 'babero', view: front0(bandanaBibFlat()), height: 160 }, { prefix: 'patucos', view: front0(bootiesFlat()), height: 80, row: 1 }]);
+}
+
+// ----------------------------------------------------------- Diseños digitalizados
+/** Decorative bow seen from the front: two loops and a knot. */
+function bowShape(cx: number, cy: number, w: number): string {
+  const h = w * .42;
+  return `M${r1(cx)} ${r1(cy)} C${r1(cx - w * .2)} ${r1(cy - h)} ${r1(cx - w * .55)} ${r1(cy - h)} ${r1(cx - w * .5)} ${r1(cy)} C${r1(cx - w * .55)} ${r1(cy + h)} ${r1(cx - w * .2)} ${r1(cy + h)} ${r1(cx)} ${r1(cy)} C${r1(cx + w * .2)} ${r1(cy + h)} ${r1(cx + w * .55)} ${r1(cy + h)} ${r1(cx + w * .5)} ${r1(cy)} C${r1(cx + w * .55)} ${r1(cy - h)} ${r1(cx + w * .2)} ${r1(cy - h)} ${r1(cx)} ${r1(cy)} Z`;
+}
+const bowDetails = (cx: number, cy: number, w: number): Details => [{ d: `M${r1(cx - w * .06)} ${r1(cy - w * .14)} L${r1(cx - w * .06)} ${r1(cy + w * .14)} M${r1(cx + w * .06)} ${r1(cy - w * .14)} L${r1(cx + w * .06)} ${r1(cy + w * .14)}`, style: 'costura' }];
+/** Flutter sleeve hanging from the shoulder to the armhole notch. */
+function flutterWing(sign: number, Sx: number, Sy: number, Mx: number, My: number, k = 1): string {
+  return `M${r1(sign * (Sx - 6))} ${r1(Sy)} C${r1(sign * (Sx + 40 * k))} ${r1(Sy - 8 * k)} ${r1(sign * (Sx + 92 * k))} ${r1(Sy + 26 * k)} ${r1(sign * (Sx + 104 * k))} ${r1(Sy + 80 * k)} C${r1(sign * (Sx + 112 * k))} ${r1(My + 50 * k)} ${r1(sign * (Mx + 80 * k))} ${r1(My + 80 * k)} ${r1(sign * (Mx + 34 * k))} ${r1(My + 64 * k)} C${r1(sign * (Mx + 10 * k))} ${r1(My + 34 * k)} ${r1(sign * (Mx + 2))} ${r1(My + 14 * k)} ${r1(sign * Mx)} ${r1(My)} Z`;
+}
+
+function casingDressFlat(): FlatView[] {
+  const r = generateCasingDress(TODDLER(), { lazo: 'si' }), f = piece(r, 'delantero'), b = piece(r, 'espalda'), m = scale(1, 1);
+  const xt = f.nodes[1].x, casing = 18, strapH = f.nodes[2].y * .95;
+  const straps = (sign: number): Details => [{ d: `M${r1(sign * (xt - 6))} 0 C${r1(sign * (xt - 4))} ${r1(-strapH * .5)} ${r1(sign * (xt - 14))} ${r1(-strapH * .9)} ${r1(sign * (xt - 18))} ${r1(-strapH)}`, style: 'costura' }, { d: `M${r1(sign * (xt - 14))} 0 C${r1(sign * (xt - 12))} ${r1(-strapH * .5)} ${r1(sign * (xt - 22))} ${r1(-strapH * .9)} ${r1(sign * (xt - 26))} ${r1(-strapH)}`, style: 'costura' }];
+  const common = (p: Piece): Details => [{ d: `M${r1(-xt)} ${casing} L${r1(xt)} ${casing}`, style: 'pespunte' }, ...gathers(-xt + 8, xt - 8, casing, 34, 14, 14), ...straps(-1), ...straps(1),
+    ...[false, true].map(mirror => ({ d: shift(stroke(p, ['bajo'], m, mirror), 0, -14), style: 'pespunte' as const })), ...[false, true].map(mirror => ({ d: stroke(p, ['sisa'], m, mirror), style: 'costura' as const }))];
+  const bw = xt * .55;
+  return [
+    view('frente', [zone('delantero', 'Delantero', 'delantero', unfold(f, 'centro', m)), zone('lazo', 'Lazo', 'otra', bowShape(0, casing + 8, bw))], [...common(f), ...bowDetails(0, casing + 8, bw)], [], 'Canto superior'),
+    view('espalda', [zone('espalda', 'Espalda', 'espalda', unfold(b, 'centro', m))], common(b), [], 'Canto superior')
+  ];
+}
+
+function romperFlat(): FlatView[] {
+  const r = generateRufflesRomper(BABY(), { tirantes: 'si' }), bf = piece(r, 'cuerpo-delantero'), bb = piece(r, 'cuerpo-espalda'), sf = piece(r, 'short-delantero'), sb = piece(r, 'short-espalda'), m = scale(1, 1);
+  const L = bf.nodes[6].y, q = bf.nodes[4].x, W = sf.nodes[1].x, kx = q * 1.25 / W, ms = scale(kx, 1, 0, L);
+  const Sx = bf.nodes[2].x, Sy = bf.nodes[2].y, Mx = bf.nodes[3].x, My = bf.nodes[3].y, k = q / 160;
+  const wings = (): Zone[] => [zone('volante--1', 'Volante izquierdo', 'manga', flutterWing(-1, Sx, Sy, Mx, My, k)), zone('volante--2', 'Volante derecho', 'manga', flutterWing(1, Sx, Sy, Mx, My, k))];
+  const legGathers = (p: Piece): Details => [false, true].flatMap(mirror => [{ d: stroke(p, ['pierna'], mirror ? mirrorX(ms) : ms), style: 'costura' as const }]);
+  const waist: Details = [{ d: `M${r1(-q)} ${r1(L)} L${r1(q)} ${r1(L)}`, style: 'costura' }, ...gathers(-q + 6, q - 6, L, 26, 10, 14)];
+  const nw = bf.nodes[1].x, sh = Sx, strap = (sign: number, i: number) => zone(`tirante--${i}`, sign < 0 ? 'Tirante izquierdo' : 'Tirante derecho', 'otra',
+    `M${r1(sign * ((nw + sh) / 2 - 7))} ${r1(Sy * .5)} L${r1(sign * ((nw + sh) / 2 + 7))} ${r1(Sy * .5)} L${r1(sign * (q * .55 + 7))} ${r1(L)} L${r1(sign * (q * .55 - 7))} ${r1(L)} Z`);
+  const bowW = q * .32;
+  return [
+    view('frente', [zone('short-delantero', 'Short delantero', 'pierna', unfold(sf, 'centro', ms)), zone('cuerpo-delantero', 'Cuerpo delantero', 'delantero', unfold(bf, 'centro', m)), ...wings(), strap(-1, 1), strap(1, 2),
+      zone('lazo--1', 'Lazo izquierdo', 'otra', bowShape(-q * .55, L, bowW)), zone('lazo--2', 'Lazo derecho', 'otra', bowShape(q * .55, L, bowW))],
+    [...waist, ...legGathers(sf), ...[false, true].map(mirror => ({ d: stroke(bf, ['cuello'], m, mirror), style: 'costura' as const })), ...bowDetails(-q * .55, L, bowW), ...bowDetails(q * .55, L, bowW)], [], 'Hombro'),
+    view('espalda', [zone('short-espalda', 'Short de espalda', 'pierna', unfold(sb, 'centro', ms)), zone('cuerpo-espalda--1', 'Espalda izquierda', 'espalda', outlineOf(bb, mirrorX(m))), zone('cuerpo-espalda--2', 'Espalda derecha', 'espalda', outlineOf(bb, m)), ...wings()],
+      [...waist, ...legGathers(sb)], bb.marks.filter(mk => mk.kind === 'boton').map(mk => ({ x: 0, y: r1(mk.at.y), r: 4 })), 'Hombro')
+  ];
+}
+
+function peasantFlat(long: boolean): FlatView[] {
+  const r = generatePeasant(GIRL(), { manga: long ? 'larga' : 'corta', volante: 'si' }), f = piece(r, 'delantero'), b = piece(r, 'espalda'), sl = piece(r, 'manga'), vol = piece(r, 'volante'), m = scale(1, 1);
+  const rx = f.nodes[1].x, q = f.nodes[2].x, ad = f.nodes[2].y, L = f.nodes[3].y, vh = vol.nodes[2].y, h = sl.nodes[2].y, Ls = sl.nodes[3].y;
+  const sleeve = (sign: number, i: number) => {
+    const o = (x: number) => r1(sign * x);
+    const d = long
+      ? `M${o(rx)} 0 C${o(rx + 50)} -12 ${o(q + 40)} ${r1(ad * .1)} ${o(q + 48)} ${r1(ad * .45)} L${o(q + 74)} ${r1(ad + (Ls - h) * .85)} C${o(q + 76)} ${r1(ad + (Ls - h) * .95)} ${o(q + 40)} ${r1(ad + (Ls - h))} ${o(q + 30)} ${r1(ad + (Ls - h) * .93)} L${o(q)} ${r1(ad)} Z`
+      : `M${o(rx)} 0 C${o(rx + 64)} -16 ${o(q + 58)} ${r1(ad * .18)} ${o(q + 62)} ${r1(ad * .58)} C${o(q + 66)} ${r1(ad * .9)} ${o(q + 22)} ${r1(ad + 14)} ${o(q)} ${r1(ad)} Z`;
+    return zone(`manga--${i}`, sign < 0 ? 'Manga izquierda' : 'Manga derecha', 'manga', d);
+  };
+  const ruffle = zone('volante', 'Volante', 'otra', `M${r1(-q)} ${r1(L)} L${r1(q)} ${r1(L)} L${r1(q * 1.16)} ${r1(L + vh)}${waves(q * 1.16, -q * 1.16, L + vh, 9, 9)} Z`);
+  const details = (p: Piece): Details => [...[false, true].map(mirror => ({ d: shift(stroke(p, ['escote'], m, mirror), 0, 10), style: 'pespunte' as const })), ...gathers(-rx + 6, rx - 6, p.nodes[0].y + 10, 18, 10, 10), ...gathers(-q + 6, q - 6, L, 18, 16, 16)];
+  return [
+    view('frente', [ruffle, zone('delantero', 'Delantero', 'delantero', unfold(f, 'centro', m)), sleeve(-1, 1), sleeve(1, 2)], details(f), [], 'Escote'),
+    view('espalda', [{ ...ruffle }, zone('espalda', 'Espalda', 'espalda', unfold(b, 'centro', m)), sleeve(-1, 1), sleeve(1, 2)], details(b), [], 'Escote')
+  ];
+}
+
+function buttonTopFlat(): FlatView[] {
+  const r = generateButtonTop(GIRL(), {}), f = piece(r, 'delantero'), b = piece(r, 'espalda'), m = scale(1, 1);
+  const hem = (p: Piece, mirror: boolean) => ({ d: shift(stroke(p, ['bajo'], m, mirror), 0, -12), style: 'pespunte' as const });
+  const bias = (p: Piece, ids: string[], mirror: boolean) => ({ d: stroke(p, ids, m, mirror), style: 'costura' as const });
+  return [
+    view('frente', [zone('delantero--2', 'Delantero izquierdo', 'delantero', outlineOf(f, mirrorX(m))), zone('delantero--1', 'Delantero derecho', 'delantero', outlineOf(f, m))],
+      [hem(f, false), hem(f, true), bias(f, ['cuello'], false), bias(f, ['cuello'], true), bias(f, ['sisa-superior', 'sisa-inferior'], false), bias(f, ['sisa-superior', 'sisa-inferior'], true)],
+      f.marks.filter(mk => mk.kind === 'boton').map(mk => ({ x: 0, y: r1(mk.at.y), r: 4 })), 'Hombro'),
+    view('espalda', [zone('espalda', 'Espalda', 'espalda', unfold(b, 'centro', m))], [hem(b, false), hem(b, true), bias(b, ['cuello'], false), bias(b, ['cuello'], true)], [], 'Hombro')
+  ];
+}
+
+/** Bombacho inside a set: the library's pants drawing, bound explicitly to the real legs. */
+function bombachoFlat(short: boolean): FlatView[] {
+  return buildFlat('bombacho', { family: 'pantalon', pants: { leg: short ? 'baggy' : 'jogger', length: short ? 'short' : 'largo', waist: 'elastica', pockets: 'ninguno' } }).views.filter(v => v.key === 'frente' || v.key === 'espalda');
+}
+
+function pixieFlat(lined: boolean): FlatView[] {
+  const r = generatePixie(BABY(), { forro: lined ? 'si' : 'no' }), side = piece(r, 'lateral'), m = scale(1, 1);
+  const tip = side.nodes[1], B = side.nodes[3], tw = 16, tl = 46;
+  const tab = zone('barbiquejo', 'Lengüeta', 'otra', `M${r1(B.x - 4)} ${r1(B.y - tw)} L${r1(B.x - tl)} ${r1(B.y - tw + 4)} C${r1(B.x - tl - 10)} ${r1(B.y - tw + 6)} ${r1(B.x - tl - 10)} ${r1(B.y + 2)} ${r1(B.x - tl)} ${r1(B.y + 4)} L${r1(B.x - 4)} ${r1(B.y)} Z`);
+  return [view('frente', [zone('lateral', 'Gorro', 'base', outlineOf(side, m)), tab], [{ d: shift(stroke(side, ['cara'], m), 7, 0), style: lined ? 'pespunte' : 'costura' }, { d: shift(stroke(side, ['cuello'], m), 0, -7), style: lined ? 'pespunte' : 'costura' }],
+    [{ x: r1(tip.x - 4), y: r1(tip.y + 4), r: 16 }, { x: r1(B.x - tl + 4), y: r1(B.y - tw / 2 + 2), r: 4 }], 'Cara')];
+}
+
+function earflapFlat(ears: 'gato' | 'oso'): FlatView[] {
+  const r = generateEarflap(BABY(), { orejas: ears }), side = piece(r, 'lateral'), ear = piece(r, 'oreja'), m = scale(1, 1);
+  const mark = side.marks.find(mk => mk.id === 'oreja')!.at, box = cmdsBBox(pieceSeamCmds(ear)), ew = box.maxX - box.minX;
+  const earZone = zone('oreja', 'Oreja', 'otra', svg(transformCmds(pieceSeamCmds(ear), scale(1, 1, mark.x - ew / 2, mark.y + 4))));
+  return [view('frente', [zone('lateral', 'Gorro', 'base', outlineOf(side, m)), earZone], [{ d: shift(stroke(side, ['nuca', 'orejera', 'cara'], m), 0, -6), style: 'pespunte' }], [], 'Borde')];
+}
+
+function headbandFlat(): FlatView[] {
+  const R = 150, t = 26, K = 1.1;
+  const band = `M${-R} 0 C${-R} ${r1(-R * K)} ${R} ${r1(-R * K)} ${R} 0 L${R - t} 0 C${R - t} ${r1(-(R - t) * K)} ${-(R - t)} ${r1(-(R - t) * K)} ${-(R - t)} 0 Z`;
+  const by = -R * K * .74;
+  return [view('frente', [zone('banda', 'Banda', 'base', band), zone('lazo', 'Lazo', 'otra', bowShape(0, by, 130))], bowDetails(0, by, 130), [], 'Banda')];
 }
 
 const BUILDERS: Record<string, () => FlatView[]> = {
   'peto-corto': () => overallFlat(false), 'peto-largo': () => overallFlat(true), 'gorro-oso': () => earHatFlat('oso'), 'gorro-gato': () => earHatFlat('gato'), 'gorro-conejo': () => earHatFlat('conejo'),
   'conjunto-verano': () => setFlat('verano'), 'conjunto-invierno': () => setFlat('invierno'), 'conjunto-recien-nacido': () => setFlat('recien-nacido'),
+  'conjunto-vestido': () => setFlat('vestido'), 'conjunto-pelele-diadema': () => setFlat('pelele-diadema'), 'conjunto-campesino': () => setFlat('campesino'), 'conjunto-rayas': () => setFlat('rayas'),
+  'vestido-jareta': casingDressFlat, 'pelele-volantes': romperFlat, 'blusa-campesina': () => peasantFlat(false), 'blusa-campesina-larga': () => peasantFlat(true), 'blusa-botones': buttonTopFlat,
+  'gorro-duende': () => pixieFlat(true), 'gorro-duende-fieltro': () => pixieFlat(false), 'gorro-orejeras-gato': () => earflapFlat('gato'), 'gorro-orejeras-oso': () => earflapFlat('oso'), diadema: headbandFlat,
   'vestido-trapecio': () => trapezeFlat(false), 'vestido-trapecio-volante': () => trapezeFlat(true), 'vestido-tirantes': sundressFlat,
   'falda-tul': tulleFlat, 'falda-olanes': tieredFlat, 'falda-circular': () => circleFlat(true), 'falda-medio-circulo': () => circleFlat(false),
-  cubrepanal: () => bloomerFlat(false), 'cubrepanal-olanes': () => bloomerFlat(true), 'saco-dormir': sleepSackFlat,
+  cubrepanal: () => bloomerFlat(false), 'cubrepanal-olanes': () => bloomerFlat(true), 'cubrepanal-tirantes': () => bloomerFlat(false, true), 'sombrero-lazo': bowBucketFlat, 'saco-dormir': sleepSackFlat,
   bonete: bonnetFlat, patucos: bootiesFlat, toalla: towelFlat, 'babero-bandana': bandanaBibFlat
 };
 const cache = new Map<string, FlatView[]>();
