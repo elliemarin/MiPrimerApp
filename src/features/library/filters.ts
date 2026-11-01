@@ -85,7 +85,9 @@ const subtypeAliases: [string[], ItemIdentity][] = [
   [['corbata', 'corbatas'], m => is(m, 'corbata') && named(m, /\bcorbata\b/)],
   [['pajarita', 'pajaritas'], m => is(m, 'corbata') && named(m, /\bpajarita\b/)],
   [['playsuit', 'playsuits'], m => is(m, 'mono') && m.flat.pants?.length === 'short'],
-  [['overol', 'overoles'], m => is(m, 'peto') && !!m.flat.pants?.bib],
+  // Custom infant drawings use flat.kids rather than flat.pants. The garment
+  // family remains authoritative; a skirt jumper stays a different subtype.
+  [['overol', 'overoles'], m => is(m, 'peto') && !m.flat.pinafore],
   [['jumper', 'jumpers', 'jumpper', 'jumppers', 'pinafore', 'pinafores'], m => is(m, 'peto') && !!m.flat.pinafore],
   [['bermuda', 'bermudas'], m => (is(m, 'short') || is(m, 'peto')) && m.flat.pants?.length === 'bermuda'],
   [['protector', 'protectores'], m => is(m, 'tapete') && named(m, /\bprotector\b/)],
@@ -93,7 +95,8 @@ const subtypeAliases: [string[], ItemIdentity][] = [
   [['portacubiertos'], m => m.id === 'portacubiertos-enrollable'],
   [['almohada', 'almohadas', 'pillow', 'pillows'], m => is(m, 'cojin') && named(m, /\balmohada\b/)],
   [['beanie', 'beanies'], m => m.generatorId === 'gorro'],
-  [['bonete', 'bonetes', 'capota', 'capotas'], m => m.designGroup?.id === 'tipo-bonete']
+  [['bonete', 'bonetes', 'capota', 'capotas'], m => is(m, 'gorro') && named(m, /\bbonete\b/)],
+  [['diadema', 'diademas'], m => is(m, 'diadema-disfraz') || is(m, 'cabello') && m.generatorId === 'diadema-lazo']
 ];
 const subtypeIdentity = Object.fromEntries(subtypeAliases.flatMap(([aliases, match]) => aliases.map(alias => [alias, match]))) as Record<string, ItemIdentity>;
 function searchMatches(m: CatalogModel, raw: string): boolean {
@@ -132,7 +135,9 @@ function searchMatches(m: CatalogModel, raw: string): boolean {
     if (['cabello', 'banda', 'bandas'].includes(word)) return is(m, 'cabello');
     if (['dona', 'donas', 'scrunchie', 'scrunchies'].includes(word)) return m.generatorId === 'dona-cabello';
     if (['laptop', 'laptops'].includes(word)) return m.designGroup?.id === 'tipo-funda-portatil';
-    if (['lazo', 'lazos'].includes(word)) return m.generatorId === 'banda-lazo' && is(m, 'cabello', 'lazo-regalo');
+    if (['lazo', 'lazos'].includes(word)) return detailStart >= 0 && index > detailStart
+      ? named(m, /\blazos?\b/)
+      : m.generatorId === 'diadema-lazo' || m.generatorId === 'banda-lazo' && is(m, 'cabello', 'lazo-regalo');
     if (['disfraz', 'disfraces', 'cosplay'].includes(word)) return m.collection === 'Disfraces';
     if (identityFamily[word]) return familyOf(m) === identityFamily[word];
     return (synonyms[word] ?? [word]).some(term => hay.includes(term));

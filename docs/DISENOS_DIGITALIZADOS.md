@@ -27,7 +27,7 @@ cambiar de talla». Todo es **experimental**: nada se ha impreso ni cosido.
 
 | # | Referencia | Resultado en Hilvana | Notas |
 | --- | --- | --- | --- |
-| 1 | Chaleco de borreguito con cerezas (2T) | `chaleco-borrego` (generador `chaleco-infantil`) y variante `chaleco-ribeteado` | Sus piezas sumaban ≥ 90 cm de pecho para una talla de 54 cm. Lazo decorativo + broches en vez de cintas. Cerezas: aplique en Bordados (no hay forma de cereza aún). |
+| 1 | Chaleco de borreguito con cerezas (2T) | `chaleco-borrego` (generador `chaleco-infantil`) y variante `chaleco-ribeteado` | Sus piezas sumaban ≥ 90 cm de pecho para una talla de 54 cm. Lazo decorativo + broches en vez de cintas. Cerezas: figura `cerezas` ya disponible en Bordados, como guía de transferencia. |
 | 2–3 | Chaqueta polar con nubes / flores (6 m–10 a) | `chaqueta-polar-cierre` (`chaqueta-cierre-infantil`) | Delantero de 36 cm ×2 para 4–5 años y largos de «96/86 cm»: incoherentes. Cuello alto, cierre separable, banda y puños; nubes y flores en Bordados. |
 | 4 | Chaqueta acolchada floral con patrón a mano | `chaqueta-acolchada-reversible` (`chaqueta-acolchada-infantil`) | Medidas coherentes: usadas como comprobación. Ribete en contraste, bolsillos, broches y puño vuelto. |
 | 5 | Chaqueta con capucha combinada (12–18 m) | `chaqueta-capucha-botones` (`chaqueta-capucha-infantil`) | Capucha forrada, vistas en contraste en delantero, bajo y puños; colores por pieza en Telas y colores. |
@@ -40,7 +40,7 @@ cambiar de talla». Todo es **experimental**: nada se ha impreso ni cosido.
 | 12 | Vestido con lazo y bombacho (12–18 m) | `vestido-jareta` (`vestido-jareta-infantil`) y `conjunto-vestido` | Tirantes continuos de ribete en vez de cintas al hombro. |
 | 13 | Pelele con volantes, tirantes con lazos y diadema | `pelele-volantes`, `diadema-lazo` y `conjunto-pelele-diadema` | Broches en entrepierna y espalda; lazos cosidos. Aviso: diadema solo con supervisión. |
 | 14 | Conjunto de vichy: blusa abullonada y short | `blusa-campesina`, `blusa-campesina-larga` (`blusa-campesina-infantil`) y `conjunto-campesino` | El short es el pantalón elástico con estilo nuevo `bombacho` y volantito. |
-| 15 | Conjunto de rayas: blusa con botones y pantalón | `blusa-botones-infantil`, `pantalon-bombacho-infantil` y `conjunto-rayas` | El panda es un aplique (pendiente como forma). |
+| 15 | Conjunto de rayas: blusa con botones y pantalón | `blusa-botones-infantil`, `pantalon-bombacho-infantil` y `conjunto-rayas` | Figura `panda-amigo` ya disponible en Bordados, con sus partes y colores. |
 | 16 | Bombacho rosa con lazo | Ya existía (`cubrepanal-bebe`); ahora con opción `lazo` | — |
 
 ## Segundo lote (8 imágenes)
@@ -104,5 +104,79 @@ láminas `infantil-04` e `infantil-05`.
 
 - Coser muestras (empezar por sudadera canguro, chaleco forrado, pelele y
   gorro con orejeras) antes de quitar «experimental».
-- Añadir formas de aplique «cerezas» y «panda» a la biblioteca de Bordados.
 - Comprobar la caída de la capucha y el bolsillo canguro en tallas de bebé.
+
+## Continuación y revisión del lote (Codex, 2026-11-01)
+
+La revisión parte de `1db95f4`, la última entrega de Claude guardada en GitHub.
+Ese commit y sus cuatro entregas anteriores estaban publicados; no había una
+rama, un PR ni una nota de código interrumpido. La referencia recuperable es el
+segundo lote de ocho diseños. No se tuvo acceso a cambios que solo pudieran
+existir en una sesión de Claude sin guardar.
+
+Se comprobó que `cerezas` y `panda-amigo` ya existían en la biblioteca. La nota
+que pedía añadirlos estaba desactualizada. Se prueban buscándolos en Bordados,
+colocándolos en las dos caras del delantal y exportando sus guías; siguen siendo
+figuras de transferencia, no archivos de puntadas automáticamente digitalizados.
+
+La revisión del recorrido encontró estos problemas de integración:
+
+- **Bonetes:** la búsqueda «bonete» solo admitía la tarjeta antigua. Ahora incluye
+  los nuevos modelos con volante; «puntilla» y «encaje» corresponden a su variante
+  real. Los overoles infantiles y la diadema con lazo también participan en sus
+  búsquedas, aunque utilicen dibujos propios desde las piezas del patrón.
+- **Delantal de una pieza:** la vista frontal y la trasera usaban toda la pieza
+  física. Ahora se separan por la línea del hombro. Mover hacia abajo en Espalda
+  recorre la pieza física hacia su bajo trasero; el arte conserva su orientación
+  legible. El PDF describe la orientación de transferencia que corresponde.
+- **Monos y petos:** los enlaces de las copias izquierda/derecha estaban
+  intercambiados respecto de sus dibujos. Se alinean sus posiciones y detalles
+  con la pieza física, incluidos los bolsillos, botones y bordados.
+
+- **Blusa con volante:** el largo de referencia incluye cuerpo y volante. La
+  fórmula anterior imponía un mínimo al cuerpo y luego añadía el volante,
+  cambiando el largo solicitado sin avisar. Ahora una combinación incompatible
+  produce un error con el mínimo necesario, y el control de largo verifica la
+  suma real de ambas piezas sin márgenes.
+- **Proyectos ya guardados:** las posiciones se validan también contra la cara
+  visible, no solo contra el contorno completo del patrón. Un bordado o bolsillo
+  guardado sobre la otra mitad del delantal debe recolocarse antes de exportar.
+  Las posiciones originales no se trasladan automáticamente. También se debe
+  revisar el largo de una blusa antigua si su combinación con el volante queda
+  fuera de los límites constructivos.
+
+Los patrones continúan como experimentales. Las comprobaciones digitales de
+posición, medidas y PDF no sustituyen imprimir y coser muestras. Tampoco se da
+por verificado el proyector físico ni Safari en un iPhone real.
+
+
+### Verificación de la continuación
+
+- Base de Claude: 3,031 pruebas/70 archivos y compilación correctas.
+- Resultado: 3,054 pruebas/73 archivos, TypeScript y build para Pages correctos.
+- `tests/kids-batch2-placement.test.ts`: regiones físicas del delantal en varias
+  tallas, centros de monos/petos, orientación de letras/logos y guía PDF.
+- `tests/kids-legacy-placement.test.ts`: bloqueo de posiciones antiguas en cara
+  incorrecta, proyectos sin metadatos y grupos ocultos.
+- `tests/trapeze-top-length.test.ts`: largo físico con/sin volante, todas las
+  tallas infantiles, distintos márgenes y sisas, parámetros y conjuntos.
+- `tests/browser/digitized_kids_handoff_smoke.py`: recorrido móvil, variantes,
+  materiales, motivos, arrastre, guardar/reabrir y PDF; capturas revisadas.
+- `tests/browser/production_kids_handoff_smoke.py`: comprobación del build con
+  prefijo `/MiPrimerApp/` sin importar módulos de desarrollo; consulta IndexedDB
+  y compara posiciones guardadas con el manifiesto PDF.
+
+Recorridos digitales comprobados en las tallas de referencia de la prueba:
+
+| Diseño | PDF carta | Plantillas |
+| --- | ---: | ---: |
+| Bonete de volante doble | 16 páginas | 7 |
+| Delantal pichi, cerezas delante y panda atrás | 41 páginas | 6 |
+| Mono de pico con volantes | 19 páginas | 7 |
+| Peto infantil largo | 21 páginas | 5 |
+| Blusa trapecio con volante | 16 páginas | 6 |
+| Conjunto vichy | 21 páginas | 8 |
+
+Todos los controles digitales del PDF miden **50.0 y 100.0 mm**. Los PDF ya
+exportados siguen en el historial; después de revisar ubicaciones o medidas,
+genera un PDF nuevo para trabajar con la corrección.

@@ -1,12 +1,12 @@
 import type { Fabric, Project } from '../../store/types';
-import { elementCorners, newDesign, type DesignDoc, type DesignView, type Fill } from '../studio/model';
-import { pointInPolygon, distToSegment } from '../../lib/geom/vec';
-import { cmdsToPolylines } from '../../lib/draw/flatten';
-import { parseSvgPath } from '../../lib/draw/svgpath';
+import { newDesign, type DesignDoc, type DesignView, type Fill } from '../studio/model';
 import { basePanelPattern, preparePanelViews } from '../studio/panelWorkflow';
 import { pieceSeamPath } from '../../lib/pattern/outline';
-import { componentElementId, componentPaintRoles, reconcileComponentDesign } from '../customize/componentDesign';
+import { componentElementId, componentGroupId, componentPaintRoles, readComponentsFromDesign, reconcileComponentDesign } from '../customize/componentDesign';
 import { getGenerator } from '../../lib/pattern/generators';
+import { assemblyComponentFits, buildAssembly } from './assembled';
+import { embroideryFitsView } from './finishEmbroidery';
+import { visibleDesignElement } from '../../lib/draw/designImage';
 
 export function simpleViews(doc: DesignDoc): DesignView[] {
   const physical = doc.views.filter(view => view.source.type === 'pieza' && !view.source.pieceId.startsWith('componente-'));
@@ -35,13 +35,35 @@ export function physicalViewsNeedRefresh(project: Project): boolean {
 export function artworkPlacementIssues(project: Project): string[] {
   const doc=project.design;
   if(!doc?.simpleWorkflow)return [];
-  return doc.elements.filter(element=>element.kind==='grupo'&&element.embroidery&&!element.hidden).flatMap(element=>{
+  const components=readComponentsFromDesign(project,doc);
+  const hasSide=doc.elements.some(element=>element.assemblySurfaceId)||components.some(component=>component.placement?.assemblySurfaceId);
+  const surfaces=new Map((hasSide?buildAssembly(project):[]).flatMap(scene=>scene.surfaces).map(surface=>[surface.id,surface]));
+  const issues=doc.elements.filter(element=>element.kind==='grupo'&&element.embroidery&&visibleDesignElement(element,doc)).flatMap(element=>{
     const view=doc.views.find(view=>view.id===element.viewId);
+    if(element.assemblySurfaceId) {
+      const surface=surfaces.get(element.assemblySurfaceId);
+      if(!surface||surface.viewId!==element.viewId)return [`El bordado «${element.name}» ya no corresponde a la cara guardada de la prenda. Vuelve a colocarlo en Acabados antes de generar el PDF.`];
+      if(!embroideryFitsView(element,surface.view,surface.physicalBounds))return [`El bordado «${element.name}» no cabe en «${surface.label}». Revisa su ubicación en Acabados antes de generar el PDF.`];
+      return [];
+    }
+    // Older projects without a chosen side keep their original physical
+    // coordinates. Do not guess a side or silently migrate their artwork.
     if(view?.source.type!=='pieza'||!view.outline)return [];
-    const polygons=cmdsToPolylines(parseSvgPath(view.outline),.2).map(contour=>contour.pts);
-    const fits=elementCorners(element).every(point=>polygons.some(poly=>pointInPolygon(point,poly)||poly.some((a,index)=>distToSegment(point,a,poly[(index+1)%poly.length])<.1)));
+    const fits=embroideryFitsView(element,view);
     return fits?[]:[`El bordado «${element.name}» se sale de la pieza actual. Revisa su tamaño o posición en Acabados.`];
   });
+  for(const component of components) {
+    const placement=component.placement;
+    if(!placement?.assemblySurfaceId)continue;
+    const body=doc.elements.find(element=>element.id===componentElementId(component.id,'cuerpo'));
+    const group=doc.elements.find(element=>element.id===componentGroupId(component.id));
+    if(body&&!visibleDesignElement(body,doc)||group&&!visibleDesignElement(group,doc))continue;
+    const surface=surfaces.get(placement.assemblySurfaceId);
+    const label=component.name??body?.name??'Complemento';
+    if(!surface||surface.viewId!==placement.viewId)issues.push(`El extra «${label}» ya no corresponde a la cara guardada de la prenda. Vuelve a colocarlo en Extras antes de generar el PDF.`);
+    else if(!assemblyComponentFits(surface,component))issues.push(`El extra «${label}» no cabe en «${surface.label}». Revisa su ubicación en Extras antes de generar el PDF.`);
+  }
+  return [...new Set(issues)];
 }
 
 export interface MaterialTarget {

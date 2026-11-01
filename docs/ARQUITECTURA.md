@@ -454,3 +454,33 @@ Relevo y comprobaciones: `LOGOTIPOS_BORDADOS.md`, `LOGOTIPOS_PDF.md` y pruebas
 `embroidery-image`, `embroidery-placement`, `embroidery-raster-pdf`,
 `selection-move-handle`, `placement-drag`. Las imágenes son guías de transferencia,
 no moldes de tela ni digitalización automática de puntadas.
+
+
+## 22. Continuación del lote infantil de Claude (2026-11-01)
+
+`kidsFlats.ts` enlaza los monos/petos `--1` con la copia dibujada en espejo y
+`--2` con la directa. El delantal pichi continuo usa una sola pieza física para
+frente y espalda: `assembled.ts` obtiene su línea de hombro del patrón actual y
+recorta el intervalo físico de cada cara. La espalda invierte su eje Y; el
+metadato `artworkFlipY` compensa esa orientación en letras, motivos y logos sin
+cambiar sus centros ni dimensiones. `placement.ts` distingue una reflexión de
+un giro de 180° en la guía canónica; la plantilla independiente conserva la
+orientación original.
+
+`artworkPlacementIssues` valida vista, cara y límites físicos de los bordados y
+complementos con lado guardado. Los proyectos sin ese metadato mantienen sus
+coordenadas físicas anteriores. Esto impide exportar posiciones antiguas que
+quedaron en la mitad equivocada tras corregir el mapeo del delantal; no migra el
+dibujo ni elimina objetos. La visibilidad heredada evita bloquear por un grupo
+oculto.
+
+`generateTrapezeTop` trata el largo de blusa como una medida terminada que
+incluye el volante. Se valida el largo restante del cuerpo y se mide la suma
+real de cuerpo y volante en los controles; una combinación imposible no se
+alarga silenciosamente. El catálogo conserva IDs, variantes y estados de
+confección experimentales.
+
+La búsqueda reconoce los nuevos bonetes por familia y nombre de la receta, y
+los petos por su construcción, aunque el dibujo se defina en `flat.kids`.
+Las etiquetas de puntilla/encaje pertenecen solo a esa variante. Detalle de la
+revisión y límites en `DISENOS_DIGITALIZADOS.md`.

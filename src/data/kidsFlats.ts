@@ -62,8 +62,8 @@ export const KIDS_SURFACE_PIECES: Record<string, Partial<Record<FlatViewKey, Kid
     espalda: [S('delantal', 'delantal', false, true), ...pair('volante-hombro')]
   },
   'mono-tirantes-infantil': {
-    frente: [S('delantero--1', 'delantero'), S('delantero--2', 'delantero', true), ...pair('tirante'), S('bolsillo--1', 'bolsillo'), S('bolsillo--2', 'bolsillo', true), S('bolsillo'), ...pair('volante'), ...pair('lazo')],
-    espalda: [S('espalda--1', 'espalda'), S('espalda--2', 'espalda', true), ...pair('tirante'), ...pair('volante')]
+    frente: [S('delantero--1', 'delantero', true), S('delantero--2', 'delantero'), ...pair('tirante'), S('bolsillo--1', 'bolsillo', true), S('bolsillo--2', 'bolsillo'), S('bolsillo'), ...pair('volante'), ...pair('lazo')],
+    espalda: [S('espalda--1', 'espalda', true), S('espalda--2', 'espalda'), ...pair('tirante'), ...pair('volante')]
   },
   'blusa-trapecio-infantil': {
     frente: [S('delantero', 'delantero', false, true), S('volante-bajo', 'volante-bajo', false, true)],

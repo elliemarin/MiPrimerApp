@@ -45,7 +45,7 @@ describe('Auditoría completa de identidad y destinatario del catálogo', () => 
     [['pajarita', 'pajaritas'], ['pajarita'], 1],
     [['corbata', 'corbatas'], ['corbata-clasica'], 1],
     [['playsuit', 'playsuits'], ['playsuit-camisero'], 1],
-    [['overol', 'overoles'], ['overol', 'peto-bermuda', 'peto-palazzo'], 3],
+    [['overol', 'overoles'], ['overol', 'peto-bermuda', 'peto-palazzo', 'tipo-peto-bebe', 'peto-infantil'], 6],
     [['jumper', 'jumpper', 'pinafore'], ['tipo-jumper-falda'], 76],
     [['bermuda', 'bermudas'], ['peto-bermuda'], 1],
     [['protector', 'protectores'], ['tipo-textil-escritorio'], 1],
@@ -54,7 +54,7 @@ describe('Auditoría completa de identidad y destinatario del catálogo', () => 
     [['almohada', 'almohadas', 'pillows'], ['tipo-cojin'], 16],
     [['gorro', 'gorros'], ['gorro', 'tipo-bonete', 'tipo-gorro-orejas', 'tipo-gorro-duende', 'tipo-gorro-orejeras', 'tipo-bonete-volante'], 12],
     [['beanie', 'beanies'], ['gorro'], 1],
-    [['bonete', 'capota'], ['tipo-bonete'], 1],
+    [['bonete', 'capota'], ['tipo-bonete', 'tipo-bonete-volante'], 4],
     [['sombrero', 'sombreros', 'hats'], ['sombrero-pescador', 'tipo-disfraz-sombrero'], 6],
     [['marcapáginas', 'bookmark'], ['tipo-textil-marcapaginas'], 2]
   ] as [string[], string[], number][])('los subtipos %s no devuelven otros objetos de su familia', (queries, ids, recipes) => {

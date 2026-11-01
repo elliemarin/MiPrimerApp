@@ -50,4 +50,21 @@ describe('Filtros de biblioteca combinables',()=>{
   it('un filtro vacío conserva todo el catálogo',()=>{
     expect(CATALOG.every(m=>matches(m,INITIAL_FILTERS))).toBe(true);
   });
+  it('encuentra los bonetes nuevos con sus variantes sin incluir otros gorros',()=>{
+    const search=(q:string)=>CATALOG.filter(m=>matches(m,{...INITIAL_FILTERS,q,recipient:'bebe',availability:'patron'})).map(m=>m.id).sort();
+    expect(search('bonetes')).toEqual(['bonete-bebe','bonete-encaje','bonete-volante','bonete-volante-doble']);
+    expect(search('bonete volante')).toEqual(['bonete-encaje','bonete-volante','bonete-volante-doble']);
+    expect(search('capota puntilla')).toEqual(['bonete-encaje']);
+    expect(search('bonete encaje')).toEqual(['bonete-encaje']);
+    expect(search('bonete doble')).toEqual(['bonete-volante-doble']);
+    expect(search('beanie')).toEqual(['gorro']);
+  });
+  it('busca petos y diademas infantiles aunque su dibujo use piezas propias',()=>{
+    const found=(q:string)=>CATALOG.filter(m=>matches(m,{...INITIAL_FILTERS,q,recipient:'bebe'})).map(m=>m.id);
+    expect(found('overol')).toEqual(expect.arrayContaining(['pelele-tirantes','overol-bebe','peto-infantil-largo']));
+    expect(found('overol')).not.toContain('jumper-peto-midi');
+    expect(found('diadema lazo')).toEqual(['diadema-lazo']);
+    expect(found('diadema con lazo')).toEqual(['diadema-lazo']);
+    expect(found('sombrero con lazo')).toEqual(['sombrero-pescador-lazo']);
+  });
 });

@@ -14,6 +14,7 @@ import type { Piece } from '../../lib/pattern/types';
 import { componentAtPoint, componentFits } from '../customize/placementDrag';
 import { COSTUME_SURFACE_PIECES } from '../../data/costumeFlats';
 import { KIDS_SURFACE_PIECES } from '../../data/kidsFlats';
+import { basePanelPattern } from '../studio/panelWorkflow';
 
 /** A reversible illustration projection. The original millimetre geometry is
  * always retained in `view`; this projection never alters cutting patterns. */
@@ -31,6 +32,8 @@ export interface AssemblySurface {
   path: string;
   /** Visible part of the physical piece, e.g. one face of a sleeve. */
   physicalBounds: BBox;
+  /** The back of a continuous apron lies upside down in its cutting piece. */
+  artworkFlipY?: boolean;
 }
 
 export interface AssemblyScene {
@@ -52,10 +55,14 @@ export function inverseAssemblyPoint(surface: AssemblySurface, point: Pt): Pt { 
  * artwork group once around its physical centre before the scene projection.
  * The same local reflection belongs in a guide printed on the canonical piece;
  * the independent embroidery/pocket pattern keeps its original orientation. */
-export function assemblyArtworkReflection(surface:AssemblySurface,root:Pick<DesignElement,'x'>):Mat {
+export function assemblyArtworkReflection(surface:AssemblySurface,root:Pick<DesignElement,'x'> & Partial<Pick<DesignElement,'y'>>):Mat {
+  if(surface.artworkFlipY) {
+    const flipX=surface.matrix[0]<0;
+    return [flipX?-1:1,0,0,-1,flipX?2*root.x:0,2*(root.y??0)];
+  }
   return surface.matrix[0]*surface.matrix[3]-surface.matrix[1]*surface.matrix[2]<0?[-1,0,0,1,2*root.x,0]:[1,0,0,1,0,0];
 }
-export function assemblyArtworkMatrix(surface:AssemblySurface,root:Pick<DesignElement,'x'>):Mat {
+export function assemblyArtworkMatrix(surface:AssemblySurface,root:Pick<DesignElement,'x'> & Partial<Pick<DesignElement,'y'>>):Mat {
   return matMul(surface.matrix,assemblyArtworkReflection(surface,root));
 }
 
@@ -88,20 +95,20 @@ function score(view: DesignView, zone: Zone, back: boolean): number {
   return -1;
 }
 
-function projection(source: BBox, target: BBox, mirror: boolean, sideways: boolean): Mat {
+function projection(source: BBox, target: BBox, mirror: boolean, sideways: boolean, reverseY = false): Mat {
   const sw=source.maxX-source.minX, sh=source.maxY-source.minY;
   const tw=target.maxX-target.minX, th=target.maxY-target.minY;
   if (sideways) {
     const a=(mirror?-1:1)*tw/sh, b=th/sw;
     return [0,b,a,0,(mirror?target.maxX:target.minX)-a*source.minY,target.minY-b*source.minX];
   }
-  const a=(mirror?-1:1)*tw/sw, d=th/sh;
-  return [a,0,0,d,(mirror?target.maxX:target.minX)-a*source.minX,target.minY-d*source.minY];
+  const a=(mirror?-1:1)*tw/sw, d=(reverseY?-1:1)*th/sh;
+  return [a,0,0,d,(mirror?target.maxX:target.minX)-a*source.minX,(reverseY?target.maxY:target.minY)-d*source.minY];
 }
 
 function physicalPath(view: DesignView): string { return view.outline ?? view.zones.map(z=>z.d).join(' '); }
 
-function makeScene(project: Project, flat: FlatView, physical: DesignView[]): AssemblyScene {
+function makeScene(project: Project, flat: FlatView, physical: DesignView[], apronShoulderY?: number): AssemblyScene {
   const back=flat.key==='espalda', label=back?'Espalda':'Frente', id=`armado-${flat.key}`;
   // Catalog pockets are reference details, never automatically sewn extras.
   const isStockPocket=(zone:Zone)=>zone.type==='bolsillo'&&!physical.some(view=>pieceId(view)===zone.id||zone.id.startsWith(`${pieceId(view)}--`));
@@ -125,7 +132,20 @@ function makeScene(project: Project, flat: FlatView, physical: DesignView[]): As
     // editable placement surfaces, but remain visible construction details.
     if(!view && ['puno','cuello','pretina','canesu'].includes(zone.type)) continue;
     if(!view) continue;
-    const source={...bounds(physicalPath(view))}, target=bounds(zone.d);
+    let source={...bounds(physicalPath(view))};
+    const target=bounds(zone.d);
+    const continuousApron=project.pattern?.generatorId==='delantal-pichi-infantil'&&pieceId(view)==='delantal'&&apronShoulderY!==undefined;
+    if(continuousApron) {
+      // A one-piece apron crosses the shoulders. Its front and back occupy
+      // different Y ranges of the same cut piece; never map the entire piece
+      // onto each side of the garment. Recompute X bounds after clipping too.
+      if(back) source.maxY=apronShoulderY; else source.minY=apronShoulderY;
+      const rect=[{x:source.minX,y:source.minY},{x:source.maxX,y:source.minY},{x:source.maxX,y:source.maxY},{x:source.minX,y:source.maxY}];
+      const polygons=cmdsToPolylines(parseSvgPath(physicalPath(view)),.2).filter(poly=>poly.closed).map(poly=>poly.pts);
+      const clipped=intersectPolygons(polygons,[rect]);
+      if(!clipped.length) continue;
+      source=bounds(clipped.map(poly=>cmdsToSvg(polylineCmds(poly,true))).join(' '));
+    }
     const babyFront=project.pattern?.generatorId==='body-bebe-broches'&&pieceId(view)==='delantero';
     const openPonchoFront=project.pattern?.generatorId==='poncho-rectangular'&&project.pattern.params.aperturaFrente==='si'&&pieceId(view)==='delantero';
     // The integrated placket folds inside and overlaps at physical CF x=0.
@@ -145,10 +165,10 @@ function makeScene(project: Project, flat: FlatView, physical: DesignView[]): As
     const center=(target.minX+target.maxX)/2;
     const repeated=zones.filter(z=>z.type===zone.type).length>1;
     const mirror=explicit?.mirror??(repeated && center>0 && ['pierna','manga','delantero'].includes(zone.type));
-    const matrix=projection(source,target,mirror,sideways);
+    const matrix=projection(source,target,mirror,sideways,continuousApron&&back);
     const side=repeated && /manga|pierna/.test(zone.type) ? `${back ? center<0?'izquierda':'derecha' : center<0?'derecha':'izquierda'}` : '';
     const partLabel=side ? `${zone.type==='pierna'?'Pierna':'Manga'} ${side}` : zone.label;
-    const surface={ id:`${id}/${zone.id}`,label:`${label} · ${partLabel}`,viewId:view.id,pieceId:pieceId(view),zoneId:zone.id,view,primary:!['manga','puno','cuello','capucha','pretina'].includes(zone.type),matrix,inverse:matInvert(matrix),path:zone.d,physicalBounds:source };
+    const surface={ id:`${id}/${zone.id}`,label:`${label} · ${partLabel}`,viewId:view.id,pieceId:pieceId(view),zoneId:zone.id,view,primary:!['manga','puno','cuello','capucha','pretina'].includes(zone.type),matrix,inverse:matInvert(matrix),path:zone.d,physicalBounds:source,...(continuousApron&&back?{artworkFlipY:true}:{}) };
     if(project.pattern?.generatorId==='falda-fruncida-elastica'&&/delantera|trasera/.test(pieceId(view))||(babyFront||openPonchoFront)&&!repeated||explicit?.fold) {
       // Each skirt pattern is HALF a panel cut on the centre fold. Unfold the
       // illustration into two distinct physical instances; do not double-scale
@@ -159,7 +179,7 @@ function makeScene(project: Project, flat: FlatView, physical: DesignView[]): As
         const rect=[{x:half.minX,y:half.minY},{x:half.maxX,y:half.minY},{x:half.maxX,y:half.maxY},{x:half.minX,y:half.maxY}];
         const polys=cmdsToPolylines(parseSvgPath(zone.d),.3).filter(p=>p.closed).map(p=>p.pts);
         const path=intersectPolygons(polys,[rect]).map(poly=>cmdsToSvg(polylineCmds(poly,true))).join(' ');
-        const m=projection(source,half,sign<0,false), side=back?(sign<0?'izquierda':'derecha'):(sign<0?'derecha':'izquierda');
+        const m=projection(source,half,sign<0,false,continuousApron&&back), side=back?(sign<0?'izquierda':'derecha'):(sign<0?'derecha':'izquierda');
         surfaces.push({...surface,id:`${surface.id}/${side}`,label:`${label} · Mitad ${side}`,path,matrix:m,inverse:matInvert(m)});
       }
     } else surfaces.push(surface);
@@ -184,7 +204,11 @@ export function buildAssembly(project: Project): AssemblyScene[] {
     flats=buildFlat(model.id,spec).views.filter(v=>v.key==='frente'||v.key==='espalda').map(v=>garmentIllustrationView(v,spec));
   }
   else flats=doc.views.filter(v=>v.source.type==='plantilla'&&(v.kind==='frente'||v.kind==='espalda')).map(v=>({...v,key:v.kind as 'frente'|'espalda',details:v.details??[],dots:v.dots??[],seams:v.seams??{}}));
-  const scenes=flats.map(flat=>makeScene(project,flat,physical)).filter(scene=>scene.surfaces.length);
+  // Read the actual shoulder construction line, including current measurements
+  // and overrides, rather than deriving a split from a reference illustration.
+  const apronShoulderY=project.pattern?.generatorId==='delantal-pichi-infantil'
+    ? basePanelPattern(project)?.pieces.find(piece=>piece.id==='delantal')?.lines.find(line=>line.id==='hombro')?.a.y : undefined;
+  const scenes=flats.map(flat=>makeScene(project,flat,physical,apronShoulderY)).filter(scene=>scene.surfaces.length);
   if(scenes.length) return scenes;
   // Unknown/custom objects still have an honest complete physical face rather
   // than fabricated clothing geometry. Keep this useful for imported projects.

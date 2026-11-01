@@ -6,22 +6,68 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-01 (Claude: diseños infantiles digitalizados desde fotos).
+- Última actualización: 2026-11-01 (Codex: continuación y revisión del lote infantil de Claude).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 3031 pruebas: catálogo, patrones, persistencia, PDF, proyector, logos y arrastre
+npm test            # 3054 pruebas: catálogo, patrones, persistencia, PDF, proyector, logos y arrastre
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Continuación del trabajo de Claude (2026-11-01)
+
+**Este es el relevo más reciente.** Se retomó `1db95f4`, el segundo lote de ocho
+referencias infantiles. Las cinco entregas de Claude estaban guardadas y
+publicadas. No había un PR o una rama pendiente: se continuó comprobando su
+último lote y corrigiendo los fallos reproducidos en el estudio y el PDF.
+
+- **Base de partida:** instalación, 3,031 pruebas en 70 archivos y compilación
+  correctas antes de editar.
+- **Búsquedas:** «bonete» incluye las nuevas variantes; «puntilla» y «encaje»
+  encuentran la receta adecuada. Los petos/overoles y las diademas infantiles
+  también aparecen con sus nombres comunes.
+- **Delantal de una pieza:** la colocación frontal y trasera se separa por el
+  hombro real; la orientación trasera se compensa para mostrar letras e imágenes
+  legibles y producir la guía de ubicación correspondiente.
+- **Monos y petos:** se corrigieron los enlaces en espejo de las copias y sus
+  bolsillos para que el dibujo y las coordenadas del patrón coincidan.
+- **Largo de blusa con volante:** el largo solicitado representa cuerpo más
+  volante. Se elimina el alargamiento silencioso, se valida el mínimo admisible
+  y la comprobación del patrón mide la prenda completa. Los valores iniciales
+  visibles permiten construir las dos variantes.
+- **Proyectos anteriores:** un bordado o extra guardado en una cara física
+  incorrecta bloquea el PDF y pide recolocarlo en Acabados o Extras. No se
+  modifican sus datos automáticamente. Una blusa antigua con largo y volante
+  incompatibles debe ajustar esas medidas antes de volver a generar el patrón.
+- **Notas de motivos corregidas:** cerezas y panda ya existían, con IDs
+  `cerezas` y `panda-amigo`. Se verifican dentro del estudio y el PDF; el pendiente
+  de añadirlos a Bordados estaba desactualizado.
+
+**Validación final:** 3,054 pruebas en 73 archivos, TypeScript y compilación para
+GitHub Pages correctos. Se completaron seis recorridos en Chromium con pantalla
+táctil de 390 px, guardado/reapertura y PDF: bonete doble, delantal pichi, mono de
+pico, peto largo, blusa con volante y conjunto vichy. Todos conservan controles
+PDF de 50/100 mm. Se verifican motivos, colores, lados y centros en milímetros.
+
+Pruebas nuevas: `kids-batch2-placement`, `kids-legacy-placement`,
+`trapeze-top-length`, regresiones de búsqueda, y los recorridos
+`tests/browser/digitized_kids_handoff_smoke.py` y
+`tests/browser/production_kids_handoff_smoke.py` (build compilado, sin módulos
+`/src`, IndexedDB y manifiesto del PDF).
+
+Detalle y límites en `docs/DISENOS_DIGITALIZADOS.md`. La confección de muestras,
+la caída de capucha/canguro y el uso de un proyector físico siguen pendientes.
+No se certificaron estos patrones como cosidos ni se recuperaron cambios de
+Claude que no estuvieran guardados en GitHub.
+
 ## Segundo lote de diseños digitalizados (2026-11-01)
 
-**Este es el relevo más reciente.** Ocho fotos más; detalle en
+Relevo anterior de Claude. Ocho fotos más; detalle en
 `docs/DISENOS_DIGITALIZADOS.md` («Segundo lote»).
 
 - 4 generadores nuevos (`kidsBatch2.ts`): bonete de tres piezas con volante

@@ -28,6 +28,8 @@ export interface Placement {
   assemblySurfaceLabel?: string;
   /** The canonical-piece guide is reversed for a mirrored sewn copy. */
   mirroredOnGuide?: boolean;
+  /** Both axes reverse when a continuous back panel is turned over its shoulder. */
+  rotatedOnGuide?: boolean;
   precise: boolean;
 }
 
@@ -147,7 +149,7 @@ function guideDrawing(view: DesignView, located: Located[], surfaceId?: string, 
   const baseNote = precise
     ? 'Guía de colocación a escala 1:1 sobre la pieza real. Cuadrícula de 10 mm; referencias cada 50 mm. X e Y indican el centro desde el origen 0,0 de la pieza, antes de sus márgenes. No cortes por estas líneas: usa las plantillas de confección. Transfiere las marcas e hilvana antes de coser.'
     : 'Colocación ilustrativa sobre una vista de referencia, no una pieza de confección. La cuadrícula expresa coordenadas del dibujo y no verifica las medidas de una foto o de la prenda real. Usa una pieza de patrón real para ubicar con precisión.';
-  const note = baseNote + (surfaceLabel ? ' Izquierda y derecha corresponden a quien viste la prenda. Conserva el lado indicado y comprueba la ubicación con la prenda hilvanada.' : '') + (located.some(item => item.placement.mirroredOnGuide) ? ' Copia en espejo: transfiere esta guía por el reverso sobre la copia indicada. La plantilla independiente del bordado conserva su orientación legible.' : '');
+  const note = baseNote + (surfaceLabel ? ' Izquierda y derecha corresponden a quien viste la prenda. Conserva el lado indicado y comprueba la ubicación con la prenda hilvanada.' : '') + (located.some(item => item.placement.mirroredOnGuide) ? ' Copia en espejo: transfiere esta guía por el reverso sobre la copia indicada. La plantilla independiente del bordado conserva su orientación legible.' : '') + (located.some(item => item.placement.rotatedOnGuide) ? ' Espalda de una pieza continua: el dibujo de esta guía gira 180° sobre el patrón abierto para quedar derecho al vestir. Respeta la línea de hombro; la plantilla independiente conserva su orientación legible.' : '');
   for (const line of wrapLabelText(precise ? 'Ubicación en pieza real · no es un contorno de corte' : 'Ubicación ilustrativa · verificar sobre la prenda real', 2.8, legendWidth)) {
     labels.push({ text: line, at: { x: center, y: legendY }, size: 2.8, bold: true });
     legendY += 5;
@@ -207,7 +209,11 @@ export function preparePlacementGuide(project: Project): { placements: Placement
     const surface = surfaces.get(item.placement.assemblySurfaceId ?? '');
     if (!surface) continue;
     const reflection = assemblyArtworkReflection(surface, item.element ?? item.placement);
-    if (reflection[0] < 0) { item.reflection = reflection; item.placement.mirroredOnGuide = true; }
+    if (reflection[0] < 0 || reflection[3] < 0) {
+      item.reflection = reflection;
+      item.placement.mirroredOnGuide = reflection[0]*reflection[3]-reflection[1]*reflection[2]<0;
+      if(reflection[0]<0&&reflection[3]<0) item.placement.rotatedOnGuide=true;
+    }
   }
   const drawings = doc.views.flatMap(view => {
     const positions = located.filter(item => item.placement.viewId === view.id);
