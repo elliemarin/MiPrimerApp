@@ -138,7 +138,7 @@ describe('diseños infantiles digitalizados desde fotos', () => {
     }
   });
 
-  it('publica cada diseño como tarjeta experimental con patrón, dibujo e imagen propia', () => {
+  it('conserva las 37 recetas digitalizadas y muestra 17 construcciones en la colección Infantil', () => {
     expect(DIGITIZED_KIDS_CATALOG).toHaveLength(37);
     for (const model of DIGITIZED_KIDS_CATALOG) {
       const live = CATALOG.find(m => m.id === model.id)!;
@@ -148,6 +148,6 @@ describe('diseños infantiles digitalizados desde fotos', () => {
       expect(catalogImageFor(live), model.id).toBeDefined();
       expect(JSON.stringify(live).toLowerCase(), model.id).not.toMatch(/tinystitch|stitch & style/);
     }
-    expect(new Set(CATALOG.filter(m => m.collection === 'Infantil').map(m => m.designGroup?.id)).size).toBe(13);
+    expect(new Set(CATALOG.filter(m => m.collection === 'Infantil').map(m => m.designGroup?.id)).size).toBe(17);
   });
 });

@@ -64,7 +64,7 @@ const synonyms: Record<string, string[]> = {
   cremallera: ['cremallera', 'cierre'], zipper: ['cremallera', 'cierre'],
 };
 const ignoredWords = new Set(['de', 'del', 'la', 'las', 'el', 'los', 'un', 'una', 'unos', 'unas', 'para', 'con', 'sin', 'y', 'o']);
-const hasHood = (m: CatalogModel) => m.generatorId === 'sudadera-capucha-holgada' ? m.params?.capucha === 'si' : m.flat.top?.neck === 'capucha';
+const hasHood = (m: CatalogModel) => familyOf(m) === 'hoodie' || (m.generatorId === 'sudadera-capucha-holgada' ? m.params?.capucha === 'si' : m.flat.top?.neck === 'capucha');
 const is = (m: CatalogModel, ...families: CatalogFamily[]) => families.includes(familyOf(m));
 type ItemIdentity = (model: CatalogModel) => boolean;
 /** Some filter families contain several different objects. A specific noun must
@@ -78,14 +78,16 @@ const subtypeAliases: [string[], ItemIdentity][] = [
   [['banda', 'bandas', 'headband', 'headbands'], m => m.designGroup?.id === 'tipo-banda-cabello'],
   [['monedero', 'monederos'], m => is(m, 'estuche') && named(m, /\bmonedero\b/)],
   [['neceser', 'neceseres'], m => is(m, 'estuche') && named(m, /\b(neceser|maquillaje|cosmeticos)\b/)],
-  [['tunica', 'tunicas', 'tunic', 'tunics'], m => is(m, 'top') && named(m, /\btunica\b/)],
+  [['tunica', 'tunicas', 'tunic', 'tunics'], m => is(m, 'top', 'vestido') && named(m, /\btunica\b/)],
   [['parka', 'parkas'], m => is(m, 'abrigo') && named(m, /\bparka\b/)],
   [['trench'], m => is(m, 'abrigo') && named(m, /\btrench\b/)],
   [['cazadora', 'cazadoras'], m => is(m, 'chaqueta') && named(m, /\bcazadora\b/)],
   [['corbata', 'corbatas'], m => is(m, 'corbata') && named(m, /\bcorbata\b/)],
   [['pajarita', 'pajaritas'], m => is(m, 'corbata') && named(m, /\bpajarita\b/)],
   [['playsuit', 'playsuits'], m => is(m, 'mono') && m.flat.pants?.length === 'short'],
-  [['overol', 'overoles'], m => is(m, 'peto') && !!m.flat.pants?.bib],
+  // Custom infant drawings use flat.kids rather than flat.pants. The garment
+  // family remains authoritative; a skirt jumper stays a different subtype.
+  [['overol', 'overoles'], m => is(m, 'peto') && !m.flat.pinafore],
   [['jumper', 'jumpers', 'jumpper', 'jumppers', 'pinafore', 'pinafores'], m => is(m, 'peto') && !!m.flat.pinafore],
   [['bermuda', 'bermudas'], m => (is(m, 'short') || is(m, 'peto')) && m.flat.pants?.length === 'bermuda'],
   [['protector', 'protectores'], m => is(m, 'tapete') && named(m, /\bprotector\b/)],
@@ -93,7 +95,8 @@ const subtypeAliases: [string[], ItemIdentity][] = [
   [['portacubiertos'], m => m.id === 'portacubiertos-enrollable'],
   [['almohada', 'almohadas', 'pillow', 'pillows'], m => is(m, 'cojin') && named(m, /\balmohada\b/)],
   [['beanie', 'beanies'], m => m.generatorId === 'gorro'],
-  [['bonete', 'bonetes', 'capota', 'capotas'], m => m.designGroup?.id === 'tipo-bonete']
+  [['bonete', 'bonetes', 'capota', 'capotas'], m => is(m, 'gorro') && named(m, /\bbonete\b/)],
+  [['diadema', 'diademas'], m => is(m, 'diadema-disfraz') || is(m, 'cabello') && m.generatorId === 'diadema-lazo']
 ];
 const subtypeIdentity = Object.fromEntries(subtypeAliases.flatMap(([aliases, match]) => aliases.map(alias => [alias, match]))) as Record<string, ItemIdentity>;
 function searchMatches(m: CatalogModel, raw: string): boolean {
@@ -109,12 +112,16 @@ function searchMatches(m: CatalogModel, raw: string): boolean {
   if (withoutHood && (hasHood(m) || m.flat.family !== 'top') || withHood && !hasHood(m)) return false;
   // Only identity, actual dimensions, supported recipients and fabrics. Broad
   // collection labels and the explanatory prose are deliberately excluded.
-  const hay = normalizeSearch(`${m.name} ${m.designGroup?.name ?? ''} ${m.variantLabel ?? ''} ${(m.searchTerms ?? []).join(' ')} ${m.recommendedFabrics.join(' ')} ${m.recipients.join(' ')} ${m.fits.join(' ')}`);
+  const identity = normalizeSearch(`${m.name} ${m.designGroup?.name ?? ''} ${m.variantLabel ?? ''} ${(m.searchTerms ?? []).join(' ')}`);
+  const hay = `${identity} ${normalizeSearch(`${m.recommendedFabrics.join(' ')} ${m.recipients.join(' ')} ${m.fits.join(' ')}`)}`;
   const detailStart = tokens.indexOf('con');
   return tokens.every((word, index) => {
     if (ignoredWords.has(word)) return true;
     if (pinafore && ['falda', 'faldas'].includes(word) || apronBib && ['peto', 'petos'].includes(word) || shortPants && ['pantalon', 'pantalones', 'pants', 'corto', 'cortos'].includes(word)) return true;
     if (word === 'capucha') return withoutHood ? !hasHood(m) : hasHood(m);
+    // “Bonete doble” describes its construction. A suggested double gauze
+    // fabric must not turn every bonnet into a double-ruffle style.
+    if (['doble', 'triple'].includes(word) && !tokens.some(token => ['gasa', 'algodon', 'tela', 'tejido'].includes(token))) return identity.includes(word);
     // In “delantal con peto” the bib is a detail of the apron, not another
     // garment category. It must still occur in the item's actual identity.
     if (detailStart >= 0 && index > detailStart && identityFamily[word]) return hay.includes(word);
@@ -132,7 +139,9 @@ function searchMatches(m: CatalogModel, raw: string): boolean {
     if (['cabello', 'banda', 'bandas'].includes(word)) return is(m, 'cabello');
     if (['dona', 'donas', 'scrunchie', 'scrunchies'].includes(word)) return m.generatorId === 'dona-cabello';
     if (['laptop', 'laptops'].includes(word)) return m.designGroup?.id === 'tipo-funda-portatil';
-    if (['lazo', 'lazos'].includes(word)) return m.generatorId === 'banda-lazo' && is(m, 'cabello', 'lazo-regalo');
+    if (['lazo', 'lazos'].includes(word)) return detailStart >= 0 && index > detailStart
+      ? named(m, /\blazos?\b/)
+      : m.generatorId === 'diadema-lazo' || m.generatorId === 'banda-lazo' && is(m, 'cabello', 'lazo-regalo');
     if (['disfraz', 'disfraces', 'cosplay'].includes(word)) return m.collection === 'Disfraces';
     if (identityFamily[word]) return familyOf(m) === identityFamily[word];
     return (synonyms[word] ?? [word]).some(term => hay.includes(term));

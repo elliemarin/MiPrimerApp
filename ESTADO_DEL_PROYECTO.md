@@ -6,13 +6,13 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-01 (Claude: tercer lote de diseños, **a medias**; ver abajo).
+- Última actualización: 2026-11-01 (Claude: tercer lote de diseños, **a medias**; antes, Codex: fotografías antes/después).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 3031 pruebas: catálogo, patrones, persistencia, PDF, proyector, logos y arrastre
+npm test            # 3694 pruebas: catálogo, fotos, patrones, persistencia, PDF, proyector, logos y transformaciones
 npm run dev         # http://localhost:5173/
 npm run build
 ```
@@ -57,14 +57,14 @@ imágenes del catálogo se distingan entre sí.
 - `scripts/sweep-generators.ts`: barrido de todas las tallas y variantes
   (`npx vite-node scripts/sweep-generators.ts chaqueta-ranglan ...`). Los
   4 generadores tocados dan 762 casos sin fallas.
-- `npm test` (3031) y `npm run build` pasan.
+- Tras fusionar el trabajo de Codex: `npm test` (3694 en 81 archivos) y `npm run build` pasan; el barrido completo (2559 casos) solo falla en los rechazos intencionales de jeans con pretina y oversize en talla bebé.
 
 ### Qué hacer con cada foto (falta crear las tarjetas)
 
 | # | Foto | Tarjeta propuesta |
 | --- | --- | --- |
 | 1 | Pantalón barrel con cintura elástica y rayas | `barrel-elastico`, grupo `pantalon-barrel` (`pantalon-mezclilla`, `silueta: barrel`, `cintura: elastica`, `bolsillos: frontales`) |
-| 2 | Palazzo con pretina y botones laterales | Convertir la tarjeta de inspiración `pantalon-palazzo` en patrón: `generatorId: 'pantalon-cintura-elastica'`, `params: { estilo: 'ancho', cintura: 'pretina', amplitudBajo: 1.5, bolsillos: 'costado' }` |
+| 2 | Palazzo con pretina y botones laterales | Codex ya creó `street-pantalon-palazzo` (palazzo con bragueta delantera). Este es distinto: abertura lateral con botones. Crear `palazzo-botones-laterales` en el grupo `pantalon-palazzo` con `generatorId: 'pantalon-cintura-elastica'`, `params: { estilo: 'ancho', cintura: 'pretina', amplitudBajo: 1.5, bolsillos: 'costado' }`. La tarjeta de inspiración `pantalon-palazzo` puede seguir como está o pasar a patrón; decídelo según las pruebas de inspiración (66). |
 | 3 | Palazzo ancho con cordón y rayas | `palazzo-elastico`, grupo `pantalon-palazzo` (`estilo: ancho`, `amplitudBajo: 1.4`, `cordon: si`, `bolsillos: costado`) |
 | 4 | Pantalón con volante en el bajo y alforzas | `pantalon-volante`, grupo nuevo (`estilo: ancho`, `volante: si`, `alforzas: 3`; dibujo genérico con `ruffle: true`) |
 | 5 | Pantalón ancho oversize con pinzas | Convertir `pantalon-pinzas`: `generatorId: 'pantalon-mezclilla'`, `params: { silueta: 'ancho', cintura: 'pretina', bolsillos: 'cinco', tiro: 'alto', pinzas: 'dos' }` |
@@ -80,6 +80,8 @@ medidas de las fotos.
 
 ### Pasos que faltan, en orden
 
+0. Antes de empezar: `git pull`, `npm install`, `npm test` (con el trabajo de
+   Codex ya fusionado deben pasar todas).
 1. **Tarjetas**: crear `src/data/digitizedAdultCatalog.ts` (copiar la forma de
    `digitizedKidsCatalog.ts`) y unirlo en `src/data/catalog.ts`; convertir
    `pantalon-palazzo` y `pantalon-pinzas`.
@@ -89,13 +91,14 @@ medidas de las fotos.
    `constructionFacets` para los generadores nuevos y para las opciones de
    pantalón (pinzas, botones, frunces). Cada tarjeta necesita `designGroup`,
    entrada en `DESIGNS` y celda de imagen; las pruebas lo exigen.
-3. **Imágenes** (`scripts/render-kids-sheets.ts`): añadir rellenos de rayas y
-   vichy (un `<pattern>` SVG por celda, `userSpaceOnUse`) y bloques de color;
-   crear láminas `mujer-01` y `mujer-02`; registrarlas en `CATALOG_IMAGE_SHEETS`
-   (clave = id del grupo), `VARIANT_IMAGES` y `DRAWN_SHEETS`
-   (`src/data/catalogImages.ts`). Volver a generar con rayas o vichy las celdas
-   anteriores que las tenían en la foto: blusa campesina, blusa con botones,
-   bombacho, conjuntos campesino, rayas, trapecio y vichy, y mono pico.
+3. **Imágenes**: Codex cambió todo el catálogo a **fotografías realistas**
+   (láminas `realistas-*`, `estilos-*`; ver `docs/IMAGENES_CATALOGO_IA.md` y
+   `src/data/completedAdultImages.ts`, `styleCatalogImages.ts`).
+   `tests/catalog-photo-completeness.test.ts` ya no acepta las láminas técnicas
+   SVG, así que **no uses `scripts/render-kids-sheets.ts`** para estas tarjetas:
+   cada tarjeta nueva necesita su foto realista en ese mismo estilo (rayas,
+   vichy y bloques de color visibles, como en las fotos de la usuaria). Los
+   dibujos técnicos de `kidsFlats.ts` siguen sirviendo para la vista armada.
 4. **Pruebas**: subir los conteos fijos (catalog-taxonomy, catalog-groups,
    kids-collection, catalog-images, búsqueda «hoodie») y añadir pruebas de las
    opciones nuevas (pretina, volante, alforzas, pinzas, cuello de tira) y de los
@@ -113,9 +116,194 @@ Reglas para no romper nada:
   genéricos (como el pantalón); para piezas de conjuntos usa `PART_BINDINGS`.
 - En el JSON de configuración del renderizador escribe `0.8`, no `.8`.
 
+## Transformar mi ropa con imágenes realistas (2026-11-01)
+
+Relevo anterior (Codex, terminado). El catálogo ya tenía fotografías, pero la
+sección de transformaciones seguía mostrando siluetas genéricas y tarjetas solo
+de texto. Se partió de `d01eb92`, con instalación, 3,689 pruebas y build correctos.
+
+- **27 comparaciones antes/después**, 54 imágenes originales de IA en nueve
+  láminas WebP locales. Se conserva el fondo marfil, la textura textil y el
+  acabado realista del catálogo.
+- Cada tarjeta muestra el resultado; la cabecera y el detalle ofrecen los
+  botones «Antes» y «Con el cambio». El resultado aparece primero, con las
+  mismas proporciones al alternar. Los controles no modifican medidas,
+  confirmación, notas ni borradores.
+- Se retiró `TransformationDiagram`. Cada propuesta tiene una fotografía
+  propia con la intervención correspondiente: ventanas de contraste, cuñas,
+  bolsillos, parches, puños, bandas y volantes. La espalda se muestra cuando
+  el cambio se coloca ahí.
+- `transformationPhotos.ts` reúne los lotes A/B/C; los recortes conservan cada
+  prenda completa. Los recursos se incluyen en el precache de la PWA y un
+  fallo de imagen muestra texto explícito, sin volver a las siluetas.
+- Se mantienen las 27 ideas, diez motores y su PDF. Las fotografías ilustran
+  apariencia; no se deducen medidas ni se certifica una confección a partir de
+  ellas. Las pruebas de muestras físicas siguen pendientes.
+
+**Validación:** 3,694 pruebas en 81 archivos y compilación de Pages correctas.
+Los nueve WebP suman 743,502 bytes. En móvil y escritorio se verificaron las
+27 tarjetas, 54 vistas, seis filtros y comparación sin alterar las medidas ni
+la confirmación. Se revisaron las nueve galerías y el fallo explícito de imagen.
+Sobre el build, las nueve láminas se decodificaron con la red desconectada usando
+el service worker. El recorrido de confección conserva filtros, entradas
+decimales, bloqueo de valores inválidos, borrador tras recarga y PDF de campana:
+siete páginas, medidas 365/220 mm, controles exactos de 50/100 mm y manifiesto
+sin patrón de la prenda base.
+
+**Para Claude:** consultar `docs/TRANSFORMACIONES_DE_PRENDAS.md` y los documentos
+de imágenes A/B/C enlazados ahí para encontrar prompts, fuentes, inventario y
+revisión. Al añadir una idea, incluir su pareja fotográfica y revisar el cambio
+real que representa: las bandas/volantes prolongan la prenda; los bolsillos de
+fuelle no llevan una tapa si el patrón no la incluye. La comparación visual no
+es una simulación del borrador a medida.
+
+## Imágenes realistas completas del catálogo (2026-11-01)
+
+Relevo anterior. La usuaria detectó diseños que aún mostraban
+dibujos. La entrega anterior fotografió los 90 estilos nuevos, pero quedaron
+46 grupos editables antiguos y variantes con fuentes vectoriales. Se partió de
+`e447bb8` con instalación, 3,672 pruebas y compilación correctas.
+
+- **123 imágenes nuevas de IA** con la presentación existente: fondo marfil,
+  textura realista y prenda completa. Incluyen 19 adultas, 38 infantiles y 66
+  referencias de inspiración; 16 láminas WebP locales.
+- La auditoría recorre **2,059 recetas y 312 grupos**: 246 diseños con patrón,
+  61 inspiraciones y 5 referencias solo para estudio. Todos tienen imagen, sin cambiar estados,
+  medidas, tallas, proyectos o geometría de patronaje.
+- Se sustituyen las fuentes de las variantes, además de la portada del grupo:
+  manga larga, sobrecamisa/bomber corta, pantalones infantiles y sombreros.
+  El sombrero de bebé tiene su propia foto con lengüeta de broche.
+- `catalog-photo-completeness.test.ts` detecta recetas que vuelvan al dibujo,
+  archivos ausentes y variantes confundidas. La auditoría reproducible queda
+  en `scripts/audit-catalog-photos.mjs` y `docs/auditoria/fotos-catalogo.csv`.
+- `tests/browser/catalog_photo_completeness_smoke.py` comprueba tarjetas,
+  detalles y recortes móviles, con modos desarrollo y publicación.
+
+**Validación:** 3,689 pruebas en 80 archivos, TypeScript y compilación de Pages
+correctos. Auditoría: 328 imágenes/celdas activas en 39 láminas, cero fuentes
+vectoriales o faltantes. En Chromium móvil: 246 tarjetas, 77 al filtrar bebé,
+123 detalles nuevos, 16 galerías de recortes y dos cambios de variante; sin
+errores de navegador ni 404. Repetido sobre el build de Pages, incluida una
+página nueva sin red: las 16 láminas nuevas cargan desde el service worker.
+Recursos nuevos: 1,702,020 bytes; catálogo completo en disco: 4,643,880 bytes.
+
+**Para Claude:** usar `docs/IMAGENES_CATALOGO_COMPLETO.md` y los cuatro documentos
+de lotes enlazados allí para encontrar prompts, celdas y revisiones visuales.
+Las fotos nunca se usan para calcular medidas ni sustituyen la vista editable
+del estudio. Las láminas vectoriales antiguas siguen en disco por compatibilidad,
+pero ninguna receta del catálogo activo las devuelve. Una nueva variante debe
+recibir foto y comprobarse en su selección, no solo en la tarjeta del grupo.
+La confección de muestras continúa pendiente; no se certificaron patrones.
+
+## Catálogo por estilos y transformaciones (2026-11-01)
+
+Relevo anterior. La petición era variedad de construcciones,
+no multiplicar tarjetas por talla o color. Se partió de `8d25d82`, con instalación,
+3,054 pruebas y compilación correctas.
+
+| Diseños con patrón disponible | Antes | Ahora |
+| --- | ---: | ---: |
+| Catálogo completo | 156 | 246 |
+| Bebé | 40 | 77 |
+| Hoodies para mujer | 1 | 13 |
+| Pantalones para mujer | 10 | 22 |
+| Vestidos para mujer | 0 | 27 |
+
+- **69 construcciones nuevas:** 12 hoodies, 12 pantalones, 27 vestidos y 18
+  diseños de bebé. Cada una tiene patrón paramétrico, piezas, márgenes,
+  instrucciones, materiales y dibujo de colocación frontal/trasero.
+- **21 estilos antes ocultos** tienen tarjeta propia: conjuntos infantiles,
+  cubrepañales con olanes/tirantes, bonetes, pichi/mono de pico, etc. Las tallas,
+  medidas y largos siguen dentro del estilo. Los IDs de las recetas y los
+  proyectos existentes se conservan.
+- **90 imágenes realistas originales de IA**, en diez láminas WebP locales.
+  Son ilustraciones; las medidas se calculan siempre desde la geometría.
+- **Navegación:** persona y tipo de prenda siempre visibles, accesos Mujer y
+  Vestidos, estilos nuevos primero. Los hoodies mantienen una búsqueda estricta;
+  «bonete doble» no encuentra otro bonete solo por recomendar gasa doble.
+- **Transformar mi ropa:** tercera sección de Biblioteca con 27 ideas y diez
+  construcciones de complementos. Incluye paneles vaqueros, cuñas setenteras,
+  cargo, bolsillos, volantes, puños y bandas. Mide la prenda existente, conserva
+  un borrador local y genera PDF de las piezas nuevas con materiales, pasos y
+  referencias de ubicación. No incluye un patrón inventado de la prenda base.
+- **Revisión de confección:** cierres separables, cruces de botones, frunces,
+  puños y curvas de paneles comprobados. Se corrigieron el largo total de manga
+  globo y pantalones con puños extensibles, y el orden de montaje de volantes.
+  El estudio excluye tapetas ocultas de los nuevos bodies y distingue las caras
+  de las mangas del babero abierto por detrás. Las rodilleras exteriores se
+  pueden colorear como pieza independiente.
+
+**Validación:** 3,672 pruebas en 79 archivos, TypeScript y compilación de Pages.
+Los recorridos móviles de 390 px verifican filtros, tallas, intervención sin
+recargar, vistas completas, materiales, persistencia y PDF. Hoodie con cierre:
+42 páginas/5 plantillas; vestido trapecio: 30/5; body con canesú: 21/11.
+Transformación de campana: 7 páginas con medidas reales 365/220 mm. Se conservaron
+los recorridos anteriores de bonete con encaje y delantal, incluyendo bordados.
+Los PDFs mantienen controles exactos de 50/100 mm y escala de impresión 100 %.
+
+**Límites y siguientes pasos para Claude:** todos los patrones nuevos siguen
+experimentales. Falta imprimir y coser muestras; las comprobaciones matemáticas
+no certifican caída ni ajuste. Los vestidos usan bloques holgados sin pinzas:
+vestidos entallados y corsetería requieren motores específicos. Transformaciones
+usa propuestas predefinidas; reconocimiento por foto y edición de la prenda usada
+en el estudio quedan pendientes. No se añadió 3D ni exportación de puntadas para
+la Singer. Priorizar muestras de cierres/puños, paneles de mezclilla, vestidos
+abotonados y aberturas infantiles antes de ampliar otra tanda.
+
+Contratos y detalles: `docs/ESTILOS_URBANOS.md`, `docs/VESTIDOS_POR_ESTILO.md`, `docs/ESTILOS_BEBE_2026.md`,
+`docs/TRANSFORMACIONES_DE_PRENDAS.md`, `docs/IMAGENES_ESTILOS.md` y
+`docs/auditoria/catalogo.csv`. Conteo total separado: 2,059 recetas, 312 tarjetas
+incluyendo inspiraciones; de ellas, 1,993 recetas/246 tarjetas tienen patrón.
+
+## Continuación del trabajo de Claude (2026-11-01)
+
+Relevo anterior. Se retomó `1db95f4`, el segundo lote de ocho
+referencias infantiles. Las cinco entregas de Claude estaban guardadas y
+publicadas. No había un PR o una rama pendiente: se continuó comprobando su
+último lote y corrigiendo los fallos reproducidos en el estudio y el PDF.
+
+- **Base de partida:** instalación, 3,031 pruebas en 70 archivos y compilación
+  correctas antes de editar.
+- **Búsquedas:** «bonete» incluye las nuevas variantes; «puntilla» y «encaje»
+  encuentran la receta adecuada. Los petos/overoles y las diademas infantiles
+  también aparecen con sus nombres comunes.
+- **Delantal de una pieza:** la colocación frontal y trasera se separa por el
+  hombro real; la orientación trasera se compensa para mostrar letras e imágenes
+  legibles y producir la guía de ubicación correspondiente.
+- **Monos y petos:** se corrigieron los enlaces en espejo de las copias y sus
+  bolsillos para que el dibujo y las coordenadas del patrón coincidan.
+- **Largo de blusa con volante:** el largo solicitado representa cuerpo más
+  volante. Se elimina el alargamiento silencioso, se valida el mínimo admisible
+  y la comprobación del patrón mide la prenda completa. Los valores iniciales
+  visibles permiten construir las dos variantes.
+- **Proyectos anteriores:** un bordado o extra guardado en una cara física
+  incorrecta bloquea el PDF y pide recolocarlo en Acabados o Extras. No se
+  modifican sus datos automáticamente. Una blusa antigua con largo y volante
+  incompatibles debe ajustar esas medidas antes de volver a generar el patrón.
+- **Notas de motivos corregidas:** cerezas y panda ya existían, con IDs
+  `cerezas` y `panda-amigo`. Se verifican dentro del estudio y el PDF; el pendiente
+  de añadirlos a Bordados estaba desactualizado.
+
+**Validación final:** 3,054 pruebas en 73 archivos, TypeScript y compilación para
+GitHub Pages correctos. Se completaron seis recorridos en Chromium con pantalla
+táctil de 390 px, guardado/reapertura y PDF: bonete doble, delantal pichi, mono de
+pico, peto largo, blusa con volante y conjunto vichy. Todos conservan controles
+PDF de 50/100 mm. Se verifican motivos, colores, lados y centros en milímetros.
+
+Pruebas nuevas: `kids-batch2-placement`, `kids-legacy-placement`,
+`trapeze-top-length`, regresiones de búsqueda, y los recorridos
+`tests/browser/digitized_kids_handoff_smoke.py` y
+`tests/browser/production_kids_handoff_smoke.py` (build compilado, sin módulos
+`/src`, IndexedDB y manifiesto del PDF).
+
+Detalle y límites en `docs/DISENOS_DIGITALIZADOS.md`. La confección de muestras,
+la caída de capucha/canguro y el uso de un proyector físico siguen pendientes.
+No se certificaron estos patrones como cosidos ni se recuperaron cambios de
+Claude que no estuvieran guardados en GitHub.
+
 ## Segundo lote de diseños digitalizados (2026-11-01)
 
-Relevo anterior (terminado). Ocho fotos más; detalle en
+Relevo anterior de Claude. Ocho fotos más; detalle en
 `docs/DISENOS_DIGITALIZADOS.md` («Segundo lote»).
 
 - 4 generadores nuevos (`kidsBatch2.ts`): bonete de tres piezas con volante

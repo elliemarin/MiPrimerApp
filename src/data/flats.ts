@@ -5,6 +5,9 @@ import { presetLines } from './panelPresets';
 import { babyBodysuitFlat } from './babyBodysuitFlat';
 import { buildCostumeFlat } from './costumeFlats';
 import { buildKidsFlat } from './kidsFlats';
+import { buildStreetStyleFlat } from './streetStyleFlats';
+import { buildDressStyleFlat } from './dressStyleFlats';
+import { buildBabyStyleFlat } from './babyStyleFlats';
 import { parseSvgPath } from '../lib/draw/svgpath';
 import { cmdsToPolylines } from '../lib/draw/flatten';
 import { bboxOf } from '../lib/geom/vec';
@@ -788,9 +791,16 @@ export interface FlatSpec {
   costume?: string;
   /** Girls' and baby designs drawn from their real pieces (kidsFlats.ts). */
   kids?: string;
+  /** Construction styles with explicit bindings to their own pattern pieces. */
+  street?: string;
+  dressStyle?: string;
+  babyStyle?: string;
 }
 
 export function buildFlat(id: string, spec: FlatSpec): FlatDef {
+  if (spec.street) return buildStreetStyleFlat(id, spec.street);
+  if (spec.dressStyle) return buildDressStyleFlat(id, spec.dressStyle);
+  if (spec.babyStyle) return buildBabyStyleFlat(spec.babyStyle);
   if (spec.costume) return buildCostumeFlat(id, spec.costume);
   if (spec.kids) return buildKidsFlat(id, spec.kids);
   const views: FlatView[] = [];

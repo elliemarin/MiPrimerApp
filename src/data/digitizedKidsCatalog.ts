@@ -109,7 +109,7 @@ export const DIGITIZED_KIDS_CATALOG: CatalogModel[] = [
     id, name, type: 'accesorios', sub: 'Gorros', recipients: babies, difficulty: 2, fabrics: ['plano'], stretch: 'ninguna', fits: ['regular'], techniques: ['costura-recta', 'forro', 'frunces'],
     generatorId: 'bonete-volante', params: { volante: kind }, flat: { family: 'accesorio', kids: id === 'bonete-encaje' ? 'bonete-encaje' : id },
     description: `${description} Cierre con lengüeta y broche (sin cintas). Un aplique o adorno (pájaro, bellotas) se añade en Bordados.`, recommendedFabrics: ['Lino', 'Algodón estampado', 'Pana fina'], materials: ['Forro de algodón', 'Broche', ...(kind === 'encaje' ? ['Puntilla'] : [])],
-    collection: BABY, searchTerms: ['bonete', 'capota', 'gorro de bebe', 'volante', 'puntilla', 'encaje', 'vintage'], designGroup: { id: 'tipo-bonete-volante', name: 'Bonete con volante', preferred: i === 0 }
+    collection: BABY, searchTerms: ['bonete', 'capota', 'gorro de bebe', 'volante', 'vintage', ...(kind === 'encaje' ? ['puntilla', 'encaje'] : ['tela', ...(kind === 'doble' ? ['doble'] : [])])], designGroup: { id: 'tipo-bonete-volante', name: 'Bonete con volante', preferred: i === 0 }
   })),
   model({ id: 'delantal-pichi', name: 'Delantal pichi con volantes', type: 'accesorios', sub: 'Delantales infantiles', recipients: ['toddler', 'infantil'], difficulty: 2, fabrics: ['plano'], stretch: 'ninguna', fits: ['holgado'], techniques: ['costura-recta', 'frunces', 'bolsillos'],
     generatorId: 'delantal-pichi-infantil', params: { volantes: 'si', bolsillo: 'si' }, flat: { family: 'accesorio', kids: 'delantal-pichi' },

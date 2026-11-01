@@ -316,26 +316,41 @@ export const strapRomperGenerator: PatternGenerator = {
 
 // ------------------------------------------------------------------ Blusa trapecio con volante opcional
 export function trapezeTopDefaults(ctx: GeneratorContext): Params {
-  const talle = ctx.body.talleEspalda ?? 260;
-  return { ...trapezeDefaults(ctx), largo: round1(Math.max(talle * 1.35, talle * .42 + 25 + 135)), amplitudBajo: 1.35, volanteBajo: 'no', altoVolante: round1(clamp(talle * .3, 35, 110)) };
+  const talle = ctx.body.talleEspalda ?? 260, altoVolante = round1(clamp(talle * .3, 35, 110));
+  // The visible finished-length default fits either variant. Generation never
+  // increases a requested length to make room for the optional ruffle.
+  const largo = Math.ceil(Math.max(talle * 1.35, talle * .42 + 25 + 125 + altoVolante) * 10) / 10;
+  return { ...trapezeDefaults(ctx), largo, amplitudBajo: 1.35, volanteBajo: 'no', altoVolante };
 }
 
 export function generateTrapezeTop(ctx: GeneratorContext, params: Params): GeneratorResult {
   const p = { ...trapezeTopDefaults(ctx), ...params }, ruffle = str(p, 'volanteBajo') === 'si', vh = num(p, 'altoVolante'), sa = num(p, 'margen', 10), hem = num(p, 'dobladillo', 12);
   if (ruffle && (!finite(vh) || vh < 30 || vh > 160)) return invalid('blusa-trapecio-volante', 'Revisa el alto del volante.');
-  // The body keeps at least 12.5 cm below the armhole; a ruffle never shortens it further.
+  // The ruffle replaces part of the finished length, without shortening the
+  // body below the drafting limit or silently lengthening the garment.
   const armDepth = (ctx.body.talleEspalda ?? 260) * .42 + 15 + (str(p, 'manga', 'sin') === 'sin' ? 10 : 0);
-  const bodyL = ruffle ? Math.max(num(p, 'largo') - vh, armDepth + 125) : num(p, 'largo');
+  const finishedL = num(p, 'largo'), bodyL = finishedL - (ruffle ? vh : 0);
+  if (!finite(finishedL) || finishedL > 950 || (ruffle && bodyL < armDepth + 125 - 1e-7))
+    return invalid('blusa-trapecio-largo', ruffle
+      ? `El largo total incluye el volante de ${cm(vh)}. Con esta sisa debe medir al menos ${cm(Math.ceil(armDepth + 125 + vh))} y como máximo 95 cm; aumenta el largo o reduce el alto del volante.`
+      : 'Revisa el largo total de la blusa: debe ser finito y no superar 95 cm.');
   const r = generateTrapeze(ctx, { ...p, largo: bodyL });
   const rename = (t: string) => t.replace(/Vestido trapecio/g, 'Blusa trapecio').replace(/vestido/g, 'blusa');
   const out: GeneratorResult = { ...r, notices: r.notices.map(n => ({ ...n, message: rename(n.message) })), assumptions: r.assumptions.map(rename), steps: r.steps.map(st => ({ ...st, title: rename(st.title), detail: rename(st.detail) })) };
   if (!r.pieces.length || !ruffle) return out;
   for (const piece of out.pieces.filter(x => x.id === 'delantero' || x.id === 'espalda')) piece.edges = piece.edges.map(e => e.id === 'bajo' ? { ...e, label: 'Bajo (une el volante)', finish: 'costura', allowance: sa } : e);
   const front = out.pieces.find(x => x.id === 'delantero')!, wv = len(front, 'bajo') * 1.6;
-  out.pieces.push(rectangle('volante-bajo', 'Volante del bajo al doblez (delantero y espalda)', wv, vh, [edge('union', 'Unión (fruncir)', 'costura', sa), edge('costado', 'Costado', 'costura', sa), edge('bajo', 'Bajo', 'dobladillo', hem), edge('centro', 'Centro (al doblez)', 'doblez', 0)], { qty: 2, onFold: true }, true));
+  const rufflePiece = rectangle('volante-bajo', 'Volante del bajo al doblez (delantero y espalda)', wv, vh, [edge('union', 'Unión (fruncir)', 'costura', sa), edge('costado', 'Costado', 'costura', sa), edge('bajo', 'Bajo', 'dobladillo', hem), edge('centro', 'Centro (al doblez)', 'doblez', 0)], { qty: 2, onFold: true }, true);
+  out.pieces.push(rufflePiece);
+  out.checks = out.checks.map(check => check.key === 'largo-centro' ? {
+    ...check, label: 'Largo total desde la línea de hombro al bajo (centro delantero, incluye volante)',
+    target: finishedL, measured: front.nodes[6].y + len(rufflePiece, 'costado')
+  } : check);
   out.seams.push(ratio('volante-bajo', 'Volante fruncido al bajo', 'fruncido', [{ pieceId: 'volante-bajo', edgeIds: ['union'] }], [{ pieceId: 'delantero', edgeIds: ['bajo'] }], 1.6, .06));
-  out.steps = out.steps.map(st => st.id === 'bajo' ? { id: 'volante', title: 'Volante y botón', detail: 'Une los volantes por los costados, dobladilla su bajo, frúncelos y cóselos al bajo de la blusa. Cose el botón frente a la presilla.', pieces: ['volante-bajo', 'delantero', 'espalda'], seams: ['volante-bajo'] } : st);
-  out.assumptions.push(`Volante de ${cm(vh)} en el bajo, fruncido 1,6 veces.`);
+  out.steps = out.steps.map(st => st.id === 'cortar'
+    ? { ...st, detail: `${st.detail} Volante del bajo: 2 al doblez (uno delantero y uno trasero).`, pieces: [...st.pieces, 'volante-bajo'] }
+    : st.id === 'bajo' ? { id: 'volante', title: 'Volante y botón', detail: 'Une los volantes por los costados, dobladilla su bajo, frúncelos y cóselos al bajo de la blusa. Cose el botón frente a la presilla.', pieces: ['volante-bajo', 'delantero', 'espalda'], seams: ['volante-bajo'] } : st);
+  out.assumptions.push(`Largo total terminado de ${cm(finishedL)} en el centro delantero: cuerpo de ${cm(bodyL)} más volante de ${cm(vh)}, fruncido 1,6 veces. Los márgenes se añaden por separado.`);
   return out;
 }
 
@@ -343,7 +358,7 @@ export const trapezeTopGenerator: PatternGenerator = {
   ...trapezeDressGenerator, id: 'blusa-trapecio-infantil', name: 'Blusa trapecio infantil', summary: 'Blusa sin mangas en trapecio con abertura y botón en la espalda, escote y sisas al bies y volante opcional en el bajo.',
   defaults: trapezeTopDefaults, generate: generateTrapezeTop,
   params: [
-    ...trapezeDressGenerator.params,
+    ...trapezeDressGenerator.params.map(param => param.key === 'largo' ? { ...param, label: 'Largo total desde el hombro (incluye volante)' } : param),
     { key: 'volanteBajo', label: 'Volante en el bajo', group: 'diseno', type: 'choice', choices: [{ value: 'no', label: 'No' }, { value: 'si', label: 'Sí' }] },
     { key: 'altoVolante', label: 'Alto del volante', group: 'diseno', type: 'length', min: 30, max: 160, when: p => p.volanteBajo === 'si' }
   ]

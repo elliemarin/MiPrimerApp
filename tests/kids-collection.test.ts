@@ -132,9 +132,9 @@ describe('colección Niña y ampliación de Bebé', () => {
     }
   });
 
-  it('presenta siete diseños de niña con patrón y tarjetas propias', () => {
+  it('presenta nueve diseños de niña separando medio círculo y mangas de mariposa', () => {
     const girls = groupCatalog(CATALOG.filter(m => modelHasPattern(m) && m.collection === 'Niña'));
-    expect(girls.map(g => g.id).sort()).toEqual(['tipo-blusa-campesina', 'tipo-falda-circular', 'tipo-falda-olanes', 'tipo-falda-tul', 'tipo-vestido-tirantes', 'tipo-vestido-trapecio', 'vestido-jareta-infantil']);
+    expect(girls.map(g => g.id).sort()).toEqual(['tipo-blusa-campesina', 'tipo-falda-circular', 'tipo-falda-medio-circulo', 'tipo-falda-olanes', 'tipo-falda-tul', 'tipo-vestido-tirantes', 'tipo-vestido-trapecio', 'tipo-vestido-trapecio-mariposa', 'vestido-jareta-infantil']);
     expect(CATALOG.find(m => m.id === 'falda-circular')?.status).toBe('experimental');
   });
 });

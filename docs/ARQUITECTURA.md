@@ -454,3 +454,128 @@ Relevo y comprobaciones: `LOGOTIPOS_BORDADOS.md`, `LOGOTIPOS_PDF.md` y pruebas
 `embroidery-image`, `embroidery-placement`, `embroidery-raster-pdf`,
 `selection-move-handle`, `placement-drag`. Las imágenes son guías de transferencia,
 no moldes de tela ni digitalización automática de puntadas.
+
+
+## 22. Continuación del lote infantil de Claude (2026-11-01)
+
+`kidsFlats.ts` enlaza los monos/petos `--1` con la copia dibujada en espejo y
+`--2` con la directa. El delantal pichi continuo usa una sola pieza física para
+frente y espalda: `assembled.ts` obtiene su línea de hombro del patrón actual y
+recorta el intervalo físico de cada cara. La espalda invierte su eje Y; el
+metadato `artworkFlipY` compensa esa orientación en letras, motivos y logos sin
+cambiar sus centros ni dimensiones. `placement.ts` distingue una reflexión de
+un giro de 180° en la guía canónica; la plantilla independiente conserva la
+orientación original.
+
+`artworkPlacementIssues` valida vista, cara y límites físicos de los bordados y
+complementos con lado guardado. Los proyectos sin ese metadato mantienen sus
+coordenadas físicas anteriores. Esto impide exportar posiciones antiguas que
+quedaron en la mitad equivocada tras corregir el mapeo del delantal; no migra el
+dibujo ni elimina objetos. La visibilidad heredada evita bloquear por un grupo
+oculto.
+
+`generateTrapezeTop` trata el largo de blusa como una medida terminada que
+incluye el volante. Se valida el largo restante del cuerpo y se mide la suma
+real de cuerpo y volante en los controles; una combinación imposible no se
+alarga silenciosamente. El catálogo conserva IDs, variantes y estados de
+confección experimentales.
+
+La búsqueda reconoce los nuevos bonetes por familia y nombre de la receta, y
+los petos por su construcción, aunque el dibujo se defina en `flat.kids`.
+Las etiquetas de puntilla/encaje pertenecen solo a esa variante. Detalle de la
+revisión y límites en `DISENOS_DIGITALIZADOS.md`.
+
+## 23. Estilos reales y transformación de prendas (2026-11-01)
+
+`catalogStyleIdentity.ts` separa 21 construcciones existentes sin modificar IDs
+de recetas, parámetros ni proyectos. El pipeline aplica esta identidad después
+de `withDesignGroup` y antes de la taxonomía. `streetStyleCatalog`,
+`dressStyleCatalog` y `babyStyleCatalog` añaden 69 construcciones con mapas
+explícitos de familia. Se agrupa después de filtrar; las tallas no generan tarjetas.
+El CSV de auditoría se regenera con `node scripts/audit-catalog.mjs`.
+
+`streetStyles.ts`, `dressStyles.ts` y `babyStyles.ts` calculan geometría en mm,
+costuras, frunces, márgenes e instrucciones. Las divisiones de paneles conservan
+las Bézier exteriores que no cruza el corte, para evitar pequeños autocruces de
+margen debidos al aplanado. Los motores anteriores mantienen sus IDs y recetas.
+Todos los nuevos modelos son experimentales y requieren muestras físicas.
+
+`FlatSpec.street/dressStyle/babyStyle` selecciona dibujos completos con contratos
+`*_SURFACE_PIECES`. Los mapas se rellenan al construir la vista de referencia y
+se consultan después en `assembled.ts` y `modelMaterials.ts`. Cada superficie
+conserva pieza física, instancia, orientación y, cuando corresponde, doblez.
+Los bodies nuevos excluyen la tapeta oculta x<0; el babero con apertura trasera
+intercambia las caras físicas de sus mangas verticales. Las mangas de body,
+hoodie y vestido se orientan sobre X; las de otras blusas bebé, sobre Y.
+
+`styleCatalogImages.ts` añade 90 fotografías ilustrativas de IA, diez WebP de
+1254 × 1254 y recortes visuales por celda. Tienen prioridad sobre las antiguas
+miniaturas vectoriales de variantes. Las imágenes no intervienen en el trazado,
+las medidas ni la escala del PDF. Son recursos locales del precache PWA.
+
+`features/transform` se abre como tercer modo de Biblioteca, sin ruta adicional.
+27 propuestas en `data/transformations.ts` usan diez motores independientes:
+panel, cuña, volante, puño, bolsillo plano/tapa/fuelle, parche, trabilla y banda.
+Los parámetros son medidas de la prenda existente, nunca medidas inferidas de
+una foto. Los borradores locales se guardan por ID de idea. La exportación reúne
+instrucciones y mosaico vectorial 1:1 con `transformacion.json`; el manifiesto
+declara `includesBaseGarment: false`. No modifica proyectos ni finge tener un
+patrón base, reconocimiento de imágenes o simulación 3D.
+
+Regresiones: `catalog-style-identity`, `style-catalog-integration`,
+`street-styles`, `dress-styles`, `baby-styles`, `transformations`; recorridos
+compilados `tests/browser/style_catalog_smoke.py` y `transformations_smoke.py`.
+Los tests anteriores del lote infantil ahora seleccionan la construcción en
+su propia tarjeta. Detalles en `ESTILOS_URBANOS.md`, `VESTIDOS_POR_ESTILO.md`,
+`ESTILOS_BEBE_2026.md`, `TRANSFORMACIONES_DE_PRENDAS.md` e `IMAGENES_ESTILOS.md`.
+
+## 24. Cobertura fotográfica completa del catálogo (2026-11-01)
+
+`completedAdultImages.ts` y `completedInfantImages.ts` aportan 57 fotos para las
+fuentes que todavía eran vectoriales. `catalogImages.ts` resuelve por la pareja
+antigua `sheet/cell`, tanto en el mapa de grupos como en `VARIANT_IMAGES`. Esto
+conserva mangas, largos y proporciones específicas al seleccionar una receta.
+El sombrero de bebé tiene una excepción por ID antes del mapa de variantes;
+los aliases de grupo de vestido trapecio y cubrepañal comparten su foto vigente.
+La prioridad de `STYLE_CATALOG_IMAGES` conserva las 90 fotos de la entrega
+anterior. Los imports de tipos de los nuevos registros no crean ciclos en runtime.
+
+`inspirationAImages.ts` y `inspirationBImages.ts` cubren las 66 referencias sin
+patrón con fotos propias (61 inspiraciones y cinco de solo estudio). No modifican `modelHasPattern`, filtros, generadores
+ni estados. Las 312 entradas de `CATALOG_IMAGES` y las 2,059 recetas resuelven a
+recursos de IA; la biblioteca simple sigue mostrando 246 diseños disponibles.
+
+Los 16 WebP nuevos se incluyen en el precache habitual de la PWA. Los recortes
+están en los mapas `*_BOUNDS` de cada registro y preceden al recorte por defecto
+de 418 px. `CatalogImage` conserva su alternativa técnica ante un fallo real
+de carga. Las láminas vectoriales históricas permanecen para los scripts antiguos,
+pero no son la portada resuelta de ningún artículo. La geometría editable sigue
+en `FlatArt`, `assembled.ts` y los motores de patronaje.
+
+Inventario reproducible: `node scripts/audit-catalog-photos.mjs`. Las pruebas
+`catalog-images` y `catalog-photo-completeness` revisan grupos, recetas,
+destinatarios, archivos y diferencias entre variantes. El recorrido Playwright
+`catalog_photo_completeness_smoke.py` comprueba la decodificación y los recortes
+del componente en móvil, con manifiesto local reutilizable en producción.
+Procedencia y límites: `IMAGENES_CATALOGO_COMPLETO.md`.
+
+## 25. Fotografías de transformaciones (2026-11-01)
+
+`data/transformationPhotos.ts` reúne tres registros con 27 pares antes/después
+en nueve WebP locales. `TransformationPhotoSource` contiene la lámina y ambos
+rectángulos de recorte, en píxeles del original de 1254 × 1254. Cada imagen se
+presenta con su proporción dentro de un marco 3:2; nunca se escala para obtener
+medidas o geometría de patronaje. Las URLs respetan `BASE_URL` y la PWA precarga
+los recursos igual que el resto de fotografías locales.
+
+`TransformationPhoto` sirve las tarjetas y el detalle; un error de imagen queda
+visible mediante texto. `TransformationPreview` alterna «Antes» y «Con el cambio»
+con estado local independiente de `Draft`, mostrando primero el resultado.
+Los botones tienen estado accesible y área táctil mínima de 44 px. Las tarjetas
+no anidan estos controles: muestran solo el resultado y abren la propuesta al
+tocarlas. Se eliminó `TransformationDiagram` del código de la aplicación.
+
+Los generadores, borradores y exportaciones de transformaciones conservan sus
+contratos. Las fotografías son ejemplos de apariencia, no vistas paramétricas
+de la prenda medida. El detalle declara su generación con IA. Véanse
+`TRANSFORMACIONES_DE_PRENDAS.md` y los tres lotes `IMAGENES_TRANSFORMACIONES_*`.
