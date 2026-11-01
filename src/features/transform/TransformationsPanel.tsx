@@ -6,7 +6,8 @@ import { Icon } from '../../ui/Icon';
 import { saveBlob } from '../../lib/download';
 import { slugify } from '../../lib/ids';
 import { buildTransformationPdf, prepareTransformation } from './export';
-import { TransformationDiagram } from './TransformationDiagram';
+import { TransformationPhoto } from './TransformationPhoto';
+import { TransformationPreview } from './TransformationPreview';
 import './transformations.css';
 
 const levels = ['', 'Sencillo', 'Intermedio', 'Con práctica'];
@@ -30,7 +31,7 @@ export function TransformationsPanel() {
   return <section className="transform-panel" aria-labelledby="transform-title">
     <div className="transform-intro">
       <div><h1 id="transform-title">Dale otra vida a tu ropa</h1><p>Empieza con una prenda que ya tienes. Elige un cambio, mide sobre ella y obtén las piezas nuevas con sus instrucciones.</p><Button variant="primary" onClick={() => setSelected(TRANSFORMATIONS[0])}>Hacer los paneles vaqueros</Button></div>
-      <TransformationDiagram idea={TRANSFORMATIONS[0]} compact/>
+      <TransformationPreview idea={TRANSFORMATIONS[0]} compact/>
     </div>
     <div className="transform-search"><Icon name="search"/><input type="search" aria-label="Buscar transformaciones" placeholder="Campana, cargo, volantes…" value={query} onChange={event => setQuery(event.target.value)}/></div>
     <div className="simple-collections" role="group" aria-label="Prenda que quieres transformar">
@@ -39,7 +40,8 @@ export function TransformationsPanel() {
     </div>
     <p className="transform-count" role="status">{found.length} {found.length === 1 ? 'idea' : 'ideas'} para renovar tu ropa <span>· 10 tipos de piezas a medida</span></p>
     {!found.length ? <Empty icon="search" title="No hay cambios con esta búsqueda" body="Prueba otra palabra o muestra todas las prendas." action={<Button onClick={() => { setQuery(''); setGarment('todos'); }}>Mostrar todas</Button>}/> : <div className="transform-grid">{found.map(idea => <button key={idea.id} className="transform-card" onClick={() => setSelected(idea)} data-transformation={idea.id}>
-      <span className="transform-card-meta">{TRANSFORMATION_GARMENTS[idea.garment]} <span>{levels[idea.level]}</span></span><strong>{idea.name}</strong><span className="transform-card-effect">{idea.effect}</span><span className="transform-card-footer">{TRANSFORMATION_CONSTRUCTIONS[idea.construction]}<Icon name="chev" size={18}/></span>
+      <TransformationPhoto idea={idea}/>
+      <span className="transform-card-meta">{TRANSFORMATION_GARMENTS[idea.garment]} <span>{levels[idea.level]}</span></span><strong>{idea.name}</strong><span className="transform-card-effect">{idea.effect}</span><span className="transform-card-footer">{TRANSFORMATION_CONSTRUCTIONS[idea.construction]}<span>Ver cambio <Icon name="chev" size={18}/></span></span>
     </button>)}</div>}
     <p className="transform-note">Son propuestas predefinidas para medir sobre tu prenda. Incluyen el patrón de las piezas nuevas, materiales e instrucciones. El ajuste sobre una prenda usada requiere una prueba; no se certifican como patrones ya cosidos.</p>
     {selected && <TransformationSheet key={selected.id} idea={selected} onClose={() => setSelected(undefined)}/>}
@@ -75,7 +77,7 @@ function TransformationSheet({ idea, onClose }: { idea: TransformationIdea; onCl
   };
   return <Sheet title={idea.name} wide onClose={onClose} footer={<div className="transform-export"><span>Piezas nuevas + instrucciones · PDF a escala 1:1</span><Button block icon="download" variant="primary" disabled={busy || !measured || !!issues.length || invalidInputs} onClick={() => void download()}>{busy ? 'Preparando PDF…' : 'Generar mi transformación'}</Button></div>}>
     <div className="stack-lg transform-detail">
-      <TransformationDiagram idea={idea}/>
+      <TransformationPreview idea={idea}/>
       <p>{idea.effect}</p>
       <section><h3>Dónde va</h3><p>{idea.placement}</p><p className="muted">Tela sugerida: {idea.fabric}</p></section>
       <section className="stack"><h3>Mide tu prenda</h3><p className="muted">Las medidas iniciales son un ejemplo. Sustitúyelas por las de tu prenda extendida sin estirar. Todos los largos se muestran en centímetros.</p>

@@ -6,22 +6,63 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-01 (Codex: completar imágenes realistas del catálogo y sus variantes).
+- Última actualización: 2026-11-01 (Codex: fotografías antes/después para Transformar mi ropa).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 3689 pruebas: catálogo, fotos, patrones, persistencia, PDF, proyector, logos y transformaciones
+npm test            # 3694 pruebas: catálogo, fotos, patrones, persistencia, PDF, proyector, logos y transformaciones
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Transformar mi ropa con imágenes realistas (2026-11-01)
+
+**Este es el relevo más reciente.** El catálogo ya tenía fotografías, pero la
+sección de transformaciones seguía mostrando siluetas genéricas y tarjetas solo
+de texto. Se partió de `d01eb92`, con instalación, 3,689 pruebas y build correctos.
+
+- **27 comparaciones antes/después**, 54 imágenes originales de IA en nueve
+  láminas WebP locales. Se conserva el fondo marfil, la textura textil y el
+  acabado realista del catálogo.
+- Cada tarjeta muestra el resultado; la cabecera y el detalle ofrecen los
+  botones «Antes» y «Con el cambio». El resultado aparece primero, con las
+  mismas proporciones al alternar. Los controles no modifican medidas,
+  confirmación, notas ni borradores.
+- Se retiró `TransformationDiagram`. Cada propuesta tiene una fotografía
+  propia con la intervención correspondiente: ventanas de contraste, cuñas,
+  bolsillos, parches, puños, bandas y volantes. La espalda se muestra cuando
+  el cambio se coloca ahí.
+- `transformationPhotos.ts` reúne los lotes A/B/C; los recortes conservan cada
+  prenda completa. Los recursos se incluyen en el precache de la PWA y un
+  fallo de imagen muestra texto explícito, sin volver a las siluetas.
+- Se mantienen las 27 ideas, diez motores y su PDF. Las fotografías ilustran
+  apariencia; no se deducen medidas ni se certifica una confección a partir de
+  ellas. Las pruebas de muestras físicas siguen pendientes.
+
+**Validación:** 3,694 pruebas en 81 archivos y compilación de Pages correctas.
+Los nueve WebP suman 743,502 bytes. En móvil y escritorio se verificaron las
+27 tarjetas, 54 vistas, seis filtros y comparación sin alterar las medidas ni
+la confirmación. Se revisaron las nueve galerías y el fallo explícito de imagen.
+Sobre el build, las nueve láminas se decodificaron con la red desconectada usando
+el service worker. El recorrido de confección conserva filtros, entradas
+decimales, bloqueo de valores inválidos, borrador tras recarga y PDF de campana:
+siete páginas, medidas 365/220 mm, controles exactos de 50/100 mm y manifiesto
+sin patrón de la prenda base.
+
+**Para Claude:** consultar `docs/TRANSFORMACIONES_DE_PRENDAS.md` y los documentos
+de imágenes A/B/C enlazados ahí para encontrar prompts, fuentes, inventario y
+revisión. Al añadir una idea, incluir su pareja fotográfica y revisar el cambio
+real que representa: las bandas/volantes prolongan la prenda; los bolsillos de
+fuelle no llevan una tapa si el patrón no la incluye. La comparación visual no
+es una simulación del borrador a medida.
+
 ## Imágenes realistas completas del catálogo (2026-11-01)
 
-**Este es el relevo más reciente.** La usuaria detectó diseños que aún mostraban
+Relevo anterior. La usuaria detectó diseños que aún mostraban
 dibujos. La entrega anterior fotografió los 90 estilos nuevos, pero quedaron
 46 grupos editables antiguos y variantes con fuentes vectoriales. Se partió de
 `e447bb8` con instalación, 3,672 pruebas y compilación correctas.

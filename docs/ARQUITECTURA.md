@@ -558,3 +558,24 @@ destinatarios, archivos y diferencias entre variantes. El recorrido Playwright
 `catalog_photo_completeness_smoke.py` comprueba la decodificación y los recortes
 del componente en móvil, con manifiesto local reutilizable en producción.
 Procedencia y límites: `IMAGENES_CATALOGO_COMPLETO.md`.
+
+## 25. Fotografías de transformaciones (2026-11-01)
+
+`data/transformationPhotos.ts` reúne tres registros con 27 pares antes/después
+en nueve WebP locales. `TransformationPhotoSource` contiene la lámina y ambos
+rectángulos de recorte, en píxeles del original de 1254 × 1254. Cada imagen se
+presenta con su proporción dentro de un marco 3:2; nunca se escala para obtener
+medidas o geometría de patronaje. Las URLs respetan `BASE_URL` y la PWA precarga
+los recursos igual que el resto de fotografías locales.
+
+`TransformationPhoto` sirve las tarjetas y el detalle; un error de imagen queda
+visible mediante texto. `TransformationPreview` alterna «Antes» y «Con el cambio»
+con estado local independiente de `Draft`, mostrando primero el resultado.
+Los botones tienen estado accesible y área táctil mínima de 44 px. Las tarjetas
+no anidan estos controles: muestran solo el resultado y abren la propuesta al
+tocarlas. Se eliminó `TransformationDiagram` del código de la aplicación.
+
+Los generadores, borradores y exportaciones de transformaciones conservan sus
+contratos. Las fotografías son ejemplos de apariencia, no vistas paramétricas
+de la prenda medida. El detalle declara su generación con IA. Véanse
+`TRANSFORMACIONES_DE_PRENDAS.md` y los tres lotes `IMAGENES_TRANSFORMACIONES_*`.
