@@ -23,7 +23,7 @@ const BASE: Record<OversizeKind, { ease: number; drop: number; length: number; f
 };
 
 export function oversizeDefaults(ctx: GeneratorContext): Params {
-  return { prenda: 'camiseta', manga: 'corta', bolsillos: 'pecho', largoExtra: 0, largoMangaExtra: 0, holguraExtra: 0, caidaExtra: 0, margen: 10, dobladillo: isChild(ctx.kind) ? 20 : 25 };
+  return { prenda: 'camiseta', manga: 'corta', bolsillos: 'pecho', cuelloTipo: 'camisero', largoExtra: 0, largoMangaExtra: 0, holguraExtra: 0, caidaExtra: 0, margen: 10, dobladillo: isChild(ctx.kind) ? 20 : 25 };
 }
 
 export function generateOversize(ctx: GeneratorContext, params: Params): GeneratorResult {
@@ -37,7 +37,7 @@ export function generateOversize(ctx: GeneratorContext, params: Params): Generat
   const drop = base.drop * s + num(p, 'caidaExtra');
   const L = est * base.length + num(p, 'largoExtra'), sa = num(p, 'margen'), hem = num(p, 'dobladillo');
   const longSleeve = kind !== 'camiseta' || str(p, 'manga', 'corta') === 'larga', pockets = str(p, 'bolsillos', 'pecho');
-  if (!finite(chest, ease, L, sa, hem, drop) || chest < 380 || chest > 1600 || L < 150 || L > 1200 || ease < 40 || drop < 0 || drop > 160 * s || sa < 6 || sa > 15 || hem < 10 || hem > 45 || !['pecho', 'tres', 'ninguno'].includes(pockets))
+  if (!finite(chest, ease, L, sa, hem, drop) || chest < 380 || chest > 1600 || L < 150 || L > 1200 || ease < 40 || drop < 0 || drop > 160 * s || sa < 6 || sa > 15 || hem < 10 || hem > 45 || !['pecho', 'tres', 'grandes', 'ninguno'].includes(pockets))
     return invalid('oversize-medidas', 'Revisa pecho, largo, holgura y caída de hombro.');
   if (kind !== 'camiseta' && (ctx.kind === 'bebe')) return invalid('oversize-bebe', 'Esta prenda no está pensada para bebé. Elige la camiseta.');
 
@@ -115,21 +115,34 @@ export function generateOversize(ctx: GeneratorContext, params: Params): Generat
     steps.push({ id: 'hombros', title: 'Une hombros', detail: 'Cose los hombros con puntada elástica o remalladora; añade cinta de refuerzo.', pieces: ['delantero', 'espalda'], seams: ['hombros'] },
       { id: 'cuello', title: 'Cuello de rib', detail: 'Cierra la tira en anillo, dóblala y repártela por cuartos en el escote. Cóse estirando solo el rib y pespuntea el margen hacia el cuerpo.', pieces: ['cuello-rib', 'delantero', 'espalda'], seams: ['cuello'] });
   } else if (kind === 'sobrecamisa') {
-    const hs = 30 * s, hc = 62 * s, Ls = halfNeck + ext;
+    const hs = (str(p, 'cuelloTipo', 'camisero') === 'tira' ? 36 : 30) * s, hc = 62 * s, Ls = halfNeck + ext;
     const stand = outline('pie-cuello', 'Pie de cuello (al doblez; exterior e interior)', [P(0, 0), P(Ls, 0), P(Ls, hs), P(0, hs)], [
       edge('base', 'Une el escote', 'costura', sa), edge('frente', 'Extremo (botón)', 'costura', sa), edge('superior', 'Une el cuello', 'costura', sa), edge('centro', 'Centro de espalda (al doblez)', 'doblez', 0)], { qty: 2, onFold: true });
     stand.marks.push({ id: 'boton', kind: 'boton', at: P(Ls - ext, hs / 2), label: 'Botón del pie de cuello' });
+    // Band collar (cuello de tira / mao): the stand alone, a little taller, no collar leaf.
+    const band = str(p, 'cuelloTipo', 'camisero') === 'tira';
+    if (band) { stand.name = 'Cuello de tira (al doblez; exterior e interior)'; stand.edges[2] = { ...stand.edges[2], label: 'Canto superior (une las dos capas)' }; }
     const collar = outline('cuello', 'Cuello (al doblez; superior y bajo cuello)', [P(0, 0), P(halfNeck, 0), P(halfNeck + 18 * s, hc + 8 * s), P(0, hc)], [
       edge('base', 'Une el pie de cuello', 'costura', sa), edge('punta', 'Punta', 'costura', sa), edge('canto', 'Canto del cuello', 'costura', sa), edge('centro', 'Centro de espalda (al doblez)', 'doblez', 0)], { qty: 2, onFold: true });
-    pieces.push(stand, collar);
-    seams.push(equal('pie-escote', 'Pie de cuello con el escote', [{ pieceId: 'pie-cuello', edgeIds: ['base'] }], [{ pieceId: 'espalda', edgeIds: ['cuello'] }, { pieceId: 'delantero', edgeIds: ['cuello', 'cuello-ext'] }], 1),
-      equal('cuello-pie', 'Cuello con el pie (hasta el centro delantero)', [{ pieceId: 'cuello', edgeIds: ['base'] }], [{ pieceId: 'espalda', edgeIds: ['cuello'] }, { pieceId: 'delantero', edgeIds: ['cuello'] }], 1));
+    pieces.push(stand, ...(band ? [] : [collar]));
+    seams.push(equal('pie-escote', band ? 'Cuello de tira con el escote' : 'Pie de cuello con el escote', [{ pieceId: 'pie-cuello', edgeIds: ['base'] }], [{ pieceId: 'espalda', edgeIds: ['cuello'] }, { pieceId: 'delantero', edgeIds: ['cuello', 'cuello-ext'] }], 1),
+      ...(band ? [] : [equal('cuello-pie', 'Cuello con el pie (hasta el centro delantero)', [{ pieceId: 'cuello', edgeIds: ['base'] }], [{ pieceId: 'espalda', edgeIds: ['cuello'] }, { pieceId: 'delantero', edgeIds: ['cuello'] }], 1)]));
     const pocket = (id: string, name: string, w: number, h: number, qty: number) => outline(id, name, [P(0, 0), P(w, 0), P(w, h - 14 * s), P(w / 2, h), P(0, h - 14 * s)], [
       edge('boca', 'Boca (doble doblez)', 'dobladillo', 25), edge('lado-der', 'Lado', 'costura', 8), edge('punta-der', 'Punta', 'costura', 8), edge('punta-izq', 'Punta', 'costura', 8), edge('lado-izq', 'Lado', 'costura', 8)], { qty });
     const chestW = clamp(Q * .4, 80, 140), lowW = clamp(Q * .58, 110, 200);
-    if (pockets !== 'ninguno') {
+    if (pockets !== 'ninguno' && pockets !== 'grandes') {
       pieces.push(pocket('bolsillo-pecho', 'Bolsillo de pecho', chestW, chestW * 1.15, pockets === 'tres' ? 1 : 2));
       front.lines.push({ id: 'bolsillo-pecho', kind: 'colocacion', a: P(Q * .32, armDepth * .62), b: P(Q * .32 + chestW, armDepth * .62), label: 'Bolsillo de pecho: borde superior' });
+    }
+    if (pockets === 'grandes') {
+      // Two big lower patch pockets with buttoned flaps (shacket).
+      const gw = clamp(Q * .62, 110, 210), gh = gw * 1.05, fh = 55 * s, y0 = L - gh - 60 * s;
+      if (y0 < armDepth + 40) return invalid('oversize-bolsillo', 'Los bolsillos grandes no caben con este largo. Alarga la prenda.');
+      pieces.push(rectangle('bolsillo-grande', 'Bolsillo bajo grande', gw, gh, [edge('boca', 'Boca (doble doblez)', 'dobladillo', 25), edge('lado-der', 'Lado', 'costura', 8), edge('fondo', 'Fondo', 'costura', 8), edge('lado-izq', 'Lado', 'costura', 8)], { qty: 2 }));
+      const flap = rectangle('cartera', 'Cartera del bolsillo (exterior y vista)', gw + 8, fh, [edge('union', 'Unión al delantero', 'costura', 8), edge('lado-der', 'Lado', 'costura', 8), edge('canto', 'Canto libre', 'costura', 8), edge('lado-izq', 'Lado', 'costura', 8)], { qty: 4 }, true);
+      flap.marks.push({ id: 'ojal', kind: 'ojal', at: P((gw + 8) / 2, fh * .65), label: 'Ojal de la cartera' });
+      pieces.push(flap);
+      front.lines.push({ id: 'bolsillo-grande', kind: 'colocacion', a: P(Q * .2, y0), b: P(Q * .2 + gw, y0), label: 'Bolsillo grande: borde superior' }, { id: 'cartera', kind: 'colocacion', a: P(Q * .2 - 4, y0 - 12 * s), b: P(Q * .2 + gw + 4, y0 - 12 * s), label: 'Cartera: línea de unión' });
     }
     if (pockets === 'tres') {
       pieces.push(pocket('bolsillo-bajo', 'Bolsillo bajo', lowW, lowW * 1.05, 2));
@@ -138,9 +151,11 @@ export function generateOversize(ctx: GeneratorContext, params: Params): Generat
     }
     materials.push({ id: 'tela', label: 'Franela, sarga, lona ligera, pana o mezclilla', qty: 'Según acomodo' }, { id: 'entretela', label: 'Entretela para cuello, pie de cuello y tapetas', qty: 'Cuello, pie y dos tiras de tapeta' },
       { id: 'botones', label: 'Botones de 15–18 mm', qty: `${front.marks.length + 1}` }, { id: 'hilo', label: 'Hilo de coser', qty: '1 carrete' });
-    steps.push({ id: 'tapetas', title: 'Tapetas y bolsillos', detail: 'Pega entretela en la vista, sobrehila su canto y dóblala por la línea. Prepara los bolsillos (doble doblez en la boca, márgenes planchados) y cóselos sobre sus líneas.', pieces: ['delantero', ...(pockets !== 'ninguno' ? ['bolsillo-pecho'] : []), ...(pockets === 'tres' ? ['bolsillo-bajo'] : [])] },
+    steps.push({ id: 'tapetas', title: 'Tapetas y bolsillos', detail: 'Pega entretela en la vista, sobrehila su canto y dóblala por la línea. Prepara los bolsillos (doble doblez en la boca, márgenes planchados) y cóselos sobre sus líneas.', pieces: ['delantero', ...(pockets !== 'ninguno' && pockets !== 'grandes' ? ['bolsillo-pecho'] : []), ...(pockets === 'tres' ? ['bolsillo-bajo'] : []), ...(pockets === 'grandes' ? ['bolsillo-grande', 'cartera'] : [])] },
       { id: 'hombros', title: 'Une hombros', detail: 'Cose los hombros con costura francesa o cargada.', pieces: ['delantero', 'espalda'], seams: ['hombros'] },
-      { id: 'cuello', title: 'Cuello y pie de cuello', detail: 'Arma el cuello (superior y bajo cuello), voltea y pespuntea. Insértalo entre las dos capas del pie, cose el pie al escote y ciérralo por dentro con pespunte. El pie llega al borde de la tapeta.', pieces: ['cuello', 'pie-cuello', 'delantero', 'espalda'], seams: ['pie-escote', 'cuello-pie'] });
+      band
+        ? { id: 'cuello', title: 'Cuello de tira', detail: 'Entretela una capa, une las dos capas por el canto superior y los extremos, voltea, cose la capa exterior al escote y cierra la interior con pespunte. Llega al borde de la tapeta.', pieces: ['pie-cuello', 'delantero', 'espalda'], seams: ['pie-escote'] }
+        : { id: 'cuello', title: 'Cuello y pie de cuello', detail: 'Arma el cuello (superior y bajo cuello), voltea y pespuntea. Insértalo entre las dos capas del pie, cose el pie al escote y ciérralo por dentro con pespunte. El pie llega al borde de la tapeta.', pieces: ['cuello', 'pie-cuello', 'delantero', 'espalda'], seams: ['pie-escote', 'cuello-pie'] });
   } else {
     const neckline = 2 * halfNeck, kn = .85, kb = .85, bandH = 60 * s, collarH = 45 * s;
     const collar = ribStrip('cuello-rib', 'Cuello de rib', neckline * kn, collarH, 1, sa);
@@ -189,7 +204,8 @@ export const oversizeGenerator: PatternGenerator = {
   params: [
     { key: 'prenda', label: 'Prenda', group: 'diseno', type: 'choice', choices: [{ value: 'camiseta', label: 'Camiseta de punto' }, { value: 'sobrecamisa', label: 'Sobrecamisa / chaqueta de trabajo' }, { value: 'bomber', label: 'Bomber con rib' }] },
     { key: 'manga', label: 'Manga de la camiseta', group: 'diseno', type: 'choice', choices: [{ value: 'corta', label: 'Corta' }, { value: 'larga', label: 'Larga' }], when: p => p.prenda === 'camiseta' },
-    { key: 'bolsillos', label: 'Bolsillos', group: 'diseno', type: 'choice', choices: [{ value: 'pecho', label: 'Dos de pecho' }, { value: 'tres', label: 'Pecho y dos bajos (trabajo)' }, { value: 'ninguno', label: 'Sin bolsillos' }], when: p => p.prenda === 'sobrecamisa' },
+    { key: 'bolsillos', label: 'Bolsillos', group: 'diseno', type: 'choice', choices: [{ value: 'pecho', label: 'Dos de pecho' }, { value: 'tres', label: 'Pecho y dos bajos (trabajo)' }, { value: 'grandes', label: 'Dos bajos grandes con cartera' }, { value: 'ninguno', label: 'Sin bolsillos' }], when: p => p.prenda === 'sobrecamisa' },
+    { key: 'cuelloTipo', label: 'Cuello', group: 'diseno', type: 'choice', choices: [{ value: 'camisero', label: 'Camisero con pie' }, { value: 'tira', label: 'De tira (mao)' }], when: p => p.prenda === 'sobrecamisa' },
     { key: 'largoExtra', label: 'Ajuste de largo', group: 'diseno', type: 'length', min: -250, max: 400 },
     { key: 'largoMangaExtra', label: 'Ajuste de largo de manga', group: 'diseno', type: 'length', min: -200, max: 200 },
     { key: 'caidaExtra', label: 'Ajuste de caída de hombro', group: 'diseno', type: 'length', min: -50, max: 80 },

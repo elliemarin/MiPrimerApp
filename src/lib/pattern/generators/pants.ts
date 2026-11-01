@@ -44,6 +44,15 @@ export function pantsDefaults(ctx: GeneratorContext): Params {
     holguraPuno: child ? 10 : 20,
     volantito: 0,
     corte: 'completo',
+    cintura: 'elastica',
+    anchoPretina: child ? 30 : 40,
+    amplitudBajo: 0,
+    bolsillos: 'ninguno',
+    cordon: 'no',
+    volante: 'no',
+    altoVolante: round1((b.entrepierna ?? 500) * (child ? 0.2 : 0.17)),
+    fruncidoVolante: 1.6,
+    alforzas: 0,
     proporcionElastico: kind === 'bebe' ? 0.95 : child ? 0.92 : 0.9
   };
 }
@@ -151,7 +160,7 @@ export function generatePants(ctx: GeneratorContext, P: Params): GeneratorResult
   const casingDepth = elastic + 5;
   const casingAllowance = casingDepth + 10;
   const largoParam = num(P, 'largo');
-  const hemCirc = style === 'jogger' ? num(P, 'bajoJogger') : num(P, 'bajo');
+  let hemCirc = style === 'jogger' ? num(P, 'bajoJogger') : num(P, 'bajo');
 
   // Holgura aplicada una sola vez: medida terminada = cuerpo + holgura (+ pañal).
   const hipEase = num(P, 'holguraCadera') + D * 1.2;
@@ -161,13 +170,21 @@ export function generatePants(ctx: GeneratorContext, P: Params): GeneratorResult
   // Cropped cuts follow the body: the leg below the crotch is a share of the inseam.
   const corte = str(P, 'corte', 'completo');
   const CUT_SHARE: Record<string, number> = { capri: 0.62, bermuda: 0.38, short: 0.2 };
-  const L = corte in CUT_SHARE ? R + Math.max(45, (b.entrepierna ?? largoParam - CD) * CUT_SHARE[corte]) : largoParam;
+  const Lfin = corte in CUT_SHARE ? R + Math.max(45, (b.entrepierna ?? largoParam - CD) * CUT_SHARE[corte]) : largoParam;
+  // A hem ruffle replaces the bottom of the leg; pintucks (5 mm deep) need extra cut length.
+  const ruffle = str(P, 'volante', 'no') === 'si' && style !== 'jogger', ruffleH = ruffle ? num(P, 'altoVolante', 120) : 0;
+  const tucks = Math.round(Math.max(0, Math.min(4, num(P, 'alforzas', 0)))), tuckDepth = 5;
+  const L = Lfin - ruffleH + tucks * 2 * tuckDepth;
+  const fitted = str(P, 'cintura', 'elastica') === 'pretina';
   const Hq = He / 4;
   const shift = He * 0.01;
   const Fw = Hq - shift;
   const Bw = Hq + shift;
   const Fe = He / 16;
   const Be = He / 10 + D * 0.3;
+  // Palazzo flare: the hem as a multiple of the leg width at the crotch.
+  const amp = num(P, 'amplitudBajo', 0);
+  if (amp > 0 && style !== 'jogger') hemCirc = (Fw + Fe + Bw + Be) * amp;
   const backRise = He * 0.025 + D * 0.8;
   const tilt = He * 0.02;
   const hemOffset = Math.min(10, hemCirc * 0.03);
@@ -185,8 +202,8 @@ export function generatePants(ctx: GeneratorContext, P: Params): GeneratorResult
   // Bombacho: the hem folds into a casing for an elastic; an optional frill stays below it.
   const frill = style === 'bombacho' ? num(P, 'volantito', 0) : 0;
   const ankleElastic = 6;
-  const hemFinish = style === 'jogger' ? 'costura' : style === 'bombacho' ? 'jareta' : 'dobladillo';
-  const hemAllowance = style === 'jogger' ? SA : style === 'bombacho' ? frill + ankleElastic + 4 + 10 : hemA;
+  const hemFinish = style === 'jogger' || ruffle ? 'costura' : style === 'bombacho' ? 'jareta' : 'dobladillo';
+  const hemAllowance = style === 'jogger' || ruffle ? SA : style === 'bombacho' ? frill + ankleElastic + 4 + 10 : hemA;
 
   // ---------- Delantero ----------
   const hF = Math.min(Fe * 1.3, R * 0.45);
@@ -476,7 +493,9 @@ export function generatePants(ctx: GeneratorContext, P: Params): GeneratorResult
   // ---------- Avisos de construcción ----------
   const waistOpening = 2 * (lenOf(front, front.edges[0]) + lenOf(back, back.edges[0]));
   const minOpening = ctx.fabric === 'punto' ? H * (1 - Math.min(ctx.stretch, 40) / 200) : H + 20;
-  if (waistOpening < minOpening) {
+  if (fitted) {
+    notices.push({ level: 'ok', code: 'pasa-cadera', message: 'Cintura ajustada con pretina: se pone abriendo la abertura lateral con botones.' });
+  } else if (waistOpening < minOpening) {
     notices.push({
       level: 'error',
       code: 'no-pasa-cadera',
@@ -544,7 +563,156 @@ export function generatePants(ctx: GeneratorContext, P: Params): GeneratorResult
     { id: 'prueba', title: 'Prueba y revisa', detail: 'Comprueba tiro, cadera y largo con la persona. Anota los cambios en el proyecto antes de cortar la versión definitiva.', pieces: [] }
   ];
 
+  applyPantsOptions({ ctx, P, pieces, seams, checks, materials, assumptions, steps, notices, front, back, Fw, R, CD, W, H, SA, casingDepth, fitted, ruffle, ruffleH, tucks, tuckDepth, L, Lfin, style });
   return { pieces, seams, checks, materials, assumptions, steps, notices };
+}
+
+/** Optional constructions shared by all pants styles: fitted waistband with a
+ * buttoned side opening, in-seam side pockets, drawstring, hem ruffle and pintucks. */
+function applyPantsOptions(o: {
+  ctx: GeneratorContext; P: Params; pieces: Piece[]; seams: SeamRelation[]; checks: MeasureCheck[]; materials: { id: string; label: string; qty: string; note?: string }[];
+  assumptions: string[]; steps: { id: string; title: string; detail: string; pieces: string[]; seams?: string[] }[]; notices: Issue[];
+  front: Piece; back: Piece; Fw: number; R: number; CD: number; W: number; H: number; SA: number; casingDepth: number; fitted: boolean; ruffle: boolean; ruffleH: number; tucks: number; tuckDepth: number; L: number; Lfin: number; style: Style;
+}) {
+  const { ctx, P, pieces, seams, checks, materials, assumptions, steps, notices, front, back, SA } = o;
+  const s = Math.max(0.45, Math.min(1.3, o.H / 1000)), cm = (v: number) => formatLength(v, 'cm');
+  const node = (pc: Piece, id: string) => pc.nodes.find((n) => n.id === id)!;
+  const edgeOf = (pc: Piece, id: string) => pc.edges.find((e) => e.id === id)!;
+  const hipY = Math.min(o.CD * 0.6, o.R - 20);
+  let sideEdges = ['lateral-sup'];
+  if (o.fitted) {
+    // Waist suppression per half garment: side seams, centre back, then darts.
+    const We = o.W + (isChild(ctx.kind) ? 15 : 20), T0 = node(back, 'cintura-centro');
+    const E = o.Fw + Math.hypot(T0.x, T0.y) - We / 2;
+    const side = Math.max(0, Math.min(E * 0.3, 30 * s)), cbSup = Math.max(0, Math.min(E * 0.1, 20 * s));
+    T0.x -= cbSup;
+    for (const pc of [front, back]) {
+      node(pc, 'cintura-lateral').x = side;
+      pc.nodes.push({ id: 'cadera-costado', x: 0, y: hipY });
+      const i = pc.edges.findIndex((e) => e.id === 'lateral-sup');
+      pc.edges.splice(i, 1,
+        { id: 'lateral-cadera', label: 'Costado (tiro a cadera)', from: 'cadera-lateral', to: 'cadera-costado', kind: 'line', allowance: SA, finish: 'costura' },
+        { id: 'lateral-sup', label: 'Costado (cadera a cintura)', from: 'cadera-costado', to: 'cintura-lateral', kind: 'cubic', c1: { x: 0, y: hipY * 0.45 }, c2: { x: side * 0.75, y: hipY * 0.12 }, allowance: SA, finish: 'costura' });
+      const w = edgeOf(pc, 'cintura');
+      w.finish = 'costura'; w.allowance = SA; w.label = 'Cintura (une la pretina)';
+      pc.lines = pc.lines.filter((l) => l.id !== 'pespunte-jareta');
+    }
+    sideEdges = ['lateral-cadera', 'lateral-sup'];
+    // Darts take whatever the shaped waist edges still exceed (the back waist is slanted).
+    const darts = Math.max(0, lenOf(front, edgeOf(front, 'cintura')) + lenOf(back, edgeOf(back, 'cintura')) - We / 2), dF = darts * 0.4, dB = darts * 0.6;
+    const dart = (pc: Piece, id: string, a: { x: number; y: number }, intake: number, length: number) => {
+      const apex = { x: a.x, y: a.y + length };
+      pc.lines.push({ id: `${id}-a`, kind: 'pespunte', a: { x: a.x - intake / 2, y: a.y }, b: apex, label: `Pinza de ${cm(intake)}` }, { id: `${id}-b`, kind: 'pespunte', a: { x: a.x + intake / 2, y: a.y }, b: apex, label: 'Pinza' });
+    };
+    const nF = dF > 30 * s ? 2 : dF > 4 ? 1 : 0, nB = dB > 30 * s ? 2 : dB > 4 ? 1 : 0;
+    for (let i = 0; i < nF; i++) dart(front, `pinza-${i + 1}`, { x: side + (o.Fw - side) * (0.45 + i * 0.2), y: 0 }, dF / nF, 85 * s);
+    const T = node(back, 'cintura-centro');
+    for (let i = 0; i < nB; i++) { const t = 0.4 + i * 0.25, x = side + (T.x - side) * t; dart(back, `pinza-${i + 1}`, { x, y: T.y * t }, dB / nB, 120 * s); }
+    const waistEdges = 2 * (lenOf(front, edgeOf(front, 'cintura')) + lenOf(back, edgeOf(back, 'cintura')));
+    const bh = num(P, 'anchoPretina', isChild(ctx.kind) ? 30 : 40), overlap = 35 * s, bandL = We + overlap;
+    const band: Piece = {
+      id: 'pretina', name: 'Pretina doblada', source: 'generada',
+      nodes: [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: bandL, y: 0 }, { id: 'c', x: bandL, y: 2 * bh }, { id: 'd', x: 0, y: 2 * bh }],
+      edges: [
+        { id: 'union-1', label: 'Unión a la cintura', from: 'a', to: 'b', kind: 'line', allowance: SA, finish: 'costura' },
+        { id: 'extremo-1', label: 'Extremo con botón', from: 'b', to: 'c', kind: 'line', allowance: SA, finish: 'costura' },
+        { id: 'union-2', label: 'Canto interior', from: 'c', to: 'd', kind: 'line', allowance: SA, finish: 'costura' },
+        { id: 'extremo-2', label: 'Extremo con ojal (cruce)', from: 'd', to: 'a', kind: 'line', allowance: SA, finish: 'costura' }
+      ],
+      grain: { a: { x: bandL * 0.2, y: bh }, b: { x: bandL * 0.8, y: bh } }, cut: { qty: 1, mirrorPairs: false, onFold: false, fabric: 'principal' },
+      notches: [{ id: 'centro-delantero', edgeId: 'union-1', s: overlap + We / 4, count: 1, label: 'Centro delantero' }, { id: 'centro-trasero', edgeId: 'union-1', s: overlap + We * 0.75, count: 2, label: 'Centro trasero' }],
+      lines: [{ id: 'doblez', kind: 'doblez', a: { x: 0, y: bh }, b: { x: bandL, y: bh }, label: 'Doblar a lo largo (entretela en una mitad)' }],
+      marks: [{ id: 'ojal', kind: 'ojal', at: { x: overlap / 2, y: bh / 2 }, label: 'Ojal' }, { id: 'boton', kind: 'boton', at: { x: bandL - overlap / 2, y: bh / 2 }, label: 'Botón' }]
+    };
+    const opening = Math.min(180 * s, hipY + 20);
+    const placket = (id: string, name: string, w: number): Piece => ({
+      id, name, source: 'generada',
+      nodes: [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: w, y: 0 }, { id: 'c', x: w, y: opening + 20 }, { id: 'd', x: 0, y: opening + 20 }],
+      edges: [{ id: 'superior', label: 'Une la pretina', from: 'a', to: 'b', kind: 'line', allowance: SA, finish: 'costura' }, { id: 'interior', label: 'Canto interior (sobrehilar)', from: 'b', to: 'c', kind: 'line', allowance: 0, finish: 'sin-margen' },
+        { id: 'inferior', label: 'Bajo de la vista', from: 'c', to: 'd', kind: 'line', allowance: 0, finish: 'sin-margen' }, { id: 'costado', label: 'Une la abertura', from: 'd', to: 'a', kind: 'line', allowance: SA, finish: 'costura' }],
+      grain: { a: { x: w / 2, y: 10 }, b: { x: w / 2, y: opening } }, cut: { qty: 1, mirrorPairs: false, onFold: false, fabric: 'principal' }, notches: [], lines: [], marks: []
+    });
+    pieces.push(band, placket('vista-abertura', 'Vista de la abertura (delantero izquierdo)', 40 * s), placket('tapeta-abertura', 'Cartera de la abertura (trasero izquierdo, doblada)', 2 * 35 * s));
+    const nButtons = Math.max(2, Math.round(opening / (45 * s)));
+    for (let i = 0; i < nButtons; i++) front.marks.push({ id: `boton-lateral-${i + 1}`, kind: 'boton', at: { x: 12 * s, y: 25 * s + (opening - 35 * s) * i / Math.max(1, nButtons - 1) }, label: 'Botón de la abertura (solo lado izquierdo)' });
+    const sideLen = lenOf(front, edgeOf(front, 'lateral-sup'));
+    front.notches.push({ id: 'fin-abertura', edgeId: 'lateral-sup', s: Math.max(0, sideLen - opening), count: 1, label: 'Fin de la abertura (lado izquierdo)' });
+    back.notches.push({ id: 'fin-abertura', edgeId: 'lateral-sup', s: Math.max(0, sideLen - opening), count: 1, label: 'Fin de la abertura (lado izquierdo)' });
+    seams.push({ id: 'pretina', label: 'Pretina con la cintura (pinzas cerradas, más el cruce)', kind: 'embebido', a: [{ pieceId: 'delantero', edgeIds: ['cintura'], factor: 2 }, { pieceId: 'trasero', edgeIds: ['cintura'], factor: 2 }], b: [{ pieceId: 'pretina', edgeIds: ['union-1'] }], ratioMin: waistEdges / bandL - 0.005, ratioMax: waistEdges / bandL + 0.005 });
+    checks.push({ key: 'cintura', label: 'Cintura terminada (con pinzas cerradas)', body: o.W, ease: We - o.W, target: We, measured: waistEdges - 2 * (dF + dB), tolerance: 1 });
+    const iEl = materials.findIndex((m) => m.id === 'elastico');
+    if (iEl >= 0) materials.splice(iEl, 1);
+    materials.push({ id: 'botones', label: 'Botones de 12–15 mm', qty: `${nButtons + 1}` }, { id: 'entretela', label: 'Entretela para pretina y vista', qty: `${cm(bandL)} × ${cm(bh)}` });
+    const iJ = steps.findIndex((st) => st.id === 'jareta');
+    steps.splice(iJ, 1,
+      { id: 'pinzas', title: 'Pinzas', detail: `Cose las pinzas del delantero (${cm(dF)} en total por lado) y del trasero (${cm(dB)}), planchando las delanteras hacia el centro y las traseras hacia el centro trasero.`, pieces: ['delantero', 'trasero'] },
+      { id: 'abertura', title: 'Abertura lateral', detail: `En el costado izquierdo deja abiertos ${cm(opening)} desde la cintura. Cose la vista al delantero y la cartera doblada al trasero; haz los ojales en la vista y los botones en la cartera.`, pieces: ['delantero', 'trasero', 'vista-abertura', 'tapeta-abertura'] },
+      { id: 'pretina', title: 'Pretina', detail: 'Entretela media pretina, cósela a la cintura empezando con el cruce en el lado izquierdo, dóblala y ciérrala por dentro. Haz el ojal y cose el botón.', pieces: ['pretina', 'delantero', 'trasero'], seams: ['pretina'] });
+    assumptions.push(`Cintura ajustada de ${cm(We)} (cintura + ${cm(We - o.W)}): la diferencia con la cadera se reparte entre costados (${cm(side)} por pieza), centro trasero (${cm(cbSup)}) y pinzas.`);
+  }
+  const cost = seams.find((r) => r.id === 'costado');
+  if (cost && o.fitted) for (const sd of [...cost.a, ...cost.b]) sd.edgeIds = [...sd.edgeIds.filter((id) => id !== 'lateral-sup'), ...sideEdges];
+
+  if (str(P, 'bolsillos', 'ninguno') === 'costado') {
+    const top = (o.fitted ? 0 : o.casingDepth) + 30 * s, open = 150 * s, bw = 130 * s, bd = open + 110 * s, r = 45 * s;
+    const bag: Piece = {
+      id: 'bolsillo', name: 'Bolsa del bolsillo de costado (2 pares)', source: 'generada',
+      nodes: [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: bw, y: 0 }, { id: 'c', x: bw, y: bd - r }, { id: 'd', x: bw - r, y: bd }, { id: 'e', x: 0, y: bd - 20 * s }],
+      edges: [{ id: 'superior', label: 'Canto superior', from: 'a', to: 'b', kind: 'line', allowance: SA, finish: 'costura' }, { id: 'interior', label: 'Canto interior', from: 'b', to: 'c', kind: 'line', allowance: SA, finish: 'costura' },
+        { id: 'curva', label: 'Fondo curvo', from: 'c', to: 'd', kind: 'cubic', c1: { x: bw, y: bd - r * 0.45 }, c2: { x: bw - r * 0.45, y: bd }, allowance: SA, finish: 'costura' },
+        { id: 'fondo', label: 'Fondo', from: 'd', to: 'e', kind: 'line', allowance: SA, finish: 'costura' }, { id: 'costado', label: 'Une el costado (boca)', from: 'e', to: 'a', kind: 'line', allowance: SA, finish: 'costura' }],
+      grain: { a: { x: bw / 2, y: 15 }, b: { x: bw / 2, y: bd - 30 } }, cut: { qty: 4, mirrorPairs: true, onFold: false, fabric: 'forro' }, notches: [], lines: [], marks: []
+    };
+    pieces.push(bag);
+    for (const pc of [front, back]) {
+      const e = edgeOf(pc, 'lateral-sup'), l = lenOf(pc, e);
+      if (top + open < l) pc.notches.push({ id: 'bolsillo-arriba', edgeId: 'lateral-sup', s: l - top, count: 1, label: 'Boca del bolsillo' }, { id: 'bolsillo-abajo', edgeId: 'lateral-sup', s: l - top - open, count: 1, label: 'Fin de la boca' });
+      else {
+        const e2 = edgeOf(pc, o.fitted ? 'lateral-cadera' : 'lateral-sup'), l2 = lenOf(pc, e2);
+        pc.notches.push({ id: 'bolsillo-arriba', edgeId: 'lateral-sup', s: Math.max(0, l - top), count: 1, label: 'Boca del bolsillo' }, { id: 'bolsillo-abajo', edgeId: e2.id, s: Math.max(0, l2 - (top + open - l)), count: 1, label: 'Fin de la boca' });
+      }
+    }
+    steps.splice(1, 0, { id: 'bolsillos', title: 'Bolsillos de costado', detail: `Cose una bolsa a cada costado del delantero y del trasero entre los piquetes (boca de ${cm(open)}), plánchalas hacia fuera y, al cerrar el costado, rodea la bolsa y deja abierta la boca.`, pieces: ['bolsillo', 'delantero', 'trasero'] });
+  }
+  if (str(P, 'cordon', 'no') === 'si' && !o.fitted) {
+    if (isChild(ctx.kind)) notices.push({ level: 'aviso', code: 'sin-cordon-infantil', message: 'En tallas infantiles no se pone cordón: solo elástico.' });
+    else {
+      front.marks.push({ id: 'ojal-cordon', kind: 'ojal', at: { x: o.Fw - 22 * s, y: o.casingDepth / 2 }, label: 'Ojal del cordón (uno en cada delantero, antes de doblar la jareta)' });
+      materials.push({ id: 'cordon', label: 'Cordón plano o tubular', qty: cm(o.W + 800) });
+      steps.push({ id: 'cordon', title: 'Cordón', detail: 'Haz un ojal vertical en cada delantero junto al centro antes de cerrar la jareta. Pasa el cordón junto al elástico y anuda sus puntas.', pieces: ['delantero'] });
+    }
+  }
+  if (o.tucks > 0) {
+    for (const pc of [front, back]) {
+      const be = node(pc, 'bajo-ext'), bi = node(pc, 'bajo-int');
+      for (let i = 0; i < o.tucks; i++) {
+        const y = o.L - (o.ruffle ? 30 : 60) * s - i * 2 * (o.tuckDepth + 12 * s);
+        pc.lines.push({ id: `alforza-${i + 1}`, kind: 'doblez', a: { x: be.x + 8, y }, b: { x: bi.x - 8, y }, label: `Alforza ${i + 1}: doblar y pespuntear a ${o.tuckDepth} mm` });
+      }
+    }
+    assumptions.push(`${o.tucks} alforzas de ${o.tuckDepth} mm sobre el bajo: la pierna se corta ${cm(o.tucks * 2 * o.tuckDepth)} más larga.`);
+    steps.push({ id: 'alforzas', title: 'Alforzas', detail: 'Antes de cerrar la entrepierna, dobla por cada línea de alforza, pespuntea a 5 mm del doblez y plancha hacia el bajo.', pieces: ['delantero', 'trasero'] });
+  }
+  if (o.ruffle) {
+    const hem = lenOf(front, edgeOf(front, 'bajo')) + lenOf(back, edgeOf(back, 'bajo')), gather = num(P, 'fruncidoVolante', 1.6);
+    const rp: Piece = {
+      id: 'volante', name: 'Volante del bajo (anillo por pierna)', source: 'generada',
+      nodes: [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: hem * gather, y: 0 }, { id: 'c', x: hem * gather, y: o.ruffleH }, { id: 'd', x: 0, y: o.ruffleH }],
+      edges: [{ id: 'union', label: 'Unión al bajo (fruncir)', from: 'a', to: 'b', kind: 'line', allowance: SA, finish: 'costura' }, { id: 'lado-a', label: 'Costura del anillo', from: 'b', to: 'c', kind: 'line', allowance: SA, finish: 'costura' },
+        { id: 'bajo', label: 'Bajo', from: 'c', to: 'd', kind: 'line', allowance: 20, finish: 'dobladillo' }, { id: 'lado-b', label: 'Costura del anillo', from: 'd', to: 'a', kind: 'line', allowance: SA, finish: 'costura' }],
+      grain: { a: { x: hem * gather * 0.2, y: o.ruffleH / 2 }, b: { x: hem * gather * 0.8, y: o.ruffleH / 2 } }, cut: { qty: 2, mirrorPairs: false, onFold: false, fabric: 'principal' }, notches: [], lines: [], marks: []
+    };
+    pieces.push(rp);
+    seams.push({ id: 'volante', label: 'Volante fruncido al bajo', kind: 'fruncido', a: [{ pieceId: 'volante', edgeIds: ['union'] }], b: [{ pieceId: 'delantero', edgeIds: ['bajo'] }, { pieceId: 'trasero', edgeIds: ['bajo'] }], ratioMin: gather - 0.05, ratioMax: gather + 0.05 });
+    const iB = steps.findIndex((st) => st.id === 'bajo');
+    const st = { id: 'volante', title: 'Volante del bajo', detail: `Cierra cada volante en anillo, dobladilla su bajo, frúncelo ${gather.toFixed(1)} veces y cóselo al bajo de la pierna.`, pieces: ['volante', 'delantero', 'trasero'], seams: ['volante'] };
+    if (iB >= 0) steps.splice(iB, 1, st); else steps.push(st);
+    assumptions.push(`Volante de ${cm(o.ruffleH)}: el largo terminado (${cm(o.Lfin)}) incluye el volante.`);
+    const lc = checks.find((c) => c.key === 'largo');
+    if (lc) lc.label = 'Largo de la pierna sin el volante (vertical)';
+  }
+  const lc = checks.find((c) => c.key === 'largo');
+  if (lc && o.tucks) lc.label = `${lc.label} · cortado con alforzas`;
 }
 
 export const pantsGenerator: PatternGenerator = {
@@ -579,6 +747,14 @@ export const pantsGenerator: PatternGenerator = {
     { key: 'anchoElastico', label: 'Ancho del elástico', group: 'diseno', type: 'length', min: 5, max: 60 },
     { key: 'proporcionElastico', label: 'Largo de elástico / cintura', group: 'diseno', type: 'ratio', min: 0.7, max: 1 },
     { key: 'margen', label: 'Margen de costura', group: 'margenes', type: 'length', min: 0, max: 30 },
+    { key: 'cintura', label: 'Cintura', group: 'diseno', type: 'choice', choices: [{ value: 'elastica', label: 'Elástica con jareta' }, { value: 'pretina', label: 'Pretina con abertura lateral y botones' }] },
+    { key: 'anchoPretina', label: 'Alto de la pretina', group: 'diseno', type: 'length', min: 20, max: 90, when: (p) => p.cintura === 'pretina' },
+    { key: 'amplitudBajo', label: 'Vuelo del bajo (0 = usar contorno de bajo)', group: 'diseno', type: 'ratio', min: 0, max: 2.5 },
+    { key: 'bolsillos', label: 'Bolsillos', group: 'diseno', type: 'choice', choices: [{ value: 'ninguno', label: 'Sin bolsillos' }, { value: 'costado', label: 'En las costuras de costado' }] },
+    { key: 'cordon', label: 'Cordón en la cintura (solo adulto)', group: 'diseno', type: 'choice', choices: [{ value: 'no', label: 'No' }, { value: 'si', label: 'Sí' }], when: (p) => p.cintura !== 'pretina' },
+    { key: 'volante', label: 'Volante en el bajo', group: 'diseno', type: 'choice', choices: [{ value: 'no', label: 'No' }, { value: 'si', label: 'Sí' }] },
+    { key: 'altoVolante', label: 'Alto del volante', group: 'diseno', type: 'length', min: 40, max: 300, when: (p) => p.volante === 'si' },
+    { key: 'alforzas', label: 'Alforzas sobre el bajo', group: 'diseno', type: 'length', min: 0, max: 4 },
     { key: 'volantito', label: 'Volantito bajo el elástico', group: 'diseno', type: 'length', min: 0, max: 40, when: (p) => p.estilo === 'bombacho' },
     { key: 'dobladillo', label: 'Dobladillo', group: 'margenes', type: 'length', min: 0, max: 80, when: (p) => p.estilo !== 'jogger' && p.estilo !== 'bombacho' }
   ],

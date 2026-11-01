@@ -1,7 +1,7 @@
 import { num, round1, str, isChild, type GeneratorContext, type GeneratorResult, type Params, type PatternGenerator } from '../generator';
 import type { Issue, Piece, SeamRelation } from '../types';
 import { norm, sub, type Pt } from '../../geom/vec';
-import { K, P, clamp, cm, edge, equal, finite, invalid, len, lens, outline, rectangle, type EdgeDef } from './kidsShared';
+import { K, P, clamp, cm, edge, equal, finite, invalid, len, lens, outline, ratio, rectangle, type EdgeDef } from './kidsShared';
 
 /* Pantalón de tejido plano con pretina y bragueta (mezclilla de cinco bolsillos
  * o cargo) o con cintura elástica para niños y bebés. Siete siluetas de pierna
@@ -25,7 +25,7 @@ export const SILHOUETTES: Record<Silhouette, { label: string; ease: number; rise
 export function jeansDefaults(ctx: GeneratorContext): Params {
   const b = ctx.body, small = ctx.kind === 'bebe' || ctx.kind === 'toddler', child = isChild(ctx.kind);
   return {
-    silueta: 'recto', cintura: small ? 'elastica' : 'pretina', bolsillos: small ? 'parche' : 'cinco', tiro: child ? 'alto' : 'medio',
+    silueta: 'recto', cintura: small ? 'elastica' : 'pretina', bolsillos: small ? 'parche' : 'cinco', tiro: child ? 'alto' : 'medio', pinzas: 'no',
     largo: round1(b.largoExterior ?? (b.tiro ?? 260) + (b.entrepierna ?? 780)),
     holguraExtra: 0, holguraTiro: 0, anchoRodillaExtra: 0, anchoBajoExtra: 0,
     anchoPretina: child ? 30 : 38, anchoElastico: ctx.kind === 'bebe' ? 15 : child ? 20 : 30,
@@ -86,10 +86,12 @@ export function generateJeans(ctx: GeneratorContext, params: Params): GeneratorR
   const cb = elastic ? He * .02 : Math.min(rest * .4, 22 * s);
   let yokeDart = Math.max(0, rest - cb);
   const xSide = (y: number) => y >= hipY ? 0 : sF * (1 - y / hipY);
-  const xCF = (y: number) => Fw - cf + cf * y / hipY;
+  // Front pleats: the centre-front side is spread by the pleat intake (folded away at the waistband).
+  const pleatN = elastic ? 0 : ({ una: 1, dos: 2 } as Record<string, number>)[str(p, 'pinzas', 'no')] ?? 0, pleat = clamp(22 * s, 15, 30), Pl = pleatN * pleat;
+  const xCF = (y: number) => Fw - cf + cf * y / hipY + Pl;
   const xCB = (y: number) => Bw - cb + cb * (y + backRise) / (hipY + backRise);
   const hF = Math.min(Fe * 1.3, R * .4), hB = Math.min(Be * .95, R * .5);
-  const CS = P(xCF(R - hF), R - hF), tipF = P(Fw + Fe, R), SR = P(0, R), HS = P(0, hipY);
+  const CS = P(xCF(R - hF), R - hF), tipF = P(Fw + Fe + Pl, R), SR = P(0, R), HS = P(0, hipY);
   const S0 = P(xCB(R - hB), R - hB), T = P(xCB(-backRise), -backRise);
 
   // Legs: front crease centred; the back keeps the same outseam and adds width toward the inseam.
@@ -128,6 +130,11 @@ export function generateJeans(ctx: GeneratorContext, params: Params): GeneratorR
     const tailEdges = [edge('costado-cadera', 'Costado (tiro a cadera)', 'costura', sa), edge('costado-sup', frontPockets ? 'Costado (cadera a bolsillo)' : 'Costado (cadera a cintura)', 'costura', sa),
       ...(frontPockets ? [edge('boca', 'Boca del bolsillo', 'costura', sa, P(PS.x + pw * K, PS.y), P(PW.x, PW.y + pd * K))] : [])];
     front = outline('delantero', 'Delantero (par en espejo)', [...head, ...frontLeg.nodes, ...tail], [...headEdges, crotchF, ...frontLeg.edges, ...tailEdges], { qty: 2, mirrorPairs: true });
+    for (let i = 0; i < pleatN; i++) {
+      const x0 = (frontPockets ? PW.x + 15 * s : SW.x + 45 * s) + i * (pleat + 20 * s), dl = 70 * s;
+      front.lines.push({ id: `pinza-${i + 1}`, kind: 'doblez', a: P(x0 + pleat, 0), b: P(x0 + pleat, dl), label: `Pinza ${i + 1}: doblar aquí y llevar sobre la línea (${cm(pleat)} hacia el costado)` },
+        { id: `pinza-${i + 1}-destino`, kind: 'referencia', a: P(x0, 0), b: P(x0, dl * .6), label: 'Línea de colocación de la pinza' });
+    }
     front.lines.push({ id: 'fin-cierre', kind: 'referencia', a: P(xCF(fz - 12), fz - 12), b: P(xCF(fz - 12) + ext * hyp, fz - 12), label: 'Tope del cierre' },
       { id: 'pespunte-bragueta', kind: 'pespunte', a: P(xCF(4) - 30 * s, 4), b: P(xCF(fz - 30) - 30 * s, fz - 30), label: 'Pespunte decorativo en J' });
   }
@@ -201,12 +208,17 @@ export function generateJeans(ctx: GeneratorContext, params: Params): GeneratorR
       seams.push(equal('costado', 'Costado: delantero con trasero y canesú', [{ pieceId: 'delantero', edgeIds: SIDE_IDS }], [{ pieceId: 'trasero', edgeIds: SIDE_IDS }, { pieceId: 'canesu', edgeIds: ['costado'] }], 1));
       waistLen = 2 * (len(front, 'cintura') + len(yoke, 'cintura'));
     }
-    const band = rectangle('pretina', 'Pretina doblada', waistLen, 2 * bw, [edge('largo-superior', 'Canto exterior', 'costura', sa), edge('extremo-der', 'Extremo', 'costura', sa), edge('largo-inferior', 'Canto que se une a la cintura', 'costura', sa), edge('extremo-izq', 'Extremo', 'costura', sa)], { fabric: 'principal' }, true);
-    band.lines.push({ id: 'doblez', kind: 'doblez', a: P(0, bw), b: P(waistLen, bw), label: 'Doblar a lo largo (entretela en una mitad)' });
-    band.marks.push({ id: 'ojal', kind: 'ojal', at: P(ext * .5, bw * 1.5), label: 'Ojal (extremo que monta)' }, { id: 'boton', kind: 'boton', at: P(waistLen - ext * 1.5, bw * 1.5), label: 'Botón de jeans' });
-    band.notches.push({ id: 'centro-espalda', edgeId: 'largo-inferior', s: waistLen / 2, count: 2, label: 'Centro trasero' });
+    const bandL = waistLen - 2 * Pl;
+    const band = rectangle('pretina', 'Pretina doblada', bandL, 2 * bw, [edge('largo-superior', 'Canto exterior', 'costura', sa), edge('extremo-der', 'Extremo', 'costura', sa), edge('largo-inferior', 'Canto que se une a la cintura', 'costura', sa), edge('extremo-izq', 'Extremo', 'costura', sa)], { fabric: 'principal' }, true);
+    band.lines.push({ id: 'doblez', kind: 'doblez', a: P(0, bw), b: P(bandL, bw), label: 'Doblar a lo largo (entretela en una mitad)' });
+    band.marks.push({ id: 'ojal', kind: 'ojal', at: P(ext * .5, bw * 1.5), label: 'Ojal (extremo que monta)' }, { id: 'boton', kind: 'boton', at: P(bandL - ext * 1.5, bw * 1.5), label: 'Botón de jeans' });
+    band.notches.push({ id: 'centro-espalda', edgeId: 'largo-inferior', s: bandL / 2, count: 2, label: 'Centro trasero' });
     pieces.push(band);
-    seams.push(equal('pretina', 'Pretina con toda la cintura', [{ pieceId: 'pretina', edgeIds: ['largo-inferior'] }], frontPockets
+    const waistSides = frontPockets
+      ? [{ pieceId: 'delantero', edgeIds: ['cintura'], factor: 2 }, { pieceId: 'vista-bolsillo', edgeIds: ['cintura'], factor: 2 }, { pieceId: 'canesu', edgeIds: ['cintura'], factor: 2 }]
+      : [{ pieceId: 'delantero', edgeIds: ['cintura'], factor: 2 }, { pieceId: 'canesu', edgeIds: ['cintura'], factor: 2 }];
+    if (Pl) seams.push(ratio('pretina', 'Pretina con la cintura (pinzas cerradas)', 'embebido', waistSides, [{ pieceId: 'pretina', edgeIds: ['largo-inferior'] }], waistLen / bandL, .004));
+    else seams.push(equal('pretina', 'Pretina con toda la cintura', [{ pieceId: 'pretina', edgeIds: ['largo-inferior'] }], frontPockets
       ? [{ pieceId: 'delantero', edgeIds: ['cintura'], factor: 2 }, { pieceId: 'vista-bolsillo', edgeIds: ['cintura'], factor: 2 }, { pieceId: 'canesu', edgeIds: ['cintura'], factor: 2 }]
       : [{ pieceId: 'delantero', edgeIds: ['cintura'], factor: 2 }, { pieceId: 'canesu', edgeIds: ['cintura'], factor: 2 }], 1));
     const shield = rectangle('tapeta', 'Tapeta de bragueta (doblada)', 2 * (ext + 5), fz + 10, [edge('a', 'Canto', 'costura', sa), edge('b', 'Extremo', 'costura', sa), edge('c', 'Canto', 'costura', sa), edge('d', 'Extremo', 'costura', sa)]);
@@ -266,9 +278,9 @@ export function generateJeans(ctx: GeneratorContext, params: Params): GeneratorR
   // One leg = front panel + back panel, measured between their seam lines at the knee.
   const kneeInB = back.nodes.find(n => Math.abs(n.y - kneeY) < 1e-6 && n.x > kneeOut.x + 1)!;
   const kneeCirc = (frontLeg.nodes[1].x - kneeOut.x) + (kneeInB.x - kneeOut.x);
-  const closed = elastic ? 0 : waistLen - 2 * ext * hyp;
+  const closed = elastic ? 0 : waistLen - 2 * ext * hyp - 2 * Pl;
   const checks = [
-    { key: 'cadera', label: 'Contorno de cadera terminado', body: H, ease: He - H, target: He, measured: 2 * (xCF(hipY) + xCB(hipY)), tolerance: .5 },
+    { key: 'cadera', label: Pl ? 'Contorno de cadera terminado (con la holgura de las pinzas)' : 'Contorno de cadera terminado', body: H, ease: He - H + 2 * Pl, target: He + 2 * Pl, measured: 2 * (xCF(hipY) + xCB(hipY)), tolerance: .5 },
     ...(elastic ? [] : [{ key: 'cintura', label: 'Contorno de cintura cerrada', body: Wr, ease: Wf - Wr, target: Wf, measured: closed, tolerance: 1 }]),
     { key: 'largo', label: 'Largo exterior desde la cintura del patrón', target: L, measured: hemOut.y, tolerance: .5 },
     { key: 'bajo', label: 'Contorno del bajo', target: Hm, measured: legCirc('bajo'), tolerance: .5 },
@@ -313,6 +325,7 @@ export const jeansGenerator: PatternGenerator = {
   params: [
     { key: 'silueta', label: 'Silueta', group: 'diseno', type: 'choice', choices: (Object.keys(SILHOUETTES) as Silhouette[]).map(value => ({ value, label: SILHOUETTES[value].label })) },
     { key: 'cintura', label: 'Cintura', group: 'diseno', type: 'choice', choices: [{ value: 'pretina', label: 'Pretina con bragueta y botón' }, { value: 'elastica', label: 'Elástica (sin bragueta)' }] },
+    { key: 'pinzas', label: 'Pinzas delanteras', group: 'diseno', type: 'choice', choices: [{ value: 'no', label: 'Sin pinzas' }, { value: 'una', label: 'Una por lado' }, { value: 'dos', label: 'Dos por lado' }], when: p => p.cintura !== 'elastica' },
     { key: 'bolsillos', label: 'Bolsillos', group: 'diseno', type: 'choice', choices: [{ value: 'cinco', label: 'Cinco bolsillos' }, { value: 'cargo', label: 'Cargo con fuelle' }, { value: 'parche', label: 'Solo traseros de parche' }, { value: 'frontales', label: 'Delanteros inclinados y traseros de parche' }, { value: 'ninguno', label: 'Sin bolsillos' }] },
     { key: 'tiro', label: 'Altura de cintura', group: 'diseno', type: 'choice', choices: [{ value: 'alto', label: 'Tiro alto (cintura natural)' }, { value: 'medio', label: 'Tiro medio' }] },
     { key: 'largo', label: 'Largo exterior desde la cintura natural', group: 'diseno', type: 'length', min: 250, max: 1400 },

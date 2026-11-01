@@ -79,6 +79,8 @@ export interface PantsOpts {
   torso?: 'camisa' | 'envolvente' | 'smock';
   torsoSleeve?: 'sin' | 'corta' | 'larga';
   pockets?: 'ninguno' | 'laterales' | 'cargo' | 'parche';
+  /** Gathered ruffle below the hem, with pintucks above it. */
+  ruffle?: boolean;
 }
 
 function pantsGeometry(o: PantsOpts) {
@@ -156,6 +158,15 @@ function pantsView(key: FlatViewKey, o: PantsOpts): FlatView {
           details.push({ d: line([x, L - 54], [x, L - 6]), style: 'pliegue' });
         }
       } else details.push({ d: line([outer + s * -1, L - 25], [inner + s * 1, L - 25]), style: 'pespunte' });
+      if (o.ruffle) {
+        // Flared, wavy ruffle: from the inner hem down, then waves back to the outer edge.
+        const h = 110, fo = outer + s * 28, fi = inner - s * 6, n = 5, step = (fo - fi) / n;
+        let wave = '';
+        for (let k = 0; k < n; k++) { const a = fi + step * k, b = a + step; wave += ` ${Q([a + step / 2, L + h + 14], [b, L + h])}`; }
+        zones.push(zone(s < 0 ? 'volante-a' : 'volante-b', 'Volante del bajo', 'otra', `${M([outer, L])} ${Lp([inner, L])} ${Lp([fi, L + h])}${wave} Z`));
+        for (let k = 0; k < 3; k++) details.push({ d: line([outer + s * -2, L - 40 - k * 16], [inner + s * 2, L - 40 - k * 16]), style: 'pespunte' });
+        for (let k = 0; k < 7; k++) { const x = outer + (inner - outer) * (k + .5) / 7; details.push({ d: line([x, L + 4], [x + s * (k - 3) * 4, L + 60]), style: 'pliegue' }); }
+      }
     }
   }
   if (o.pockets === 'laterales' && !back) {

@@ -6,7 +6,7 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-01 (Claude: diseños infantiles digitalizados desde fotos).
+- Última actualización: 2026-11-01 (Claude: tercer lote de diseños, **a medias**; ver abajo).
 
 ## Cómo continuar en 5 minutos
 
@@ -19,9 +19,103 @@ npm run build
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Tercer lote de diseños (11 fotos) — EN CURSO, sigue aquí
+
+**Este es el relevo más reciente y está a medias.** Claude dejó hecha la parte
+de patrones (generadores y opciones, validados en todas las tallas). Falta
+conectarla al catálogo, hacer las imágenes, las pruebas y la documentación.
+Hasta entonces nada de esto se ve en la app.
+
+Petición de la usuaria: hacer los patrones con cambio de talla lo más precisos
+posible e inspirarse en los dibujos de cada prenda terminada para que las
+imágenes del catálogo se distingan entre sí.
+
+### Hecho (commit «Relevo: patrones del tercer lote…»)
+
+- `src/lib/pattern/generators/pants.ts` (`pantalon-cintura-elastica`), opciones nuevas:
+  `cintura: 'pretina'` (cadera moldeada, pinzas calculadas desde el contorno real,
+  pretina con botón, abertura lateral con vista y tapeta), `amplitudBajo`
+  (factor de ancho del bajo, p. ej. 1,5 para palazzo), `bolsillos: 'costado'`,
+  `cordon: 'si'` (solo adulto; en niños sale un aviso), `volante: 'si'` +
+  `altoVolante` + `fruncidoVolante`, y `alforzas` (0–4, ya compensadas en el largo).
+  Todo está en `applyPantsOptions()`.
+- `jeans.ts` (`pantalon-mezclilla`): `pinzas: 'no' | 'una' | 'dos'` (pinzas
+  delanteras; la pretina queda embebida y la cadera lo compensa).
+- `oversize.ts`: `cuelloTipo: 'tira'` (cuello de tira sin pala) y
+  `bolsillos: 'grandes'` (bolsillos de parche grandes con cartera) para la sobrecamisa.
+- `kidsBlocks.ts`: el punto medio de la sisa deja 3 cm × escala bajo la axila
+  cuando el hombro va caído (antes se cruzaba el corte).
+- `adultBatch.ts` (registrado en `index.ts`): 3 generadores nuevos, sin tallas de bebé:
+  `sudadera-media-cremallera` (con o sin `bloques` de color), `chaqueta-ranglan`
+  (manga ranglán de dos piezas resuelta para que todas las costuras midan igual,
+  cuello alto, banda, puños, bolsillos de vivo) y `buzo-murcielago` (manga
+  murciélago con paneles, capucha, banda, puños; cordón solo en adulto).
+- Dibujos por piezas en `src/data/kidsFlats.ts` (BUILDERS
+  `sudadera-bloques`, `sudadera-media-cremallera`, `chaqueta-ranglan`,
+  `buzo-murcielago`) y `ruffle` en el pantalón genérico de `src/data/flats.ts`.
+  **Aún ninguna tarjeta los usa.**
+- `scripts/sweep-generators.ts`: barrido de todas las tallas y variantes
+  (`npx vite-node scripts/sweep-generators.ts chaqueta-ranglan ...`). Los
+  4 generadores tocados dan 762 casos sin fallas.
+- `npm test` (3031) y `npm run build` pasan.
+
+### Qué hacer con cada foto (falta crear las tarjetas)
+
+| # | Foto | Tarjeta propuesta |
+| --- | --- | --- |
+| 1 | Pantalón barrel con cintura elástica y rayas | `barrel-elastico`, grupo `pantalon-barrel` (`pantalon-mezclilla`, `silueta: barrel`, `cintura: elastica`, `bolsillos: frontales`) |
+| 2 | Palazzo con pretina y botones laterales | Convertir la tarjeta de inspiración `pantalon-palazzo` en patrón: `generatorId: 'pantalon-cintura-elastica'`, `params: { estilo: 'ancho', cintura: 'pretina', amplitudBajo: 1.5, bolsillos: 'costado' }` |
+| 3 | Palazzo ancho con cordón y rayas | `palazzo-elastico`, grupo `pantalon-palazzo` (`estilo: ancho`, `amplitudBajo: 1.4`, `cordon: si`, `bolsillos: costado`) |
+| 4 | Pantalón con volante en el bajo y alforzas | `pantalon-volante`, grupo nuevo (`estilo: ancho`, `volante: si`, `alforzas: 3`; dibujo genérico con `ruffle: true`) |
+| 5 | Pantalón ancho oversize con pinzas | Convertir `pantalon-pinzas`: `generatorId: 'pantalon-mezclilla'`, `params: { silueta: 'ancho', cintura: 'pretina', bolsillos: 'cinco', tiro: 'alto', pinzas: 'dos' }` |
+| 6–7 | Jeans anchos crema y ciruela | Ya existe `jeans-ancho`; no crear tarjeta nueva |
+| 8 | Chaqueta ranglán con cuello alto | `chaqueta-ranglan`, grupo nuevo (dibujo `chaqueta-ranglan`) |
+| 9 | Sobrecamisa oversize con cuello de tira y bolsillos grandes | `sobrecamisa-cuello-tira`, grupo `tipo-sobrecamisa` (`oversize-hombro-caido`, `prenda: sobrecamisa`, `cuelloTipo: tira`, `bolsillos: grandes`) |
+| 10 | Sudadera de media cremallera en bloques de color | `sudadera-bloques` (`bloques: si`) y `sudadera-media-cremallera-lisa` (`bloques: no`), grupo `sudadera-media-cremallera` |
+| 11 | Buzo corto murciélago con capucha y paneles | `buzo-murcielago`, familia hoodie |
+
+Todas con colección `Tendencias`, destinatarios adultos (y niños donde el
+generador lo permite) y estado **experimental**. No usar marcas ni copiar las
+medidas de las fotos.
+
+### Pasos que faltan, en orden
+
+1. **Tarjetas**: crear `src/data/digitizedAdultCatalog.ts` (copiar la forma de
+   `digitizedKidsCatalog.ts`) y unirlo en `src/data/catalog.ts`; convertir
+   `pantalon-palazzo` y `pantalon-pinzas`.
+2. **Taxonomía** (`src/data/catalogTaxonomy.ts`): añadir a `DESIGNS`
+   `pantalon-volante` (pantalón), `chaqueta-ranglan` (chaqueta),
+   `sudadera-media-cremallera` (sudadera) y `buzo-murcielago` (hoodie); y
+   `constructionFacets` para los generadores nuevos y para las opciones de
+   pantalón (pinzas, botones, frunces). Cada tarjeta necesita `designGroup`,
+   entrada en `DESIGNS` y celda de imagen; las pruebas lo exigen.
+3. **Imágenes** (`scripts/render-kids-sheets.ts`): añadir rellenos de rayas y
+   vichy (un `<pattern>` SVG por celda, `userSpaceOnUse`) y bloques de color;
+   crear láminas `mujer-01` y `mujer-02`; registrarlas en `CATALOG_IMAGE_SHEETS`
+   (clave = id del grupo), `VARIANT_IMAGES` y `DRAWN_SHEETS`
+   (`src/data/catalogImages.ts`). Volver a generar con rayas o vichy las celdas
+   anteriores que las tenían en la foto: blusa campesina, blusa con botones,
+   bombacho, conjuntos campesino, rayas, trapecio y vichy, y mono pico.
+4. **Pruebas**: subir los conteos fijos (catalog-taxonomy, catalog-groups,
+   kids-collection, catalog-images, búsqueda «hoodie») y añadir pruebas de las
+   opciones nuevas (pretina, volante, alforzas, pinzas, cuello de tira) y de los
+   3 generadores (todas las tallas, costuras iguales en la ranglán, paso de
+   cabeza en el buzo y en la media cremallera).
+5. **Docs**: sección «Tercer lote» en `docs/DISENOS_DIGITALIZADOS.md` (tabla
+   imagen por imagen y medidas incoherentes), este archivo e
+   `docs/IMAGENES_CATALOGO_IA.md`.
+6. Revisar en tamaño iPhone (chip Tendencias, tarjetas nuevas, un PDF),
+   `npm test`, `npm run build`, commit en español y push a `main`.
+
+Reglas para no romper nada:
+
+- Nunca añadas `KIDS_SURFACE_PIECES` a un generador que también usa dibujos
+  genéricos (como el pantalón); para piezas de conjuntos usa `PART_BINDINGS`.
+- En el JSON de configuración del renderizador escribe `0.8`, no `.8`.
+
 ## Segundo lote de diseños digitalizados (2026-11-01)
 
-**Este es el relevo más reciente.** Ocho fotos más; detalle en
+Relevo anterior (terminado). Ocho fotos más; detalle en
 `docs/DISENOS_DIGITALIZADOS.md` («Segundo lote»).
 
 - 4 generadores nuevos (`kidsBatch2.ts`): bonete de tres piezas con volante

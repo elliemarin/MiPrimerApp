@@ -67,7 +67,8 @@ export interface BodiceFinish {
 export function bodicePiece(id: string, name: string, g: BodiceGeo, back: boolean, f: BodiceFinish, cut: { qty?: number; mirrorPairs?: boolean; fabric?: FabricRole } = {}): Piece {
   const x0 = back ? -(g.bext ?? 0) : -g.ext, depth = back ? g.bd : g.fd;
   const CN = P(x0, depth), NP = P(g.nw, 0), SP = P(g.sh, g.sy);
-  const M = P(Math.min(g.sh - (back ? 3 : 7) * g.s, g.q - 8 * g.s), g.sy + .55 * (g.ad - g.sy)), UA = P(g.q, g.ad);
+  // With a dropped shoulder the armhole midpoint keeps 3 cm (× size) from the underarm, or the curve folds its allowance.
+  const M = P(Math.min(g.sh - (back ? 3 : 7) * g.s, g.q - 30 * g.s), g.sy + .55 * (g.ad - g.sy)), UA = P(g.q, g.ad);
   // A flared hem rises at the side so it meets the side seam square (as in the trapeze dress).
   const flared = g.flare > 8 * g.s, ySide = flared ? g.L - (g.q + g.flare) * (g.flare / Math.max(1, g.L - g.ad)) * .5 : g.L;
   const HS = P(g.q + g.flare, ySide), HC = P(x0, g.L);
