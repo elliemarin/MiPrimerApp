@@ -4,6 +4,7 @@
 import { presetLines } from './panelPresets';
 import { babyBodysuitFlat } from './babyBodysuitFlat';
 import { buildCostumeFlat } from './costumeFlats';
+import { buildKidsFlat } from './kidsFlats';
 import { parseSvgPath } from '../lib/draw/svgpath';
 import { cmdsToPolylines } from '../lib/draw/flatten';
 import { bboxOf } from '../lib/geom/vec';
@@ -774,10 +775,13 @@ export interface FlatSpec {
   set?: boolean;
   /** Physical costume assembly with explicit piece bindings. */
   costume?: string;
+  /** Girls' and baby designs drawn from their real pieces (kidsFlats.ts). */
+  kids?: string;
 }
 
 export function buildFlat(id: string, spec: FlatSpec): FlatDef {
   if (spec.costume) return buildCostumeFlat(id, spec.costume);
+  if (spec.kids) return buildKidsFlat(id, spec.kids);
   const views: FlatView[] = [];
   const keys: FlatViewKey[] = ['frente', 'espalda'];
   if (spec.pinafore) return {id,views:keys.map(k=>pinaforeView(k,spec.pinafore!))};

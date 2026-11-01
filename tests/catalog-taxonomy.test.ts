@@ -10,9 +10,9 @@ const patternSearch = (q: string) => CATALOG.filter(model => matches(model, { ..
 
 describe('Auditoría completa de identidad y destinatario del catálogo', () => {
   it('clasifica cada receta e inspiración mediante una asignación explícita de su diseño', () => {
-    expect(CATALOG).toHaveLength(1923);
+    expect(CATALOG).toHaveLength(1936);
     expect(new Set(CATALOG.map(model => model.id)).size).toBe(CATALOG.length);
-    expect(CATALOG.filter(modelHasPattern)).toHaveLength(1846);
+    expect(CATALOG.filter(modelHasPattern)).toHaveLength(1860);
     const designIds = new Set(CATALOG.map(model => model.designGroup?.id ?? model.id));
     expect(Object.keys(FAMILY_BY_DESIGN).sort()).toEqual([...designIds].sort());
     for (const model of CATALOG) {
@@ -52,7 +52,9 @@ describe('Auditoría completa de identidad y destinatario del catálogo', () => 
     [['tapete', 'tapetes'], ['tipo-textil-maquina', 'tipo-textil-bandeja', 'tipo-textil-taza', 'tipo-textil-plato', 'tipo-textil-raton'], 6],
     [['portacubiertos'], ['portacubiertos-enrollable'], 1],
     [['almohada', 'almohadas', 'pillows'], ['tipo-cojin'], 16],
-    [['gorro', 'gorros', 'beanies'], ['gorro'], 1],
+    [['gorro', 'gorros'], ['gorro', 'tipo-bonete'], 2],
+    [['beanie', 'beanies'], ['gorro'], 1],
+    [['bonete', 'capota'], ['tipo-bonete'], 1],
     [['sombrero', 'sombreros', 'hats'], ['sombrero-pescador', 'tipo-disfraz-sombrero'], 4],
     [['marcapáginas', 'bookmark'], ['tipo-textil-marcapaginas'], 2]
   ] as [string[], string[], number][])('los subtipos %s no devuelven otros objetos de su familia', (queries, ids, recipes) => {
@@ -117,11 +119,12 @@ describe('Auditoría completa de identidad y destinatario del catálogo', () => 
     expect(search('capa con capucha').map(model => model.id)).toEqual(['capa-capucha']);
   });
 
-  it('recupera bebé por edad explícita y conserva siete diseños nativos sin presets adultos', () => {
-    const expectedIds = ['pantalon-recto-elastico', 'jogger', 'pantalon-bebe-panal', 'short-elastico', 'pantalon-pijama', 'babero', 'gorro', 'body-bebe', 'body-bebe-manga-larga'];
+  it('recupera bebé por edad explícita y ofrece quince diseños nativos sin presets adultos', () => {
+    const expectedIds = ['pantalon-recto-elastico', 'jogger', 'pantalon-bebe-panal', 'short-elastico', 'pantalon-pijama', 'babero', 'gorro', 'body-bebe', 'body-bebe-manga-larga',
+      'vestido-trapecio', 'vestido-trapecio-volantes', 'falda-tul', 'cubrepanal-bebe', 'cubrepanal-olanes', 'bonete-bebe', 'patucos-bebe', 'saco-dormir-bebe', 'toalla-capucha', 'babero-bandana'];
     const baby = CATALOG.filter(model => matches(model, { ...onlyPatterns, recipient: 'bebe' }));
     expect(baby.map(model => model.id).sort()).toEqual(expectedIds.sort());
-    expect(groupCatalog(baby)).toHaveLength(7);
+    expect(groupCatalog(baby)).toHaveLength(15);
     expect(patternSearch('bebé').map(model => model.id)).toEqual(baby.map(model => model.id));
     expect(search('baby').map(model => model.id)).toContain('body-bebe');
     expect(search('baby').map(model => model.id)).toContain('mameluco');
@@ -188,7 +191,7 @@ describe('Auditoría completa de identidad y destinatario del catálogo', () => 
     expect(groupCatalog(patternSearch('funda laptop'))).toHaveLength(1);
     expect(patternSearch('funda laptop').every(model => model.designGroup?.id === 'tipo-funda-portatil')).toBe(true);
     expect(patternSearch('funda libro').every(model => model.designGroup?.id === 'tipo-funda-libro')).toBe(true);
-    expect(CATALOG.filter(model => matches(model, { ...onlyPatterns, type: 'accesorios', recipient: 'bebe' })).map(model => model.id).sort()).toEqual(['babero', 'gorro']);
+    expect(CATALOG.filter(model => matches(model, { ...onlyPatterns, type: 'accesorios', recipient: 'bebe' })).map(model => model.id).sort()).toEqual(['babero', 'babero-bandana', 'bonete-bebe', 'gorro']);
   });
 
   it('filtra técnicas y nivel por la construcción actual, sin etiquetas de adornos futuros', () => {

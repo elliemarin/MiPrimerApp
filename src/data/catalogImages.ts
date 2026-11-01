@@ -18,6 +18,9 @@ export const CATALOG_IMAGE_SHEETS: Record<string, readonly string[]> = {
   'disfraces-03': ['disfraz-cola-ballena','disfraz-cola-gato','disfraz-cola-dragon','disfraz-orejas-conejo','disfraz-orejas-oso','disfraz-astas-ciervo','disfraz-cuerno-unicornio','disfraz-antenas-insecto','disfraz-cuello-arlequin'],
   'disfraces-04': ['disfraz-cuello-petalos','disfraz-gorguera','disfraz-cuello-vampiro','disfraz-punos-arlequin','disfraz-punos-dragon','disfraz-polainas-explorador','disfraz-peto-caballero','disfraz-peto-astronauta','disfraz-cinturon-pirata'],
   'disfraces-05': ['disfraz-kit-hada','disfraz-kit-dragon','disfraz-kit-conejo','disfraz-kit-insecto'],
+  // Vector renders of the real technical drawings (scripts/render-kids-sheets.ts).
+  'ninas-01': ['tipo-vestido-trapecio','tipo-vestido-tirantes','tipo-falda-tul','tipo-falda-olanes','tipo-falda-circular'],
+  'bebe-02': ['tipo-cubrepanal','tipo-bonete','tipo-patucos','tipo-saco-dormir','tipo-toalla-capucha','tipo-babero-bandana'],
 };
 
 export const CATALOG_IMAGES: Readonly<Record<string, CatalogImageSource>> = Object.fromEntries(
@@ -73,11 +76,25 @@ const BABY_IMAGES: Record<string, CatalogImageSource> = {
   'pantalon-pijama': { sheet: 'especiales-01', cell: 8 },
 };
 
+/** Extra cells after a sheet's group list show the exact variant recipe. */
+const VARIANT_IMAGES: Record<string, CatalogImageSource> = {
+  'vestido-trapecio': { sheet: 'ninas-01', cell: 5 },
+  'falda-medio-circulo': { sheet: 'ninas-01', cell: 6 },
+  'cubrepanal-bebe': { sheet: 'bebe-02', cell: 6 }
+};
+
 export function catalogImageFor(model: CatalogModel, recipient?: Recipient): CatalogImageSource | undefined {
+  if (VARIANT_IMAGES[model.id]) return VARIANT_IMAGES[model.id];
   const id = model.designGroup?.id ?? model.id;
   if (id === 'body-bebe' && model.params?.tipoManga === 'larga') return { sheet: 'especiales-01', cell: 7 };
   if ((recipient === 'bebe' || model.recipients.every(value => value === 'bebe' || value === 'toddler')) && BABY_IMAGES[id]) return BABY_IMAGES[id];
   return CATALOG_IMAGES[id];
+}
+
+/** Sheets drawn as vectors from the real technical drawing, not AI images. */
+const DRAWN_SHEETS = new Set(['ninas-01', 'bebe-02']);
+export function catalogImageCaption(source: CatalogImageSource): string {
+  return DRAWN_SHEETS.has(source.sheet) ? 'Ilustración dibujada a partir del patrón real.' : 'Ilustración generada con IA.';
 }
 
 export function catalogImageUrl(source: CatalogImageSource): string {

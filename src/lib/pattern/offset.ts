@@ -35,8 +35,10 @@ function setEnd(poly: Pt[], X: Pt): Pt[] {
   const prev = res[res.length - 2];
   const t = norm(sub(last, prev));
   if (dot(sub(X, last), t) >= 0) {
-    // X está sobre la prolongación del último tramo: basta con moverlo.
-    res[res.length - 1] = X;
+    // X está sobre la prolongación: se añade conservando el extremo original.
+    // En un borde sin margen ese extremo es la esquina de costura; moverlo
+    // sobre la tangente exacta lo dejaría fuera de la cuerda aplanada.
+    if (dist(X, last) > 1e-9) res.push(X);
     return res;
   }
   // X está antes: retroceder segmentos hasta encontrarlo.

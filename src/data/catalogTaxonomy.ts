@@ -11,7 +11,8 @@ export const FAMILY_LABEL = {
   camiseta: 'Camisetas', camisa: 'Camisas', top: 'Blusas, tops y túnicas', sueter: 'Suéteres',
   pantalon: 'Pantalones', jogger: 'Joggers', short: 'Shorts', falda: 'Faldas',
   vestido: 'Vestidos', peto: 'Petos y jumpers', mono: 'Monos y enterizos', pijama: 'Pijamas',
-  body: 'Pañaleros / bodies', mameluco: 'Mamelucos', babero: 'Baberos', gorro: 'Gorros de punto',
+  body: 'Pañaleros / bodies', mameluco: 'Mamelucos', babero: 'Baberos', gorro: 'Gorros y bonetes',
+  cubrepanal: 'Cubrepañales y bombachos', patucos: 'Patucos de bebé', 'saco-dormir': 'Sacos de dormir', toalla: 'Toallas con capucha',
   tote: 'Bolsas tote', 'bolsa-jareta': 'Bolsas con jareta', estuche: 'Estuches y neceseres', bandolera: 'Bandoleras',
   'funda-tecnologia': 'Fundas para tecnología', 'funda-lectura': 'Fundas para libros y documentos',
   'funda-costura': 'Fundas para costura', 'funda-lentes': 'Fundas para lentes',
@@ -44,10 +45,11 @@ const DESIGNS: Partial<Record<CatalogFamily, readonly string[]>> = {
   sueter: ['sueter-oversize', 'sueter-tortuga', 'sueter-corto'],
   pantalon: ['tipo-pantalon-recto', 'tipo-pantalon-amplio', 'pantalon-baggy', 'pantalon-barrel', 'pantalon-cargo', 'pantalon-palazzo', 'pantalon-pinzas', 'pantalon-pitillo', 'pantalon-acampanado'],
   jogger: ['tipo-jogger'], short: ['short-elastico'], pijama: ['pantalon-pijama', 'pijama-camisa'],
-  falda: ['tipo-falda-fruncida', 'falda-recta', 'falda-a', 'falda-circular', 'falda-tableada'],
-  vestido: ['vestido-camisero'], peto: ['overol', 'tipo-jumper-falda', 'peto-bermuda', 'peto-palazzo'],
+  falda: ['tipo-falda-fruncida', 'falda-recta', 'falda-a', 'tipo-falda-circular', 'falda-tableada', 'tipo-falda-tul', 'tipo-falda-olanes'],
+  vestido: ['vestido-camisero', 'tipo-vestido-trapecio', 'tipo-vestido-tirantes'], peto: ['overol', 'tipo-jumper-falda', 'peto-bermuda', 'peto-palazzo'],
   mono: ['mono-camisero', 'mono-mecanico', 'mono-palazzo', 'mono-cruzado', 'playsuit-camisero', 'mono-baggy'],
-  body: ['body-bebe'], mameluco: ['mameluco'], babero: ['babero'], gorro: ['gorro'],
+  body: ['body-bebe'], mameluco: ['mameluco'], babero: ['babero', 'tipo-babero-bandana'], gorro: ['gorro', 'tipo-bonete'],
+  cubrepanal: ['tipo-cubrepanal'], patucos: ['tipo-patucos'], 'saco-dormir': ['tipo-saco-dormir'], toalla: ['tipo-toalla-capucha'],
   tote: ['tipo-bolsa-tote'], 'bolsa-jareta': ['tipo-bolsa-jareta'], estuche: ['neceser', 'tipo-estuche-cierre'], bandolera: ['bandolera'],
   'funda-tecnologia': ['tipo-funda-portatil', 'tipo-funda-tableta', 'tipo-funda-telefono', 'tipo-funda-lector', 'tipo-funda-consola', 'tipo-funda-cables'],
   'funda-lectura': ['tipo-funda-libro', 'tipo-funda-cuaderno', 'tipo-funda-tarjetas', 'tipo-funda-pasaporte'],
@@ -82,7 +84,8 @@ export function modelSupportsRecipient(model: CatalogModel, recipient: Recipient
 
 const FAMILY_TYPE: Partial<Record<CatalogFamily, GarmentType>> = {
   tote: 'bolsos', 'bolsa-jareta': 'bolsos', estuche: 'bolsos', bandolera: 'bolsos',
-  peto: 'monos', mono: 'monos', jogger: 'inferiores', babero: 'accesorios', gorro: 'accesorios'
+  peto: 'monos', mono: 'monos', jogger: 'inferiores', babero: 'accesorios', gorro: 'accesorios',
+  cubrepanal: 'bebe', patucos: 'bebe', 'saco-dormir': 'bebe', toalla: 'bebe'
 };
 /** Individual inconsistencies found while reviewing all legacy records. */
 const REVIEW_FIXES: Record<string, Partial<CatalogModel>> = {
@@ -134,6 +137,17 @@ function constructionFacets(model: CatalogModel): Pick<CatalogModel, 'difficulty
     case 'corona-textil': difficulty = 2; techniques = ['costura-recta', 'forro']; break;
     case 'sombrero-mago': difficulty = 3; techniques = ['costura-recta', 'forro']; break;
     case 'orejas-diadema': techniques = ['costura-recta']; break;
+    case 'vestido-trapecio-infantil': difficulty = 2; techniques = ['costura-recta', 'dobladillo', 'botones']; break;
+    case 'vestido-tirantes-fruncido': difficulty = 2; techniques = ['costura-recta', 'forro', 'frunces', 'botones', 'dobladillo']; break;
+    case 'falda-tul-elastica': techniques = ['costura-recta', 'frunces', 'jareta']; break;
+    case 'falda-olanes-escalonada': difficulty = 2; techniques = ['costura-recta', 'frunces', 'jareta', 'dobladillo']; break;
+    case 'falda-circular-elastica': difficulty = 2; techniques = ['costura-recta', 'jareta', 'dobladillo']; break;
+    case 'cubrepanal-bebe': difficulty = 2; techniques = ['costura-recta', 'jareta', ...(p.olanes === 'si' ? ['frunces' as const] : [])]; break;
+    case 'bonete-bebe': difficulty = 2; techniques = ['costura-recta', 'forro']; break;
+    case 'patucos-bebe': difficulty = 2; techniques = ['costura-recta', 'forro', 'jareta']; break;
+    case 'saco-dormir-bebe': difficulty = 3; techniques = ['costura-recta', 'forro', 'cierre']; break;
+    case 'toalla-capucha': techniques = ['costura-recta']; break;
+    case 'babero-bandana': techniques = ['costura-recta', 'forro']; break;
     default: return { difficulty: model.difficulty, techniques: model.techniques };
   }
   return { difficulty, techniques };

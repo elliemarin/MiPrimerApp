@@ -30,11 +30,12 @@ const hoodieId=()=>CATALOG.find(model=>model.generatorId==='sudadera-capucha-hol
 describe('prenda armada con coordenadas físicas reversibles',()=>{
   it('cubre cada diseño editable previo y pañalero, sin transformaciones inválidas ni piezas ajenas',()=>{
     const groups=groupCatalog(CATALOG.filter(model=>modelHasPattern(model)&&!model.generatorId?.startsWith('cosplay-')));
-    const babyTable=SIZE_TABLES.find(table=>table.id==='ref-bebe-meses')!;
+    const babyTable=SIZE_TABLES.find(table=>table.id==='ref-bebe-meses')!,kidTable=SIZE_TABLES.find(table=>table.id==='ref-infantil-estatura')!;
     const fallback:string[]=[],missingPrimary:string[]=[];
     expect(groups.length).toBeGreaterThanOrEqual(70);
     for(const group of groups) {
-      const model=group.representative,profile=model.recipients.includes('bebe')&&!model.recipients.includes('mujer')?profileFromSize(babyTable,babyTable.rows[0]):profileFromSize(size.table,size.row);
+      const model=group.representative,childOnly=!model.recipients.some(recipient=>['mujer','hombre','unisex'].includes(recipient));
+      const profile=model.recipients.includes('bebe')&&!model.recipients.includes('mujer')?profileFromSize(babyTable,babyTable.rows[0]):childOnly?profileFromSize(kidTable,kidTable.rows.find(row=>row.code==='E116')!):profileFromSize(size.table,size.row);
       const project=prepareSimpleProject(projectFromModel(model,profile)),scenes=buildAssembly(project);
       expect(scenes.length,model.id).toBeGreaterThan(0);
       if(scenes[0].label==='Diseño') fallback.push(group.id);

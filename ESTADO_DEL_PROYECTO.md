@@ -6,22 +6,58 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-10-31 (Codex, sobre el relevo de Claude).
+- Última actualización: 2026-11-01 (Claude: colección Niña y ampliación de Bebé).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 2899 pruebas: catálogo, patrones, persistencia, PDF, logos y arrastre
+npm test            # 2924 pruebas: catálogo, patrones, persistencia, PDF, logos y arrastre
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Colección Niña y ampliación de Bebé (2026-11-01)
+
+**Este es el relevo más reciente.** Detalle completo en
+`docs/NINA_Y_BEBE_AMPLIADO.md`.
+
+- **11 generadores nuevos, todos `experimental`**, con piezas, márgenes una sola
+  vez, relaciones de costura, comprobaciones, materiales y pasos:
+  vestido trapecio (sin mangas o con volantes de mariposa), vestido de tirantes
+  con falda fruncida, falda de tul, falda de tres olanes, falda circular
+  (completa o medio círculo; la inspiración `falda-circular` ahora genera patrón
+  sin cambiar su id), cubrepañal (liso o con olanes), bonete con lengüeta,
+  patucos, saco de dormir, toalla con capucha y babero bandana.
+- **Biblioteca:** filtro Bebé de 7 a 15 diseños; nuevo acceso **Niña** junto a
+  Bebé (colección `Niña` + vestidos, faldas y petos infantiles existentes).
+  Familias nuevas: cubrepañales, patucos, sacos de dormir, toallas; «Gorros y
+  bonetes». Buscar «gorro» incluye el bonete; «beanie» solo el gorro de punto.
+- **Dibujos técnicos desde las piezas reales** (`src/data/kidsFlats.ts`) con
+  enlaces explícitos zona → pieza; las piezas al doblez se despliegan en dos
+  mitades en la vista armada. El figurín funciona para vestidos y faldas.
+- **Imágenes:** láminas `ninas-01` y `bebe-02` dibujadas como vectores desde el
+  dibujo técnico (no son IA; la ficha lo indica). Se regeneran con
+  `npx vite-node scripts/render-kids-sheets.ts`.
+- **Seguridad infantil codificada:** el vestido comprueba que pase la cabeza;
+  el saco de dormir exige escote < cabeza − 4 cm y sisas < cabeza − 6 cm; sin
+  cintas para atar en bonete, babero ni tirantes.
+- **Motor:** `offset.ts/setEnd` conserva la esquina de costura al prolongar un
+  margen (corregía un corte fuera de línea en hombros de recién nacido).
+
+Validación: **2,924 pruebas en 67 archivos**, TypeScript y compilación correctos.
+Recorrido en iPhone 13 (Playwright): chip Niña, ficha, figurín, «Obtener patrón»
+y PDF del vestido trapecio con volantes (21 hojas carta, 6 plantillas), sin
+errores de consola.
+
+**Pendiente:** imprimir y coser muestras de cada diseño antes de quitar
+«experimental»; probar el saco con bebé real y tabla de grosor.
+
 ## Logos en Bordados y control de mover (2026-10-31)
 
-**Este es el relevo más reciente.** El recorrido Base → Extras → Telas y colores →
+Relevo anterior. El recorrido Base → Extras → Telas y colores →
 Bordados → PDF se conserva. Esta entrega atiende subir un logo y mover objetos
 pequeños sin tener que acertar a una línea de la letra.
 
@@ -880,8 +916,9 @@ el intento inicial; esta bitácora del repositorio es el estado más reciente.
 
 1. **Probar la sincronización con una cuenta real de GitHub** (repo privado y
    token de grano fino). Quitar «Experimental» solo después.
-2. **Imprimir y coser muestras** del babero y el gorro; si están bien, pasarlos
-   a `implementado` en `src/data/catalog.ts`.
+2. **Imprimir y coser muestras** del babero y el gorro, y de la colección Niña
+   y Bebé ampliada (`docs/NINA_Y_BEBE_AMPLIADO.md`); si están bien, pasarlos a
+   `implementado`.
 3. **Más patrones** siguiendo `AGENTS.md §5`: bloque de torso y manga para
    camiseta, sudadera y body de bebé. Cada uno entra como `experimental`.
 4. **Ampliar complementos**: ya hay módulo reutilizable de bolsillos aplicados,

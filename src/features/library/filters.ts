@@ -91,7 +91,9 @@ const subtypeAliases: [string[], ItemIdentity][] = [
   [['protector', 'protectores'], m => is(m, 'tapete') && named(m, /\bprotector\b/)],
   [['tapete', 'tapetes'], m => is(m, 'tapete') && named(m, /\btapete\b/)],
   [['portacubiertos'], m => m.id === 'portacubiertos-enrollable'],
-  [['almohada', 'almohadas', 'pillow', 'pillows'], m => is(m, 'cojin') && named(m, /\balmohada\b/)]
+  [['almohada', 'almohadas', 'pillow', 'pillows'], m => is(m, 'cojin') && named(m, /\balmohada\b/)],
+  [['beanie', 'beanies'], m => m.generatorId === 'gorro'],
+  [['bonete', 'bonetes', 'capota', 'capotas'], m => m.designGroup?.id === 'tipo-bonete']
 ];
 const subtypeIdentity = Object.fromEntries(subtypeAliases.flatMap(([aliases, match]) => aliases.map(alias => [alias, match]))) as Record<string, ItemIdentity>;
 function searchMatches(m: CatalogModel, raw: string): boolean {

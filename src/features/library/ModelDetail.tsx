@@ -3,7 +3,7 @@ import { findModel, RECIPIENT_LABEL, type CatalogModel, type Recipient } from '.
 import { Button, Empty, Notice } from '../../ui/components';
 import { FlatArt, getFlat } from '../../ui/FlatArt';
 import { CatalogImage } from '../../ui/CatalogImage';
-import { catalogImageFor } from '../../data/catalogImages';
+import { catalogImageCaption, catalogImageFor } from '../../data/catalogImages';
 import { goBack, queryParam } from '../../ui/router';
 import { SIZE_TABLES, rowsForKinds, type SizeTable } from '../../lib/sizes/tables';
 import { getGenerator } from '../../lib/pattern/generators';
@@ -46,7 +46,7 @@ export function ModelDetail({ id }: { id: string }) {
         <div className={`simple-model-art${presentation==='figurin'?' is-figurine':''}`}>{presentation==='figurin'?<ModelIllustration model={model} view={view}/>:view==='frente'?<CatalogImage model={model} title={group?.name ?? model.name} recipient={recipient} eager/>:<FlatArt id={model.id} spec={model.flat} view={view} title={model.name} catalog/>}</div>
         {visibleViews.length>1&&<div className="scroll-x" style={{marginTop:12}} role="group" aria-label="Vista de la base">{visibleViews.map(item=><button className="filter-chip" key={item.key} aria-pressed={view===item.key} onClick={()=>setView(item.key)}>{({frente:'Frente',espalda:'Espalda','costado-izq':'Costado izquierdo','costado-der':'Costado derecho'} as Record<string,string>)[item.key]??item.key}</button>)}</div>}
         {presentation==='figurin'&&<p className="tiny muted model-illustration-note">Ilustración de la silueta. El ajuste se comprueba con las medidas del patrón.</p>}
-        {presentation==='prenda'&&view==='frente'&&catalogImageFor(model,recipient)&&<p className="tiny muted model-illustration-note">Ilustración generada con IA. Tú eliges las telas, colores y acabados.</p>}
+        {presentation==='prenda'&&view==='frente'&&catalogImageFor(model,recipient)&&<p className="tiny muted model-illustration-note">{catalogImageCaption(catalogImageFor(model,recipient)!)} Tú eliges las telas, colores y acabados.</p>}
         {presentation==='prenda'&&catalogSubject(model.id,model.flat)&&<p className="tiny muted model-illustration-note">Ejemplo de uso. El patrón incluye el textil; los objetos son de referencia.</p>}
       </div>
       <div className="simple-model-copy stack-lg">

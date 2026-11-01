@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CATALOG, RECIPIENT_LABEL, TECHNIQUE_LABEL, TYPE_LABEL, type GarmentType, type Recipient, type Technique } from '../../data/catalog';
+import { CATALOG, RECIPIENT_LABEL, TECHNIQUE_LABEL, TYPE_LABEL, type CatalogModel, type GarmentType, type Recipient, type Technique } from '../../data/catalog';
 import { catalogFamilyOptions, FAMILY_LABEL, familyOf, type CatalogFamily } from '../../data/catalogTaxonomy';
 import { Button, Empty, Field, Select, Sheet } from '../../ui/components';
 import { Icon } from '../../ui/Icon';
@@ -8,6 +8,7 @@ import { SIZE_TABLES } from '../../lib/sizes/tables';
 import { INITIAL_FILTERS, matches, modelHasPattern, sanitizeFilters, type Filters } from './filters';
 import { groupCatalog } from './groups';
 import { FreePatternsPanel } from './FreePatternsPanel';
+import { GIRL_FAMILIES } from '../../data/kidsCatalog';
 import './library.css';
 import './simpleLibrary.css';
 export { matches } from './filters';
@@ -22,6 +23,14 @@ const quickTypes: [GarmentType, string][] = [
   ['superiores', 'Tops'], ['abrigo', 'Abrigo'], ['inferiores', 'Pantalones'],
   ['faldas-vestidos', 'Faldas y vestidos'], ['monos', 'Petos'], ['bolsos', 'Bolsos'], ['accesorios', 'Accesorios'],
 ];
+const GIRLS = 'Niña';
+/** The girls' shortcut joins the new collection with kid-sized dresses, skirts
+ * and pinafores already in the catalogue; costumes keep their own shortcut. */
+function inCollection(model: CatalogModel, collection: string): boolean {
+  if (collection === 'todas') return true;
+  if (collection === GIRLS) return model.collection === GIRLS || (GIRL_FAMILIES as readonly string[]).includes(familyOf(model)) && model.collection !== 'Disfraces';
+  return (model.collection ?? model.sub) === collection;
+}
 function saved(key: string, fallback: string) { try { return sessionStorage.getItem(key) ?? fallback; } catch { return fallback; } }
 function initial(): Filters {
   try { return { ...sanitizeFilters(JSON.parse(saved('hilvana-simple-search', '{}'))), availability: 'patron' }; }
@@ -57,7 +66,7 @@ export function LibraryPage() {
     return values;
   }, [all, filters, collection]);
   const list = useMemo(() => {
-    const found = groupCatalog(all.filter(model => matches(model, filters) && (collection === 'todas' || (model.collection ?? model.sub) === collection)));
+    const found = groupCatalog(all.filter(model => matches(model, filters) && inCollection(model, collection)));
     if (filters.q || filters.type !== 'todos' || filters.family !== 'todas' || collection !== 'todas') return found;
     const seen = new Set<string>();
     const featured = found.filter(group => {
@@ -96,6 +105,7 @@ export function LibraryPage() {
   };
   const reset = () => { setFilters(start); setCollection('todas'); };
   const chooseBaby = () => { setFilters({ ...start, recipient: 'bebe' }); setCollection('todas'); };
+  const chooseGirls = () => { setFilters({ ...start, recipient: 'infantil' }); setCollection(GIRLS); };
   const chooseInternet = () => { focusInternet.current = true; setMode('internet'); };
   const active: { key: string; label: string; remove: () => void }[] = [];
   if (filters.q.trim()) active.push({ key: 'q', label: `“${filters.q.trim()}”`, remove: () => set({ q: '' }) });
@@ -124,6 +134,7 @@ export function LibraryPage() {
       <div className="simple-collections" role="group" aria-label="Tipo de proyecto">
         <button className="filter-chip" aria-pressed={!active.length} onClick={reset}>Todo</button>
         <button className="filter-chip simple-baby-shortcut" aria-pressed={filters.recipient === 'bebe'} onClick={chooseBaby}>Bebé</button>
+        <button className="filter-chip simple-baby-shortcut" aria-pressed={collection === GIRLS} onClick={chooseGirls}>Niña</button>
         <button className="filter-chip" aria-pressed={filters.family === 'hoodie'} onClick={() => set({ type: 'todos', family: 'hoodie' })}>Hoodies</button>
         <button className="filter-chip" aria-pressed={collection === 'Disfraces'} onClick={() => { setFilters(current => ({ ...current, type: 'todos', family: 'todas' })); setCollection('Disfraces'); }}>Disfraces</button>
         {quickTypes.map(([type, label]) => <button key={type} className="filter-chip" aria-pressed={collection !== 'Disfraces' && !familySelected && filters.type === type} onClick={() => set({ type })}>{label}</button>)}

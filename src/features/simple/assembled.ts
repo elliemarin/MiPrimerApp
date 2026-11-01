@@ -13,6 +13,7 @@ import type { PatternComponent } from '../../lib/pattern/components';
 import type { Piece } from '../../lib/pattern/types';
 import { componentAtPoint, componentFits } from '../customize/placementDrag';
 import { COSTUME_SURFACE_PIECES } from '../../data/costumeFlats';
+import { KIDS_SURFACE_PIECES } from '../../data/kidsFlats';
 
 /** A reversible illustration projection. The original millimetre geometry is
  * always retained in `view`; this projection never alters cutting patterns. */
@@ -114,7 +115,7 @@ function makeScene(project: Project, flat: FlatView, physical: DesignView[]): As
   const surfaces: AssemblySurface[]=[];
   const forced=KNOWN_OBJECTS[project.pattern?.generatorId??''];
   const costumeKey=project.pattern?.generatorId.replace(/^cosplay-/,'');
-  const explicitBindings=costumeKey?COSTUME_SURFACE_PIECES[costumeKey]?.[flat.key]:undefined;
+  const explicitBindings:{zoneId:string;pieceId:string;mirror:boolean;fold?:boolean}[]|undefined=(costumeKey?COSTUME_SURFACE_PIECES[costumeKey]?.[flat.key]:undefined)??KIDS_SURFACE_PIECES[project.pattern?.generatorId??'']?.[flat.key];
   const ranked=(zone:Zone)=>physical.map(view=>({view,score:score(view,zone,back)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score)[0]?.view;
   for(const zone of zones) {
     const physicalId=forced?.[zone.id];
@@ -148,7 +149,7 @@ function makeScene(project: Project, flat: FlatView, physical: DesignView[]): As
     const side=repeated && /manga|pierna/.test(zone.type) ? `${back ? center<0?'izquierda':'derecha' : center<0?'derecha':'izquierda'}` : '';
     const partLabel=side ? `${zone.type==='pierna'?'Pierna':'Manga'} ${side}` : zone.label;
     const surface={ id:`${id}/${zone.id}`,label:`${label} · ${partLabel}`,viewId:view.id,pieceId:pieceId(view),zoneId:zone.id,view,primary:!['manga','puno','cuello','capucha','pretina'].includes(zone.type),matrix,inverse:matInvert(matrix),path:zone.d,physicalBounds:source };
-    if(project.pattern?.generatorId==='falda-fruncida-elastica'&&/delantera|trasera/.test(pieceId(view))||(babyFront||openPonchoFront)&&!repeated) {
+    if(project.pattern?.generatorId==='falda-fruncida-elastica'&&/delantera|trasera/.test(pieceId(view))||(babyFront||openPonchoFront)&&!repeated||explicit?.fold) {
       // Each skirt pattern is HALF a panel cut on the centre fold. Unfold the
       // illustration into two distinct physical instances; do not double-scale
       // a pocket or silently duplicate it on the opposite half of the skirt.

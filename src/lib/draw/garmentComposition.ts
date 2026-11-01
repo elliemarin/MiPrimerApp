@@ -5,7 +5,9 @@ import { cmdsToSvg, type PathCmd } from './paths';
 
 /** Some legacy reference drawings have no assembled sleeve/torso contract. */
 export function supportsModelIllustration(spec: FlatSpec): boolean {
-  return !spec.pants?.torso;
+  // Baby garments of the kids collection are drawn at real infant size and
+  // objects such as booties or towels are not worn on the croquis.
+  return !spec.pants?.torso && !(spec.kids && (spec.family === 'bebe' || spec.family === 'accesorio'));
 }
 
 export interface GarmentSegment {

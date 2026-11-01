@@ -24,3 +24,12 @@ Los archivos se codificaron en WebP con FFmpeg, calidad 86; no se recortaron ni 
 - Capturas de auditoría: `/tmp/hilvana-art-library-390.png`, `/tmp/hilvana-art-contact-390.png`, `/tmp/hilvana-art-contact-1500.png`; índice `/tmp/hilvana-art-audit.json`.
 
 Para añadir un diseño nativo, generar una imagen acorde con las piezas reales, registrar la celda y revisar la hoja de contacto. Una nueva construcción debe tener su propia imagen; cambiar sólo el tamaño sigue siendo una variante dentro de la misma tarjeta. Las referencias de IA ilustran el diseño: la correspondencia exacta de costuras, escala y ubicación de extras se consulta en las vistas armadas y el patrón generado.
+
+## Láminas vectoriales (2026-11-01)
+
+`ninas-01` y `bebe-02` no son IA: `scripts/render-kids-sheets.ts` las dibuja desde
+el dibujo técnico real de cada diseño, con textura y sombra suaves. Para ellas la
+ficha dice «Ilustración dibujada a partir del patrón real» (`catalogImageCaption`).
+Las celdas posteriores a la lista de grupos muestran variantes exactas
+(`VARIANT_IMAGES` en `src/data/catalogImages.ts`). Si más adelante se generan
+fotos con IA para estos diseños, conserva ids y celdas y cambia el texto.
