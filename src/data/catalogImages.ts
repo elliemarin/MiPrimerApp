@@ -1,12 +1,29 @@
 import type { CatalogModel, Recipient } from './catalog';
 import { STYLE_CATALOG_IMAGE_SHEETS, STYLE_CATALOG_IMAGES, STYLE_CATALOG_IMAGE_BOUNDS } from './styleCatalogImages';
+import { COMPLETED_INFANT_SHEETS, COMPLETED_INFANT_SOURCE_MAP, COMPLETED_INFANT_RECIPE_MAP, COMPLETED_INFANT_BOUNDS } from './completedInfantImages';
+import { COMPLETED_ADULT_SHEETS, COMPLETED_ADULT_SOURCE_MAP, COMPLETED_ADULT_BOUNDS } from './completedAdultImages';
+import { INSPIRATION_A_SHEETS, INSPIRATION_A_IMAGES, INSPIRATION_A_BOUNDS } from './inspirationAImages';
+import { INSPIRATION_B_SHEETS, INSPIRATION_B_IMAGES, INSPIRATION_B_BOUNDS } from './inspirationBImages';
 
 /** Original AI product illustrations. A 3 × 3 atlas keeps the entire library
  * lightweight; these images never supply geometry or scale to the patterns. */
 export interface CatalogImageSource { sheet: string; cell: number }
 
+/** Resolve the exact former drawing, including recipe-specific sleeve lengths,
+ * closures and proportions. Group-only replacement would leave variants drawn. */
+const REALISTIC_SOURCE_MAP: Readonly<Record<string, CatalogImageSource>> = {
+  ...COMPLETED_INFANT_SOURCE_MAP, ...COMPLETED_ADULT_SOURCE_MAP
+};
+function realisticSource(source: CatalogImageSource): CatalogImageSource {
+  return REALISTIC_SOURCE_MAP[`${source.sheet}/${source.cell}`] ?? source;
+}
+
 export const CATALOG_IMAGE_SHEETS: Record<string, readonly string[]> = {
   ...STYLE_CATALOG_IMAGE_SHEETS,
+  ...INSPIRATION_A_SHEETS,
+  ...INSPIRATION_B_SHEETS,
+  // Replacement resources retain the original group/recipe identities below.
+  ...Object.fromEntries([...Object.keys(COMPLETED_INFANT_SHEETS), ...Object.keys(COMPLETED_ADULT_SHEETS)].map(sheet => [sheet, []])),
   'prendas-01': ['tipo-pantalon-recto','tipo-jogger','tipo-pantalon-amplio','short-elastico','pantalon-pijama','tipo-falda-fruncida','tipo-sudadera','tipo-hoodie','tipo-chaqueta-hombro-caido'],
   'prendas-02': ['tipo-cardigan-abierto','tipo-chaleco-abierto','tipo-poncho','tipo-ruana','tipo-jumper-falda','tipo-top-cuadrado','tipo-top-cuadrado-sin-mangas','babero','gorro'],
   'accesorios-01': ['tipo-bolsa-tote','tipo-cojin','tipo-funda-bebida','tipo-dona-cabello','tipo-bandana','tipo-delantal','tipo-antifaz','tipo-banderin','tipo-estuche-cierre'],
@@ -35,9 +52,10 @@ export const CATALOG_IMAGE_SHEETS: Record<string, readonly string[]> = {
   'infantil-05': [],
 };
 
-export const CATALOG_IMAGES: Readonly<Record<string, CatalogImageSource>> = Object.fromEntries(
-  Object.entries(CATALOG_IMAGE_SHEETS).flatMap(([sheet, ids]) => ids.map((id, cell) => [id, { sheet, cell }]))
-);
+export const CATALOG_IMAGES: Readonly<Record<string, CatalogImageSource>> = {
+  ...Object.fromEntries(Object.entries(CATALOG_IMAGE_SHEETS).flatMap(([sheet, ids]) => ids.map((id, cell) => [id, realisticSource({ sheet, cell })]))),
+  ...INSPIRATION_A_IMAGES, ...INSPIRATION_B_IMAGES
+};
 
 // Reviewed bounds in each 1254 px original. Some illustrated props/wing tips
 // extend beyond an exact grid cell; crop the complete object, never its neighbour.
@@ -78,7 +96,9 @@ const IMAGE_BOUNDS: Record<string, ImageBounds> = {
 };
 
 export function catalogImageBounds(source: CatalogImageSource): ImageBounds {
-  return STYLE_CATALOG_IMAGE_BOUNDS[`${source.sheet}/${source.cell}`] ?? IMAGE_BOUNDS[`${source.sheet}/${source.cell}`] ?? [(source.cell % 3) * 418, Math.floor(source.cell / 3) * 418, 418, 418];
+  const key = `${source.sheet}/${source.cell}`;
+  return COMPLETED_INFANT_BOUNDS[key] ?? COMPLETED_ADULT_BOUNDS[key] ?? INSPIRATION_A_BOUNDS[key] ?? INSPIRATION_B_BOUNDS[key]
+    ?? STYLE_CATALOG_IMAGE_BOUNDS[key] ?? IMAGE_BOUNDS[key] ?? [(source.cell % 3) * 418, Math.floor(source.cell / 3) * 418, 418, 418];
 }
 
 const BABY_IMAGES: Record<string, CatalogImageSource> = {
@@ -125,8 +145,9 @@ const VARIANT_IMAGES: Record<string, CatalogImageSource> = {
 
 export function catalogImageFor(model: CatalogModel, recipient?: Recipient): CatalogImageSource | undefined {
   const id = model.designGroup?.id ?? model.id;
+  if (COMPLETED_INFANT_RECIPE_MAP[model.id]) return COMPLETED_INFANT_RECIPE_MAP[model.id];
   if (STYLE_CATALOG_IMAGES[id]) return STYLE_CATALOG_IMAGES[id];
-  if (VARIANT_IMAGES[model.id]) return VARIANT_IMAGES[model.id];
+  if (VARIANT_IMAGES[model.id]) return realisticSource(VARIANT_IMAGES[model.id]);
   if (id === 'body-bebe' && model.params?.tipoManga === 'larga') return { sheet: 'especiales-01', cell: 7 };
   if ((recipient === 'bebe' || model.recipients.every(value => value === 'bebe' || value === 'toddler')) && BABY_IMAGES[id]) return BABY_IMAGES[id];
   return CATALOG_IMAGES[id];

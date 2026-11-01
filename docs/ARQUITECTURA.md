@@ -528,3 +528,33 @@ compilados `tests/browser/style_catalog_smoke.py` y `transformations_smoke.py`.
 Los tests anteriores del lote infantil ahora seleccionan la construcción en
 su propia tarjeta. Detalles en `ESTILOS_URBANOS.md`, `VESTIDOS_POR_ESTILO.md`,
 `ESTILOS_BEBE_2026.md`, `TRANSFORMACIONES_DE_PRENDAS.md` e `IMAGENES_ESTILOS.md`.
+
+## 24. Cobertura fotográfica completa del catálogo (2026-11-01)
+
+`completedAdultImages.ts` y `completedInfantImages.ts` aportan 57 fotos para las
+fuentes que todavía eran vectoriales. `catalogImages.ts` resuelve por la pareja
+antigua `sheet/cell`, tanto en el mapa de grupos como en `VARIANT_IMAGES`. Esto
+conserva mangas, largos y proporciones específicas al seleccionar una receta.
+El sombrero de bebé tiene una excepción por ID antes del mapa de variantes;
+los aliases de grupo de vestido trapecio y cubrepañal comparten su foto vigente.
+La prioridad de `STYLE_CATALOG_IMAGES` conserva las 90 fotos de la entrega
+anterior. Los imports de tipos de los nuevos registros no crean ciclos en runtime.
+
+`inspirationAImages.ts` y `inspirationBImages.ts` cubren las 66 referencias sin
+patrón con fotos propias (61 inspiraciones y cinco de solo estudio). No modifican `modelHasPattern`, filtros, generadores
+ni estados. Las 312 entradas de `CATALOG_IMAGES` y las 2,059 recetas resuelven a
+recursos de IA; la biblioteca simple sigue mostrando 246 diseños disponibles.
+
+Los 16 WebP nuevos se incluyen en el precache habitual de la PWA. Los recortes
+están en los mapas `*_BOUNDS` de cada registro y preceden al recorte por defecto
+de 418 px. `CatalogImage` conserva su alternativa técnica ante un fallo real
+de carga. Las láminas vectoriales históricas permanecen para los scripts antiguos,
+pero no son la portada resuelta de ningún artículo. La geometría editable sigue
+en `FlatArt`, `assembled.ts` y los motores de patronaje.
+
+Inventario reproducible: `node scripts/audit-catalog-photos.mjs`. Las pruebas
+`catalog-images` y `catalog-photo-completeness` revisan grupos, recetas,
+destinatarios, archivos y diferencias entre variantes. El recorrido Playwright
+`catalog_photo_completeness_smoke.py` comprueba la decodificación y los recortes
+del componente en móvil, con manifiesto local reutilizable en producción.
+Procedencia y límites: `IMAGENES_CATALOGO_COMPLETO.md`.

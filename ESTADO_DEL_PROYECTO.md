@@ -6,22 +6,60 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-01 (Codex: catálogo por estilos y transformaciones de prendas existentes).
+- Última actualización: 2026-11-01 (Codex: completar imágenes realistas del catálogo y sus variantes).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 3672 pruebas: catálogo, patrones, persistencia, PDF, proyector, logos y transformaciones
+npm test            # 3689 pruebas: catálogo, fotos, patrones, persistencia, PDF, proyector, logos y transformaciones
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Imágenes realistas completas del catálogo (2026-11-01)
+
+**Este es el relevo más reciente.** La usuaria detectó diseños que aún mostraban
+dibujos. La entrega anterior fotografió los 90 estilos nuevos, pero quedaron
+46 grupos editables antiguos y variantes con fuentes vectoriales. Se partió de
+`e447bb8` con instalación, 3,672 pruebas y compilación correctas.
+
+- **123 imágenes nuevas de IA** con la presentación existente: fondo marfil,
+  textura realista y prenda completa. Incluyen 19 adultas, 38 infantiles y 66
+  referencias de inspiración; 16 láminas WebP locales.
+- La auditoría recorre **2,059 recetas y 312 grupos**: 246 diseños con patrón,
+  61 inspiraciones y 5 referencias solo para estudio. Todos tienen imagen, sin cambiar estados,
+  medidas, tallas, proyectos o geometría de patronaje.
+- Se sustituyen las fuentes de las variantes, además de la portada del grupo:
+  manga larga, sobrecamisa/bomber corta, pantalones infantiles y sombreros.
+  El sombrero de bebé tiene su propia foto con lengüeta de broche.
+- `catalog-photo-completeness.test.ts` detecta recetas que vuelvan al dibujo,
+  archivos ausentes y variantes confundidas. La auditoría reproducible queda
+  en `scripts/audit-catalog-photos.mjs` y `docs/auditoria/fotos-catalogo.csv`.
+- `tests/browser/catalog_photo_completeness_smoke.py` comprueba tarjetas,
+  detalles y recortes móviles, con modos desarrollo y publicación.
+
+**Validación:** 3,689 pruebas en 80 archivos, TypeScript y compilación de Pages
+correctos. Auditoría: 328 imágenes/celdas activas en 39 láminas, cero fuentes
+vectoriales o faltantes. En Chromium móvil: 246 tarjetas, 77 al filtrar bebé,
+123 detalles nuevos, 16 galerías de recortes y dos cambios de variante; sin
+errores de navegador ni 404. Repetido sobre el build de Pages, incluida una
+página nueva sin red: las 16 láminas nuevas cargan desde el service worker.
+Recursos nuevos: 1,702,020 bytes; catálogo completo en disco: 4,643,880 bytes.
+
+**Para Claude:** usar `docs/IMAGENES_CATALOGO_COMPLETO.md` y los cuatro documentos
+de lotes enlazados allí para encontrar prompts, celdas y revisiones visuales.
+Las fotos nunca se usan para calcular medidas ni sustituyen la vista editable
+del estudio. Las láminas vectoriales antiguas siguen en disco por compatibilidad,
+pero ninguna receta del catálogo activo las devuelve. Una nueva variante debe
+recibir foto y comprobarse en su selección, no solo en la tarjeta del grupo.
+La confección de muestras continúa pendiente; no se certificaron patrones.
+
 ## Catálogo por estilos y transformaciones (2026-11-01)
 
-**Este es el relevo más reciente.** La petición era variedad de construcciones,
+Relevo anterior. La petición era variedad de construcciones,
 no multiplicar tarjetas por talla o color. Se partió de `8d25d82`, con instalación,
 3,054 pruebas y compilación correctas.
 

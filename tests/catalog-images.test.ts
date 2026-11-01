@@ -2,14 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { CATALOG, findModel } from '../src/data/catalog';
-import { CATALOG_IMAGES, CATALOG_IMAGE_SHEETS, catalogImageBounds, catalogImageFor } from '../src/data/catalogImages';
-import { modelHasPattern } from '../src/features/library/filters';
+import { CATALOG_IMAGES, CATALOG_IMAGE_SHEETS, catalogImageBounds, catalogImageCaption, catalogImageFor } from '../src/data/catalogImages';
 import { groupCatalog } from '../src/features/library/groups';
 
-describe('imágenes propias para los diseños con patrón', () => {
+describe('imágenes propias para todos los diseños y referencias del catálogo', () => {
   it('cubre todos los grupos con una celda propia, incluidas todas sus recetas', () => {
-    const models = CATALOG.filter(modelHasPattern), groups = groupCatalog(models);
+    const models = CATALOG, groups = groupCatalog(models);
     expect(Object.keys(CATALOG_IMAGES).sort()).toEqual(groups.map(group => group.id).sort());
+    for (const [id, image] of Object.entries(CATALOG_IMAGES)) {
+      expect(catalogImageCaption(image), id).toBe('Ilustración generada con IA.');
+    }
     const cells = groups.map(group => {
       const image = catalogImageFor(group.representative);
       expect(image, group.name).toBeDefined();
@@ -35,7 +37,7 @@ describe('imágenes propias para los diseños con patrón', () => {
       expect(statSync(path).size).toBeLessThan(250_000);
       bytes += file.length;
     }
-    expect(bytes).toBeLessThan(4_500_000);
+    expect(bytes).toBeLessThan(5_000_000);
   });
 
   it('muestra las mangas y proporciones de bebé sin cambiar el patrón ni duplicar tarjetas', () => {
