@@ -8,6 +8,8 @@ import { slugify, stableHash } from '../../lib/ids';
 import { makeVersion } from '../../store/projects';
 import { exportRecord, freezeDeps } from '../../store/exports';
 import { saveBlob } from '../../lib/download';
+import { projectorSource } from '../../lib/projector/source';
+import { downloadProjectorPdf } from '../projector/projectorPdf';
 
 /** One explicit final step: review everything the physical project will need. */
 export function SewingPackSheet({ projectId, onClose, onPrepareEditorial }: { projectId: string; onClose: () => void; onPrepareEditorial?: () => void }) {
@@ -21,6 +23,7 @@ export function SewingPackSheet({ projectId, onClose, onPrepareEditorial }: { pr
   const hasBase=project?hasSewingBase(project):false;
   const ctx: SewingPackCtx = useMemo(()=>({profiles,fabrics,materials,unit:settings.unit,tile:{...settings.tile,footer:13},mode:hasBase?'complete':'intervention'}),[profiles,fabrics,materials,settings,hasBase]);
   const preview=useMemo(()=>project?prepareSewingPack(project,ctx):undefined,[project,ctx]);
+  const projector=useMemo(()=>project&&preview?projectorSource(project,ctx,preview):undefined,[project,ctx,preview]);
   if(!project || !preview) return <Sheet title="PDF de confección" onClose={onClose}><Empty icon="proyectos" title="Proyecto no encontrado" /></Sheet>;
 
   const download=async()=>{
@@ -54,11 +57,25 @@ export function SewingPackSheet({ projectId, onClose, onPrepareEditorial }: { pr
     } finally {setBusy(false);}
   };
   const go=(path:string)=>{onClose();navigate(path);};
+  const projectorReady=!!projector&&projector.blockers.length===0;
+  const projectorPdf=async()=>{
+    setBusy(true);setError('');
+    try {
+      const result=await downloadProjectorPdf(projectId,ctx);
+      useApp.getState().toast(`PDF para proyector listo: ${result.pages} ${result.pages===1?'hoja':'hojas'} a escala 1:1.`,'ok');
+    } catch(cause) { setError(cause instanceof Error?cause.message:'No se pudo generar el PDF para proyector.'); }
+    finally {setBusy(false);}
+  };
   const excluded=project.pattern && (project.pattern.hidden.length>0 || !!project.pattern.noExport?.length);
   const experimental=preview.warnings.some(warning=>/experimental/i.test(warning));
   return <Sheet title={hasBase?'Todo listo para coser':'PDF de la intervención'} wide onClose={onClose} footer={<div className="stack" style={{gap:8}}>
     <Button variant="primary" icon="pdf" block disabled={busy||preview.blockers.length>0} onClick={()=>void download()}>{busy?'Preparando tu PDF…':hasBase?'Descargar PDF completo':'Descargar PDF de intervención'}</Button>
     <p className="tiny muted" style={{margin:0}}>Un archivo PDF en hojas carta. Imprime las plantillas al 100 %, sin ajustar a la página.</p>
+    <div className="row-wrap" style={{gap:8}}>
+      <Button icon="eye" disabled={busy||!projectorReady} onClick={()=>go(`/proyectar/${projectId}`)}>Proyectar en la mesa</Button>
+      <Button variant="ghost" disabled={busy||!projectorReady} onClick={()=>void projectorPdf()}>PDF para proyector</Button>
+    </div>
+    <p className="tiny muted" style={{margin:0}}>¿Sin impresora? Proyecta las piezas a tamaño real sobre la tela; primero calibra con una regla. <a href="#/ayuda/proyector" onClick={onClose}>Cómo hacerlo</a></p>
     {onPrepareEditorial&&<Button variant="ghost" disabled={busy} onClick={onPrepareEditorial}>Preparar lámina</Button>}
   </div>}>
     <div className="stack-lg">

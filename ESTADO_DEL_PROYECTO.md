@@ -6,22 +6,41 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-01 (Claude: colección Niña y ampliación de Bebé).
+- Última actualización: 2026-11-01 (Claude: modo proyector y PDF para proyector).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 2924 pruebas: catálogo, patrones, persistencia, PDF, logos y arrastre
+npm test            # 2933 pruebas: catálogo, patrones, persistencia, PDF, proyector, logos y arrastre
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Modo proyector y PDF para proyector (2026-11-01)
+
+**Este es el relevo más reciente.** Detalle completo en `docs/PROYECTOR.md`.
+
+- **Proyectar en la mesa** desde «Todo listo para coser»: pantalla completa con
+  fondo negro y las piezas reales a escala 1:1; mover, girar 90°, voltear,
+  centrar, bloquear y ocultar controles. Cuadro de control de 5 cm siempre a la
+  vista. No exige haber elegido colores; solo un patrón válido.
+- **Calibración** guardada por dispositivo: rápida con regla (cuadro de 10 cm,
+  corrige ancho y alto) o precisa con 4 esquinas (homografía: escala, giro e
+  inclinación), y pantalla de comprobación con cuadrícula de 10 cm.
+- **PDF para proyector**: hojas grandes 1:1 (hasta 4,8 m) con fondo negro,
+  cuadrícula de 10 cm y cuadro de calibración de 10 × 10 cm para usar en otras
+  apps de proyección. Se registra en Exportaciones.
+- **Instrucciones** en Ayuda → «Proyectar el patrón sobre la tela» y dentro del
+  asistente.
+- Validación: **2,933 pruebas en 68 archivos**; recorrido en Chromium e iPhone 13.
+  **Pendiente:** prueba con proyector físico real.
+
 ## Colección Niña y ampliación de Bebé (2026-11-01)
 
-**Este es el relevo más reciente.** Detalle completo en
+Relevo anterior. Detalle completo en
 `docs/NINA_Y_BEBE_AMPLIADO.md`.
 
 - **11 generadores nuevos, todos `experimental`**, con piezas, márgenes una sola

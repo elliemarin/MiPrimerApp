@@ -15,6 +15,7 @@ import { StudioHub } from './features/studio/StudioHub';
 const StudioEditor = lazy(() => import('./features/studio/StudioEditor').then((m) => ({ default: m.StudioEditor })));
 const CustomizePage = lazy(() => import('./features/customize/CustomizePage').then((m) => ({ default: m.CustomizePage })));
 const SewingPackPage = lazy(() => import('./features/projects/SewingPackPage').then((m) => ({ default: m.SewingPackPage })));
+const ProjectorPage = lazy(() => import('./features/projector/ProjectorPage').then((m) => ({ default: m.ProjectorPage })));
 const FinishesPage = lazy(() => import('./features/simple/FinishesPage').then((m) => ({ default: m.FinishesPage })));
 import { FabricsPage } from './features/fabrics/FabricsPage';
 const FabricDetail = lazy(() => import('./features/fabrics/FabricDetail').then((m) => ({ default: m.FabricDetail })));
@@ -75,6 +76,8 @@ export function App() {
   if (!ready) return <div className="page" aria-busy="true" />;
 
   const [section = 'biblioteca', a, b] = route;
+  // The projector owns the whole screen: no navigation chrome over the fabric.
+  if (section === 'proyectar' && a) return <Suspense fallback={<div className="page" aria-busy="true" style={{ background: '#000', minHeight: '100vh' }} />}><ProjectorPage projectId={a} /></Suspense>;
   const active = ['ajustes', 'mas'].includes(section) ? 'mas' : ['personalizar', 'acabados', 'confeccion'].includes(section) ? 'proyectos' : section;
   let content: JSX.Element;
   switch (section) {

@@ -58,6 +58,38 @@ export function HelpPage({ topic }: { topic?: string }) {
           </ol>
           <p>Cada PDF registra la versión de medidas y de patrón que lo generó, y en Exportaciones verás si quedó desactualizado.</p>
         </Topic>
+        <Topic id="proyector" title="Proyectar el patrón sobre la tela (sin imprimir)" open={topic === 'proyector'}>
+          <p>Hilvana puede mostrar las piezas a <strong>tamaño real</strong> sobre la mesa de corte con un proyector. Ábrelo desde el PDF de confección con <strong>Proyectar en la mesa</strong>. Funciona con los mismos patrones del PDF: márgenes incluidos, piquetes, doblez y flecha de hilo.</p>
+          <strong>Qué necesitas</strong>
+          <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
+            <li>Un proyector montado encima de la mesa, mirando hacia abajo (soporte de techo, brazo o tripié). Mientras más resolución, más finas las líneas.</li>
+            <li>Una computadora, tableta o teléfono conectado al proyector (cable HDMI o duplicado inalámbrico).</li>
+            <li>Regla o escuadra de al menos 30 cm, o un tapete de corte con cuadrícula.</li>
+          </ul>
+          <strong>1. Montaje</strong>
+          <ol style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
+            <li>Coloca el proyector lo más perpendicular posible a la mesa y enfoca hasta que las líneas se vean nítidas.</li>
+            <li>Muestra Hilvana en el proyector a <strong>pantalla completa</strong> (en iPhone o iPad, añade la app a la pantalla de inicio y duplica la pantalla).</li>
+            <li>Si el proyector tiene corrección trapezoidal automática, déjala fija antes de calibrar. No cambies después el zoom, la altura, la resolución ni el tamaño de la ventana.</li>
+          </ol>
+          <strong>2. Calibración</strong>
+          <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
+            <li><strong>Rápida con regla</strong> (proyector recto): aparece un cuadro que debe medir 10 cm. Mide su ancho y su alto y escribe los milímetros reales; la app corrige la escala. Repite hasta que mida 100 mm.</li>
+            <li><strong>Precisa con 4 esquinas</strong> (proyector inclinado o girado): elige un rectángulo de medidas conocidas en tu tapete, por ejemplo 40 × 30 cm. Arrastra las cruces 1 → 2 → 3 → 4 hasta sus esquinas y afina con las flechas. Corrige escala, giro e inclinación a la vez.</li>
+          </ul>
+          <strong>3. Comprobación</strong>
+          <p style={{ margin: 0 }}>Mide el cuadro de 10 cm y los de 5 cm, y compara la cuadrícula de 10 cm con tu tapete en el centro y en las orillas. Si algo difiere más de 1–2 mm, recalibra. Mientras proyectas, el <strong>cuadro de control de 5 cm</strong> de la esquina permite revisar la escala en cualquier momento. La calibración se guarda en este dispositivo.</p>
+          <strong>4. Cortar</strong>
+          <ol style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
+            <li>Usa el <strong>fondo negro</strong>: no ilumina la tela y las líneas se ven mejor. En telas muy oscuras sube el grosor de línea en Opciones.</li>
+            <li>Extiende la tela sin arrugas con el orillo paralelo al borde de la mesa. Arrastra las piezas o usa Girar 90° hasta que la <strong>flecha de hilo</strong> quede paralela al orillo.</li>
+            <li>Las piezas «al doblez» van con la línea de doblez exactamente sobre el doblez de la tela. Para la segunda pieza de un par en espejo, pulsa <strong>Voltear</strong>.</li>
+            <li>Pulsa Bloquear para no mover las piezas por accidente y Ocultar controles para cortar sin botones; toca la pantalla para volver a verlos.</li>
+            <li>Marca con tiza o lápiz textil, o corta directamente con cortador circular y pesas; marca los piquetes.</li>
+          </ol>
+          <p style={{ margin: 0 }}>En telas gruesas (polar, acolchado) la superficie queda más cerca del proyector: comprueba el cuadro de 5 cm sobre la propia tela. No mires directamente al haz del proyector.</p>
+          <p style={{ margin: 0 }}><strong>PDF para proyector</strong>: si prefieres otra app de proyección, descarga una hoja grande a escala 1:1 con fondo negro, cuadrícula de 10 cm y un cuadro de calibración de 10 × 10 cm. Ábrela en esa app y calibra con la cuadrícula. No es para imprimir en hojas carta.</p>
+        </Topic>
         <Topic id="estudio" title="Estudio de diseño">
           <p>Trabaja sobre el dibujo técnico de un modelo, fotos de tu prenda, piezas del patrón o un parche independiente. Cada vista tiene zonas (delantero, mangas, piernas…) y una línea de referencia compartida.</p>
           <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
