@@ -10,6 +10,7 @@ import { nodeById } from '../lib/pattern/outline';
 import { cubicPoint, solve } from '../lib/pattern/generators/kidsShared';
 import { generateCircle, generateSundress, generateTiered, generateTrapeze, generateTulle } from '../lib/pattern/generators/girls';
 import { generateBandanaBib, generateBloomers, generateBonnet, generateBooties, generateSleepSack, generateTowel } from '../lib/pattern/generators/babyPlus';
+import { generateEarHat, generateOverall } from '../lib/pattern/generators/babyMore';
 
 /* Dibujos técnicos de la colección Niña y de la ampliación de Bebé.
  * Las siluetas salen de las piezas reales de una talla de referencia; cada
@@ -34,8 +35,18 @@ export const KIDS_SURFACE_PIECES: Record<string, Partial<Record<FlatViewKey, Kid
   'bonete-bebe': { frente: [S('banda'), S('trasera'), S('lengueta')] },
   'patucos-bebe': { frente: [...pair('talonera'), ...pair('empeine'), ...pair('suela')] },
   'toalla-capucha': { frente: [S('toalla'), S('capucha')] },
-  'babero-bandana': { frente: [S('babero')] }
+  'babero-bandana': { frente: [S('babero')] },
+  'peto-bebe': { frente: [S('delantero', 'delantero', false, true), ...pair('tirante')], espalda: [S('espalda', 'espalda', false, true), ...pair('tirante')] },
+  'gorro-orejas': { frente: [S('gorro'), ...pair('oreja')] }
 };
+/** Sets reuse the bindings of each part, with the part prefix on zones and pieces. */
+const SET_PARTS: Record<string, [string, string][]> = {
+  verano: [['pelele', 'peto-bebe'], ['sombrero', 'sombrero-pescador']], invierno: [['overol', 'peto-bebe'], ['gorro', 'gorro-orejas']],
+  'recien-nacido': [['bonete', 'bonete-bebe'], ['patucos', 'patucos-bebe'], ['babero', 'babero-bandana']]
+};
+KIDS_SURFACE_PIECES['sombrero-pescador'] = { frente: [S('copa'), S('banda'), S('ala')] };
+KIDS_SURFACE_PIECES['conjunto-bebe'] = { frente: Object.values(SET_PARTS).flatMap(parts => parts.flatMap(([prefix, gen]) =>
+  (KIDS_SURFACE_PIECES[gen]?.frente ?? []).map(b => ({ ...b, zoneId: `${prefix}-${b.zoneId}`, pieceId: `${prefix}-${b.pieceId}` })))) };
 
 type Details = FlatView['details'];
 const P = (x: number, y: number): Pt => ({ x, y });
@@ -270,7 +281,85 @@ function bandanaBibFlat(): FlatView[] {
   return [view('frente', [zone('babero', 'Babero', 'base', outlineOf(bib, scale(1, 1)))], [{ d: inner, style: 'pespunte' }], bib.marks.map(mark => ({ x: r1(mark.at.x), y: r1(mark.at.y), r: 4 })), 'Borde del cuello')];
 }
 
+// ----------------------------------------------------------- Más bebé
+function overallFlat(longLeg: boolean): FlatView[] {
+  const r = generateOverall(BABY(), { largo: longLeg ? 'largo' : 'corto' }), front = piece(r, 'delantero'), back = piece(r, 'espalda'), m = scale(1, 1);
+  const bw = front.nodes[1].x, Wq = front.nodes[2].x, backTop = back.nodes[0].y, sw = 22;
+  const straps = (y0: number, cross: boolean): Zone[] => [-1, 1].map((sign, i) => {
+    const x0 = sign * (cross ? Wq * .45 : bw - 14), x1 = sign * (cross ? -bw * .9 : bw - 18), top = y0 - 95;
+    return zone(`tirante--${i + 1}`, sign < 0 ? 'Tirante izquierdo' : 'Tirante derecho', 'otra', `M${r1(x0 - sw / 2)} ${r1(y0 + 4)} L${r1(x0 + sw / 2)} ${r1(y0 + 4)} L${r1(x1 + sw / 2)} ${r1(top)} L${r1(x1 - sw / 2)} ${r1(top)} Z`);
+  });
+  const hemLines = (p: Piece): Details => [false, true].map(mirror => ({ d: shift(stroke(p, ['bajo'], m, mirror), 0, -10), style: 'pespunte' as const }));
+  const opening = (p: Piece): Details => [false, true].map(mirror => ({ d: stroke(p, ['abertura-pierna', 'abertura-entrepierna'], m, mirror), style: 'pespunte' as const }));
+  return [
+    view('frente', [zone('delantero', 'Delantero con peto', 'delantero', unfold(front, 'centro', m)), ...straps(0, false)], [...hemLines(front), ...opening(front)], [-1, 1].map(sign => ({ x: r1(sign * (bw - 14)), y: 14, r: 4 })), 'Peto'),
+    view('espalda', [...straps(backTop, true), zone('espalda', 'Espalda', 'espalda', unfold(back, 'centro', m))], [...hemLines(back), ...opening(back)], [], 'Peto')
+  ];
+}
+
+function earHatFlat(ears: 'oso' | 'gato' | 'conejo'): FlatView[] {
+  const r = generateEarHat({ ...BABY(), fabric: 'punto', stretch: 30 }, { orejas: ears }), hat = piece(r, 'gorro'), ear = piece(r, 'oreja');
+  const w = hat.nodes[4].x, dome = hat.nodes[1].y, total = hat.nodes[0].y, brim = total - hat.lines[0].a.y;
+  const earBox = cmdsBBox(pieceSeamCmds(ear)), ew = earBox.maxX - earBox.minX;
+  const earZone = (sign: number, i: number) => {
+    const angle = sign * .55, cx = w / 2 + sign * w * .3, cy = dome * .35, c = Math.cos(angle), sn = Math.sin(angle);
+    const M: Mat = [c, sn, -sn, c, cx - (c * ew / 2 - sn * 0), cy - (sn * ew / 2)];
+    return zone(`oreja--${i + 1}`, 'Oreja', 'otra', svg(transformCmds(pieceSeamCmds(ear), M)));
+  };
+  // Worn state: the brim is folded up once, so the hat ends at the fold line.
+  const fold = total - brim, K4 = .5523;
+  const worn = `M0 ${r1(fold)} L0 ${r1(dome)} C0 ${r1(dome * (1 - K4))} ${r1(w / 2 * (1 - K4))} 0 ${r1(w / 2)} 0 C${r1(w / 2 + w / 2 * K4)} 0 ${r1(w)} ${r1(dome * (1 - K4))} ${r1(w)} ${r1(dome)} L${r1(w)} ${r1(fold)} Z`;
+  return [view('frente', [earZone(-1, 0), earZone(1, 1), zone('gorro', 'Gorro', 'base', worn)],
+    [{ d: `M0 ${r1(fold - brim)} L${r1(w)} ${r1(fold - brim)}`, style: 'doblez' }, ...Array.from({ length: 9 }, (_, i) => ({ d: `M${r1(w * (i + 1) / 10)} ${r1(fold - brim + 6)} L${r1(w * (i + 1) / 10)} ${r1(fold - 6)}`, style: 'pliegue' as const }))], [], 'Borde del gorro')];
+}
+
+/** Schematic side view of the bucket hat: crown top, band and brim. */
+function bucketZones(prefix: string, dx: number, dy: number, k: number): Zone[] {
+  const W = 150 * k, hb = 60 * k, top = 120 * k, brimW = 55 * k;
+  const id = (z: string) => prefix ? `${prefix}-${z}` : z;
+  return [
+    zone(id('ala'), 'Ala', 'base', `M${r1(dx - W / 2 - brimW)} ${r1(dy + hb + 14 * k)} Q${r1(dx)} ${r1(dy + hb - 18 * k)} ${r1(dx + W / 2 + brimW)} ${r1(dy + hb + 14 * k)} Q${r1(dx)} ${r1(dy + hb + 44 * k)} ${r1(dx - W / 2 - brimW)} ${r1(dy + hb + 14 * k)} Z`),
+    zone(id('banda'), 'Banda', 'base', `M${r1(dx - top / 2)} ${r1(dy)} L${r1(dx + top / 2)} ${r1(dy)} L${r1(dx + W / 2)} ${r1(dy + hb)} Q${r1(dx)} ${r1(dy + hb + 10 * k)} ${r1(dx - W / 2)} ${r1(dy + hb)} Z`),
+    zone(id('copa'), 'Copa', 'base', `M${r1(dx - top / 2)} ${r1(dy)} Q${r1(dx)} ${r1(dy - 22 * k)} ${r1(dx + top / 2)} ${r1(dy)} Q${r1(dx)} ${r1(dy + 10 * k)} ${r1(dx - top / 2)} ${r1(dy)} Z`)
+  ];
+}
+
+/** Places finished part views side by side, prefixing zone ids with the part. */
+/** Lays the drawings of a set side by side on a common baseline; `row` stacks small accessories below. */
+function compose(parts: { prefix: string; view: FlatView; height: number; row?: number }[]): FlatView[] {
+  const zones: Zone[] = [], details: Details = [], dots: FlatView['dots'] = [], gap = 60;
+  const sized = parts.map(part => {
+    const box = cmdsBBox(part.view.zones.flatMap(z => parseSvgPath(z.d))), k = part.height / (box.maxY - box.minY);
+    return { ...part, box, k, width: (box.maxX - box.minX) * k };
+  });
+  const rows: (typeof sized)[] = [];
+  for (const part of sized) (rows[part.row ?? 0] ??= []).push(part);
+  const widths = rows.map(row => row.reduce((w, part) => w + part.width + gap, -gap)), widest = Math.max(...widths);
+  let baseline = 0;
+  rows.forEach((row, r) => {
+    let x = (widest - widths[r]) / 2;
+    baseline += Math.max(...row.map(part => part.height));
+    for (const part of row) {
+      const { box, k } = part, m: Mat = [k, 0, 0, k, x - box.minX * k, baseline - box.maxY * k];
+      zones.push(...part.view.zones.map(z => ({ ...z, id: `${part.prefix}-${z.id}`, label: `${part.prefix[0].toUpperCase()}${part.prefix.slice(1)} · ${z.label}`, d: svg(transformCmds(parseSvgPath(z.d), m)) })));
+      details.push(...part.view.details.map(d => ({ ...d, d: svg(transformCmds(parseSvgPath(d.d), m)) })));
+      dots.push(...part.view.dots.map(d => ({ x: r1(m[0] * d.x + m[4]), y: r1(m[3] * d.y + m[5]), r: d.r * k })));
+      x += part.width + gap;
+    }
+    baseline += gap;
+  });
+  return [view('frente', zones, details, dots, 'Conjunto')];
+}
+const front0 = (views: FlatView[]) => views.find(v => v.key === 'frente')!;
+function setFlat(set: 'verano' | 'invierno' | 'recien-nacido'): FlatView[] {
+  if (set === 'verano') return compose([{ prefix: 'pelele', view: front0(overallFlat(false)), height: 420 }, { prefix: 'sombrero', view: view('frente', bucketZones('', 0, 0, 1), [], [], ''), height: 150 }]);
+  if (set === 'invierno') return compose([{ prefix: 'overol', view: front0(overallFlat(true)), height: 520 }, { prefix: 'gorro', view: front0(earHatFlat('oso')), height: 200 }]);
+  return compose([{ prefix: 'bonete', view: front0(bonnetFlat()), height: 160 }, { prefix: 'babero', view: front0(bandanaBibFlat()), height: 160 }, { prefix: 'patucos', view: front0(bootiesFlat()), height: 80, row: 1 }]);
+}
+
 const BUILDERS: Record<string, () => FlatView[]> = {
+  'peto-corto': () => overallFlat(false), 'peto-largo': () => overallFlat(true), 'gorro-oso': () => earHatFlat('oso'), 'gorro-gato': () => earHatFlat('gato'), 'gorro-conejo': () => earHatFlat('conejo'),
+  'conjunto-verano': () => setFlat('verano'), 'conjunto-invierno': () => setFlat('invierno'), 'conjunto-recien-nacido': () => setFlat('recien-nacido'),
   'vestido-trapecio': () => trapezeFlat(false), 'vestido-trapecio-volante': () => trapezeFlat(true), 'vestido-tirantes': sundressFlat,
   'falda-tul': tulleFlat, 'falda-olanes': tieredFlat, 'falda-circular': () => circleFlat(true), 'falda-medio-circulo': () => circleFlat(false),
   cubrepanal: () => bloomerFlat(false), 'cubrepanal-olanes': () => bloomerFlat(true), 'saco-dormir': sleepSackFlat,

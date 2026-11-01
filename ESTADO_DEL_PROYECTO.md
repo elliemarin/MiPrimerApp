@@ -6,22 +6,50 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-01 (Claude: modo proyector y PDF para proyector).
+- Última actualización: 2026-11-01 (Claude: tendencias de mezclilla y oversize, más bebé).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 2933 pruebas: catálogo, patrones, persistencia, PDF, proyector, logos y arrastre
+npm test            # 2970 pruebas: catálogo, patrones, persistencia, PDF, proyector, logos y arrastre
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Tendencias (mezclilla y oversize) y más Bebé (2026-11-01)
+
+**Este es el relevo más reciente.** Detalle completo en `docs/TENDENCIAS_Y_BEBE.md`.
+
+- **Pantalón de mezclilla** (`jeans.ts`, generador `pantalon-mezclilla`) con
+  siete siluetas: recto, pitillo, mom, acampanado, ancho, baggy y barrel.
+  Pretina con bragueta de cierre (tapeta, canesú, bolsillos de cinco con vista y
+  forro, relojera, presillas) o cintura elástica; bolsillos de parche o cargo.
+  Las inspiraciones baggy, barrel, cargo, pitillo y acampanado ahora generan
+  patrón sin cambiar su id; nuevas tarjetas jeans recto, mom y pierna ancha.
+- **Hombro caído / oversize** (`oversize.ts`, `oversize-hombro-caido`):
+  camiseta (corta o larga), sobrecamisa (tapeta, pie de cuello y cuello),
+  chaqueta de trabajo con tres bolsillos y bomber con rib, forro y cierre
+  separable (clásica y corta).
+- **Bebé** (`babyMore.ts`): peto/jumper corto y largo con tirantes y aberturas
+  para broches, barrel y baggy de bebé con elástico, gorro con orejas (oso, gato,
+  conejo), sombrero pescador reversible y tres conjuntos (verano, invierno,
+  recién nacido) que juntan varias prendas en un solo PDF.
+- **Biblioteca:** nuevo acceso **Tendencias** (12 tarjetas); Bebé pasa de 15 a
+  22 diseños; familia nueva «Conjuntos de bebé». Imágenes `tendencia-01/02/03`
+  dibujadas como vectores desde el dibujo técnico (no IA); cada variante del
+  selector tiene su propio dibujo.
+- Validación: barridos de todas las tallas y variantes sin errores, **2,970
+  pruebas en 69 archivos**, compilación correcta; recorrido en iPhone 13 con PDF
+  del pantalón barrel (44 hojas carta).
+  **Pendiente:** coser muestras antes de quitar «experimental»; revisar holguras
+  de baggy y barrel con una persona real.
+
 ## Modo proyector y PDF para proyector (2026-11-01)
 
-**Este es el relevo más reciente.** Detalle completo en `docs/PROYECTOR.md`.
+Relevo anterior. Detalle completo en `docs/PROYECTOR.md`.
 
 - **Proyectar en la mesa** desde «Todo listo para coser»: pantalla completa con
   fondo negro y las piezas reales a escala 1:1; mover, girar 90°, voltear,

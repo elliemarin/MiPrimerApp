@@ -5,17 +5,21 @@
  * diseño (src/data/kidsFlats.ts), con textura de tela y sombra suave para
  * acompañar a las láminas existentes. No aportan geometría ni escala.
  *
+ * Las celdas `model` se dibujan desde el dibujo técnico del catálogo (buildFlat).
+ *
  * Uso (requiere Playwright con Chromium instalado en la máquina):
- *   npx vite-node scripts/render-kids-sheets.ts
- * Escribe public/catalog-images/ninas-01.webp y bebe-02.webp.
+ *   npx vite-node scripts/render-kids-sheets.ts            # todas las láminas
+ *   npx vite-node scripts/render-kids-sheets.ts tendencia-01
+ * Escribe public/catalog-images/<lámina>.webp.
  */
 import { writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { buildKidsFlat } from '../src/data/kidsFlats';
-import type { FlatView } from '../src/data/flats';
+import { buildFlat, type FlatView } from '../src/data/flats';
+import { findModel } from '../src/data/catalog';
 
-interface Cell { key: string; color: string; accents?: Record<string, string>; view?: 'frente' | 'espalda' }
+interface Cell { key: string; color: string; accents?: Record<string, string>; view?: 'frente' | 'espalda'; /** Catalog model drawn from its own technical drawing. */ model?: boolean }
 const SHEETS: Record<string, Cell[]> = {
   'ninas-01': [
     { key: 'vestido-trapecio-volante', color: '#d8a79d', accents: { 'volante--1': '#e2b9b0', 'volante--2': '#e2b9b0' } },
@@ -36,7 +40,45 @@ const SHEETS: Record<string, Cell[]> = {
     { key: 'babero-bandana', color: '#e2b3a6' },
     // Variant cell (6): plain diaper cover, front view.
     { key: 'cubrepanal', color: '#e7dccb' }
+  ],
+  'tendencia-01': [
+    { key: 'jeans-recto', model: true, color: '#5f7fa6', accents: { pretina: '#56769c' } },
+    { key: 'pantalon-pitillo', model: true, color: '#4a4f58', accents: { pretina: '#43474f' } },
+    { key: 'jeans-mom', model: true, color: '#8fa9c7', accents: { pretina: '#86a0bf' } },
+    { key: 'pantalon-acampanado', model: true, color: '#6c88ad', accents: { pretina: '#627ea3' } },
+    { key: 'jeans-ancho', model: true, color: '#d9cfbd', accents: { pretina: '#d0c5b1' } },
+    { key: 'pantalon-baggy', model: true, color: '#7d95b5', accents: { pretina: '#738bab' } },
+    { key: 'pantalon-barrel', model: true, color: '#9db3cf', accents: { pretina: '#93a9c5' } },
+    { key: 'pantalon-cargo', model: true, color: '#b5a27c', accents: { pretina: '#aa9771' } },
+    { key: 'camiseta-oversize', model: true, color: '#bdbcb5' }
+  ],
+  'tendencia-02': [
+    { key: 'sobrecamisa-leñadora', model: true, color: '#b5654a' },
+    { key: 'chaqueta-trabajo', model: true, color: '#c8a25a' },
+    { key: 'bomber-clasica', model: true, color: '#6f7a52' },
+    { key: 'peto-corto', color: '#c98f6e', accents: { 'tirante--1': '#b97f5e', 'tirante--2': '#b97f5e' } },
+    { key: 'gorro-oso', color: '#e3c9a8', accents: { 'oreja--1': '#d8b892', 'oreja--2': '#d8b892' } },
+    { key: 'sombrero-pescador', model: true, color: '#a8bccb', accents: { ala: '#9cb1c1' } },
+    { key: 'conjunto-verano', color: '#e2b3a6', accents: { 'sombrero-copa': '#a8bccb', 'sombrero-banda': '#a8bccb', 'sombrero-ala': '#9cb1c1' } },
+    // Variant cells (7, 8): baby barrel with elastic waist and the long overall.
+    { key: 'barrel-bebe', model: true, color: '#e7dccb', accents: { pretina: '#ddd0bb' } },
+    { key: 'peto-largo', color: '#8fa5bf', accents: { 'tirante--1': '#7f96b1', 'tirante--2': '#7f96b1' } }
+  ],
+  // Variant-only sheet: each cell is the exact recipe of a card variant.
+  'tendencia-03': [
+    { key: 'sobrecamisa-corta', model: true, color: '#7f8f6a', accents: { cuello: '#76855f' } },
+    { key: 'bomber-corta', model: true, color: '#4f5d73', accents: { 'puno-a': '#46536a', 'puno-b': '#46536a', cuello: '#46536a', pretina: '#46536a' } },
+    { key: 'camiseta-oversize-larga', model: true, color: '#e3dacb' },
+    { key: 'gorro-gato', color: '#c9c3bd', accents: { 'oreja--1': '#bab3ac', 'oreja--2': '#bab3ac' } },
+    { key: 'gorro-conejo', color: '#efd9dc', accents: { 'oreja--1': '#e5c8cc', 'oreja--2': '#e5c8cc' } },
+    { key: 'conjunto-invierno', color: '#8fa5bf', accents: { 'overol-tirante--1': '#7f96b1', 'overol-tirante--2': '#7f96b1', 'gorro-gorro': '#e3c9a8', 'gorro-oreja--1': '#d8b892', 'gorro-oreja--2': '#d8b892' } },
+    { key: 'conjunto-recien-nacido', color: '#f1e4d3', accents: { 'babero-babero': '#d9e3d4', 'bonete-banda': '#e8d6bf' } },
+    { key: 'baggy-bebe', model: true, color: '#9db3cf', accents: { pretina: '#93a9c5' } }
   ]
+};
+const viewFor = (cell: Cell): FlatView => {
+  const views = cell.model ? buildFlat(cell.key, findModel(cell.key)!.flat).views : buildKidsFlat(cell.key, cell.key).views;
+  return views.find(v => v.key === (cell.view ?? 'frente'))!;
 };
 
 const CELL = 418, SIZE = CELL * 3, BG = '#f3eee5';
@@ -57,7 +99,7 @@ function cellSvg(view: FlatView, cell: Cell, index: number): string {
 }
 
 function sheetSvg(cells: Cell[]): string {
-  const body = cells.map((cell, index) => cellSvg(buildKidsFlat(cell.key, cell.key).views.find(v => v.key === (cell.view ?? 'frente'))!, cell, index)).join('');
+  const body = cells.map((cell, index) => cellSvg(viewFor(cell), cell, index)).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">
 <defs>
   <filter id="tela" x="-5%" y="-5%" width="110%" height="110%">
@@ -77,7 +119,8 @@ const { chromium } = require('playwright') as typeof import('playwright');
 const browser = await chromium.launch();
 const page = await browser.newPage();
 await page.setContent('<html><body></body></html>');
-for (const [sheet, cells] of Object.entries(SHEETS)) {
+const only = process.argv.slice(2).filter(arg => SHEETS[arg]);
+for (const [sheet, cells] of Object.entries(SHEETS).filter(([name]) => !only.length || only.includes(name))) {
   const data: string = await page.evaluate(async ({ svg, size }) => {
     const img = new Image();
     img.src = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));

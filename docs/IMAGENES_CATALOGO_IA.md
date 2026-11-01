@@ -27,9 +27,10 @@ Para añadir un diseño nativo, generar una imagen acorde con las piezas reales,
 
 ## Láminas vectoriales (2026-11-01)
 
-`ninas-01` y `bebe-02` no son IA: `scripts/render-kids-sheets.ts` las dibuja desde
+`ninas-01`, `bebe-02` y `tendencia-01/02/03` no son IA: `scripts/render-kids-sheets.ts` las dibuja desde
 el dibujo técnico real de cada diseño, con textura y sombra suaves. Para ellas la
 ficha dice «Ilustración dibujada a partir del patrón real» (`catalogImageCaption`).
 Las celdas posteriores a la lista de grupos muestran variantes exactas
-(`VARIANT_IMAGES` en `src/data/catalogImages.ts`). Si más adelante se generan
+(`VARIANT_IMAGES` en `src/data/catalogImages.ts`); `tendencia-03` solo tiene
+celdas de variante y se registra con lista vacía para que su archivo se pruebe. Si más adelante se generan
 fotos con IA para estos diseños, conserva ids y celdas y cambia el texto.

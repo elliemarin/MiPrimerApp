@@ -92,7 +92,8 @@ profesional de patronaje 2D (estilo Seamly2D), pero con una interfaz muy simple.
    costuras que coinciden, medidas terminadas correctas).
 5. Para que aparezca bien en la biblioteca simple (ejemplo completo:
    `src/data/kidsCatalog.ts` + `src/data/kidsFlats.ts`, ver
-   `docs/NINA_Y_BEBE_AMPLIADO.md`): `designGroup` y familia en
+   `docs/NINA_Y_BEBE_AMPLIADO.md`; para convertir inspiraciones existentes sin
+   cambiar su id, `src/data/trendCatalog.ts` y `docs/TENDENCIAS_Y_BEBE.md`): `designGroup` y familia en
    `catalogTaxonomy.ts` (DESIGNS + `constructionFacets`), dibujo técnico cuyas
    zonas apunten a piezas reales, imagen propia en `catalogImages.ts` y conteos
    de `tests/catalog-*.test.ts` actualizados.

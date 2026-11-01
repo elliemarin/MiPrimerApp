@@ -23,7 +23,7 @@ const quickTypes: [GarmentType, string][] = [
   ['superiores', 'Tops'], ['abrigo', 'Abrigo'], ['inferiores', 'Pantalones'],
   ['faldas-vestidos', 'Faldas y vestidos'], ['monos', 'Petos'], ['bolsos', 'Bolsos'], ['accesorios', 'Accesorios'],
 ];
-const GIRLS = 'Niña';
+const GIRLS = 'Niña', TRENDS = 'Tendencias';
 /** The girls' shortcut joins the new collection with kid-sized dresses, skirts
  * and pinafores already in the catalogue; costumes keep their own shortcut. */
 function inCollection(model: CatalogModel, collection: string): boolean {
@@ -135,6 +135,7 @@ export function LibraryPage() {
         <button className="filter-chip" aria-pressed={!active.length} onClick={reset}>Todo</button>
         <button className="filter-chip simple-baby-shortcut" aria-pressed={filters.recipient === 'bebe'} onClick={chooseBaby}>Bebé</button>
         <button className="filter-chip simple-baby-shortcut" aria-pressed={collection === GIRLS} onClick={chooseGirls}>Niña</button>
+        <button className="filter-chip" aria-pressed={collection === TRENDS} onClick={() => { setFilters(start); setCollection(TRENDS); }}>Tendencias</button>
         <button className="filter-chip" aria-pressed={filters.family === 'hoodie'} onClick={() => set({ type: 'todos', family: 'hoodie' })}>Hoodies</button>
         <button className="filter-chip" aria-pressed={collection === 'Disfraces'} onClick={() => { setFilters(current => ({ ...current, type: 'todos', family: 'todas' })); setCollection('Disfraces'); }}>Disfraces</button>
         {quickTypes.map(([type, label]) => <button key={type} className="filter-chip" aria-pressed={collection !== 'Disfraces' && !familySelected && filters.type === type} onClick={() => set({ type })}>{label}</button>)}

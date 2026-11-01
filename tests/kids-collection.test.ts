@@ -113,9 +113,10 @@ describe('colección Niña y ampliación de Bebé', () => {
 
   it('enlaza cada zona de los dibujos con una pieza física del patrón', () => {
     const models = CATALOG.filter(m => m.flat.kids);
-    expect(models.length).toBe(14);
+    expect(models.length).toBe(22);
     for (const model of models) {
-      const gen = getGenerator(model.generatorId!)!, kind = SUPPORTED[gen.id][0] === 'bebe' ? 'bebe' : SUPPORTED[gen.id].includes('infantil') ? 'infantil' : 'toddler';
+      const gen = getGenerator(model.generatorId!)!, kinds = SUPPORTED[gen.id] ?? ['bebe'];
+      const kind = kinds[0] === 'bebe' ? 'bebe' : kinds.includes('infantil') ? 'infantil' : 'toddler';
       const ctx = kind === 'bebe' ? at('ref-bebe-meses', 'B0-3', 'bebe') : at('ref-infantil-estatura', kind === 'infantil' ? 'E116' : 'E92', kind);
       const pieces = gen.generate(ctx, { ...gen.defaults(ctx), ...model.params }).pieces.map(p => p.id);
       for (const view of buildFlat(model.id, model.flat).views) {
