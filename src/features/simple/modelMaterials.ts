@@ -1,6 +1,9 @@
 import type { FlatView } from '../../data/flats';
 import type { Project } from '../../store/types';
 import type { DesignView, Fill, Zone } from '../studio/model';
+import { STREET_SURFACE_PIECES } from '../../data/streetStyleFlats';
+import { DRESS_STYLE_SURFACE_PIECES } from '../../data/dressStyleFlats';
+import { BABY_STYLE_SURFACE_PIECES } from '../../data/babyStyleFlats';
 
 const normalized = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
@@ -45,9 +48,13 @@ export function modelMaterials(project: Project, flat: FlatView): { fills: Recor
   const fills: Record<string, Fill> = { ...original?.zoneFills };
   let omittedPanels = false;
   const costume = COSTUME_SURFACES[project.pattern?.generatorId ?? ''];
+  const generatorId = project.pattern?.generatorId ?? '';
+  const bindings = STREET_SURFACE_PIECES[generatorId]?.[flat.key] ?? DRESS_STYLE_SURFACE_PIECES[generatorId]?.[flat.key] ?? BABY_STYLE_SURFACE_PIECES[generatorId]?.[flat.key];
   for (const zone of flat.zones) {
     const ranked = (part: Zone) => doc.views.map(view => ({ view, score: pieceScore(view, part, back) })).filter(item => item.score > 0).sort((a,b) => b.score - a.score)[0]?.view;
-    let physical = costume ? doc.views.find(view => view.source.type === 'pieza' && view.source.pieceId === costume[zone.id]) : ranked(zone);
+    const binding = bindings?.find(value => value.zoneId === zone.id);
+    let physical = binding ? doc.views.find(view => view.source.type === 'pieza' && view.source.pieceId === binding.pieceId)
+      : costume ? doc.views.find(view => view.source.type === 'pieza' && view.source.pieceId === costume[zone.id]) : ranked(zone);
     if (costume && !costume[zone.id]) continue; // Purchased headband is a reference, not a generated fabric piece.
     if (!physical && ['pretina','cuello','puno','canesu'].includes(zone.type)) {
       // A casing/hem/bound neckline can be part of a main piece. It inherits

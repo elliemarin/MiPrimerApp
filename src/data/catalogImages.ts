@@ -1,10 +1,12 @@
 import type { CatalogModel, Recipient } from './catalog';
+import { STYLE_CATALOG_IMAGE_SHEETS, STYLE_CATALOG_IMAGES, STYLE_CATALOG_IMAGE_BOUNDS } from './styleCatalogImages';
 
 /** Original AI product illustrations. A 3 × 3 atlas keeps the entire library
  * lightweight; these images never supply geometry or scale to the patterns. */
 export interface CatalogImageSource { sheet: string; cell: number }
 
 export const CATALOG_IMAGE_SHEETS: Record<string, readonly string[]> = {
+  ...STYLE_CATALOG_IMAGE_SHEETS,
   'prendas-01': ['tipo-pantalon-recto','tipo-jogger','tipo-pantalon-amplio','short-elastico','pantalon-pijama','tipo-falda-fruncida','tipo-sudadera','tipo-hoodie','tipo-chaqueta-hombro-caido'],
   'prendas-02': ['tipo-cardigan-abierto','tipo-chaleco-abierto','tipo-poncho','tipo-ruana','tipo-jumper-falda','tipo-top-cuadrado','tipo-top-cuadrado-sin-mangas','babero','gorro'],
   'accesorios-01': ['tipo-bolsa-tote','tipo-cojin','tipo-funda-bebida','tipo-dona-cabello','tipo-bandana','tipo-delantal','tipo-antifaz','tipo-banderin','tipo-estuche-cierre'],
@@ -76,7 +78,7 @@ const IMAGE_BOUNDS: Record<string, ImageBounds> = {
 };
 
 export function catalogImageBounds(source: CatalogImageSource): ImageBounds {
-  return IMAGE_BOUNDS[`${source.sheet}/${source.cell}`] ?? [(source.cell % 3) * 418, Math.floor(source.cell / 3) * 418, 418, 418];
+  return STYLE_CATALOG_IMAGE_BOUNDS[`${source.sheet}/${source.cell}`] ?? IMAGE_BOUNDS[`${source.sheet}/${source.cell}`] ?? [(source.cell % 3) * 418, Math.floor(source.cell / 3) * 418, 418, 418];
 }
 
 const BABY_IMAGES: Record<string, CatalogImageSource> = {
@@ -122,8 +124,9 @@ const VARIANT_IMAGES: Record<string, CatalogImageSource> = {
 };
 
 export function catalogImageFor(model: CatalogModel, recipient?: Recipient): CatalogImageSource | undefined {
-  if (VARIANT_IMAGES[model.id]) return VARIANT_IMAGES[model.id];
   const id = model.designGroup?.id ?? model.id;
+  if (STYLE_CATALOG_IMAGES[id]) return STYLE_CATALOG_IMAGES[id];
+  if (VARIANT_IMAGES[model.id]) return VARIANT_IMAGES[model.id];
   if (id === 'body-bebe' && model.params?.tipoManga === 'larga') return { sheet: 'especiales-01', cell: 7 };
   if ((recipient === 'bebe' || model.recipients.every(value => value === 'bebe' || value === 'toddler')) && BABY_IMAGES[id]) return BABY_IMAGES[id];
   return CATALOG_IMAGES[id];

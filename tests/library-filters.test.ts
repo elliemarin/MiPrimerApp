@@ -52,11 +52,12 @@ describe('Filtros de biblioteca combinables',()=>{
   });
   it('encuentra los bonetes nuevos con sus variantes sin incluir otros gorros',()=>{
     const search=(q:string)=>CATALOG.filter(m=>matches(m,{...INITIAL_FILTERS,q,recipient:'bebe',availability:'patron'})).map(m=>m.id).sort();
-    expect(search('bonetes')).toEqual(['bonete-bebe','bonete-encaje','bonete-volante','bonete-volante-doble']);
+    expect(search('bonetes')).toEqual(['bebe-bonete-visera','bonete-bebe','bonete-encaje','bonete-volante','bonete-volante-doble']);
     expect(search('bonete volante')).toEqual(['bonete-encaje','bonete-volante','bonete-volante-doble']);
     expect(search('capota puntilla')).toEqual(['bonete-encaje']);
     expect(search('bonete encaje')).toEqual(['bonete-encaje']);
     expect(search('bonete doble')).toEqual(['bonete-volante-doble']);
+    expect(search('bonete visera')).toEqual(['bebe-bonete-visera']);
     expect(search('beanie')).toEqual(['gorro']);
   });
   it('busca petos y diademas infantiles aunque su dibujo use piezas propias',()=>{

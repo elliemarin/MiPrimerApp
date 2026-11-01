@@ -14,20 +14,18 @@ from simple_journey_smoke import assert_pattern, drag, no_overflow, project_stat
 BASE = os.environ.get('HILVANA_TEST_URL', 'http://127.0.0.1:5185').rstrip('/')
 
 
-def start(page, model_id, variant=None, from_catalog=False):
+def start(page, model_id, from_catalog=False):
     if from_catalog:
         page.goto(BASE + '/#/biblioteca', wait_until='networkidle')
         page.get_by_role('searchbox', name='Buscar prendas y accesorios', exact=True).fill('bonete volante')
-        card = page.locator('.simple-pattern-card').filter(has_text='Bonete con volante')
+        card = page.locator(f'.simple-pattern-card[href*="/biblioteca/{model_id}?"]')
         card.wait_for()
-        assert card.count() == 1, 'Las variantes deben permanecer en una tarjeta'
+        assert card.count() == 1, 'El volante doble tiene su propia tarjeta y las tallas están dentro'
         card.click()
     else:
         page.goto(BASE + '/#/biblioteca/' + model_id, wait_until='networkidle')
     page.get_by_role('button', name='Intervenir', exact=True).click()
     dialog = page.get_by_role('dialog')
-    if variant:
-        dialog.locator('#variant-' + variant[0]).select_option(value=json.dumps(variant[1]))
     size = dialog.locator('#simple-child-size')
     if size.count():
         options = size.locator('option').evaluate_all('(els)=>els.map(o=>o.value)')
@@ -41,10 +39,7 @@ def start(page, model_id, variant=None, from_catalog=False):
     page.locator('.customize-art > svg').wait_for()
     state = project_state(page, project_id)
     assert_pattern(state)
-    if variant == ('volante', 'doble'):
-        assert state['project']['modelId'] == 'bonete-volante-doble', state['project']['modelId']
-    else:
-        assert state['project']['modelId'] == model_id, state['project']['modelId']
+    assert state['project']['modelId'] == model_id, state['project']['modelId']
     no_overflow(page)
     return project_id
 
@@ -157,12 +152,12 @@ def inspect_pdf(path, expected_pieces, motifs=False):
     return {'pages': len(pdf), 'pieces': len(manifest['pieces']), 'controls': bars[:2]}
 
 
-def run(browser, model_id, *, variant=None, from_catalog=False, motifs=False):
+def run(browser, model_id, *, from_catalog=False, motifs=False):
     context = browser.new_context(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True, accept_downloads=True)
     page = context.new_page()
     errors = []
     page.on('pageerror', lambda error: errors.append(str(error)))
-    project_id = start(page, model_id, variant, from_catalog)
+    project_id = start(page, model_id, from_catalog)
     state, scenes = finish(page, project_id, motifs)
     page.evaluate('window.scrollTo(0,0)')
     page.screenshot(path=f'/tmp/hilvana-handoff-{model_id}.png', full_page=True)
@@ -190,7 +185,7 @@ if __name__ == '__main__':
     with sync_playwright() as p:
         browser = p.chromium.launch(executable_path='/usr/bin/chromium', args=['--no-sandbox'])
         try:
-            run(browser, 'bonete-volante', variant=('volante', 'doble'), from_catalog=True)
+            run(browser, 'bonete-volante-doble', from_catalog=True)
             run(browser, 'delantal-pichi', motifs=True)
             run(browser, 'mono-pico-volantes')
             run(browser, 'peto-infantil-largo')

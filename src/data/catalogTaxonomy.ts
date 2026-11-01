@@ -1,5 +1,9 @@
 import type { CatalogModel, GarmentType, Recipient, Technique } from './catalog';
 import { COSTUME_EXPANSION_FAMILY_LABELS, COSTUME_EXPANSION_FAMILIES } from './costumeExpansion';
+import { STYLE_IDENTITY_FAMILIES } from './catalogStyleIdentity';
+import { STREET_STYLE_FAMILIES } from './streetStyleCatalog';
+import { BABY_STYLE_FAMILIES } from './babyStyleCatalog';
+import { DRESS_STYLE_FAMILIES } from './dressStyleCatalog';
 
 /** A family identifies the item itself. Collections, fabric recommendations and
  * optional decorations never assign a family. Every current design is listed. */
@@ -68,7 +72,11 @@ const DESIGNS: Partial<Record<CatalogFamily, readonly string[]>> = {
   reparacion: ['intervenir-camisa', 'intervenir-pantalon', 'remiendo-rodilla', 'acortar-bajo'],
   aplicacion: ['parche-personalizado', 'collage-montanas']
 };
-export const FAMILY_BY_DESIGN = { ...Object.fromEntries(Object.entries(DESIGNS).flatMap(([family, ids]) => ids.map(id => [id, family]))), ...COSTUME_EXPANSION_FAMILIES } as Record<string, CatalogFamily>;
+export const FAMILY_BY_DESIGN = {
+  ...Object.fromEntries(Object.entries(DESIGNS).flatMap(([family, ids]) => ids.map(id => [id, family]))),
+  ...COSTUME_EXPANSION_FAMILIES, ...STYLE_IDENTITY_FAMILIES,
+  ...STREET_STYLE_FAMILIES, ...BABY_STYLE_FAMILIES, ...DRESS_STYLE_FAMILIES
+} as Record<string, CatalogFamily>;
 
 export function familyOf(model: CatalogModel): CatalogFamily {
   return FAMILY_BY_DESIGN[model.designGroup?.id ?? model.id] ?? 'sin-clasificar';

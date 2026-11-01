@@ -14,6 +14,9 @@ import type { Piece } from '../../lib/pattern/types';
 import { componentAtPoint, componentFits } from '../customize/placementDrag';
 import { COSTUME_SURFACE_PIECES } from '../../data/costumeFlats';
 import { KIDS_SURFACE_PIECES } from '../../data/kidsFlats';
+import { STREET_SURFACE_PIECES } from '../../data/streetStyleFlats';
+import { DRESS_STYLE_SURFACE_PIECES } from '../../data/dressStyleFlats';
+import { BABY_STYLE_SURFACE_PIECES } from '../../data/babyStyleFlats';
 import { basePanelPattern } from '../studio/panelWorkflow';
 
 /** A reversible illustration projection. The original millimetre geometry is
@@ -122,7 +125,10 @@ function makeScene(project: Project, flat: FlatView, physical: DesignView[], apr
   const surfaces: AssemblySurface[]=[];
   const forced=KNOWN_OBJECTS[project.pattern?.generatorId??''];
   const costumeKey=project.pattern?.generatorId.replace(/^cosplay-/,'');
-  const explicitBindings:{zoneId:string;pieceId:string;mirror:boolean;fold?:boolean}[]|undefined=(costumeKey?COSTUME_SURFACE_PIECES[costumeKey]?.[flat.key]:undefined)??KIDS_SURFACE_PIECES[project.pattern?.generatorId??'']?.[flat.key];
+  const generatorId=project.pattern?.generatorId??'';
+  const explicitBindings:{zoneId:string;pieceId:string;mirror:boolean;fold?:boolean}[]|undefined=
+    STREET_SURFACE_PIECES[generatorId]?.[flat.key] ?? DRESS_STYLE_SURFACE_PIECES[generatorId]?.[flat.key] ?? BABY_STYLE_SURFACE_PIECES[generatorId]?.[flat.key] ??
+    (costumeKey?COSTUME_SURFACE_PIECES[costumeKey]?.[flat.key]:undefined) ?? KIDS_SURFACE_PIECES[generatorId]?.[flat.key];
   const ranked=(zone:Zone)=>physical.map(view=>({view,score:score(view,zone,back)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score)[0]?.view;
   for(const zone of zones) {
     const physicalId=forced?.[zone.id];
@@ -146,21 +152,23 @@ function makeScene(project: Project, flat: FlatView, physical: DesignView[], apr
       if(!clipped.length) continue;
       source=bounds(clipped.map(poly=>cmdsToSvg(polylineCmds(poly,true))).join(' '));
     }
-    const babyFront=project.pattern?.generatorId==='body-bebe-broches'&&pieceId(view)==='delantero';
+    const babyFront=generatorId==='body-bebe-broches'&&pieceId(view)==='delantero'
+      || generatorId.startsWith('bebe-body-') && /^delantero(?:-|$)/.test(pieceId(view));
     const openPonchoFront=project.pattern?.generatorId==='poncho-rectangular'&&project.pattern.params.aperturaFrente==='si'&&pieceId(view)==='delantero';
     // The integrated placket folds inside and overlaps at physical CF x=0.
     // Decorative placements belong to the exposed body, not that hidden facing.
-    if(babyFront) source.minX=0;
+    if(babyFront) source.minX=Math.max(0,source.minX);
     if(!validBounds(source)||!validBounds(target)) continue;
     // All current sewn sleeve generators use X from shoulder to cuff. A short
     // sleeve can be wider than it is long, so aspect ratio alone is incorrect.
-    const horizontalSleeve=/sudadera|camisa|haori|bluson|body-bebe|chaleco|chaqueta|tunic|kimono/.test(project.pattern?.generatorId??'');
+    const horizontalSleeve=generatorId.startsWith('bebe-') ? generatorId.startsWith('bebe-body-') : /sudadera|camisa|haori|bluson|body-bebe|chaleco|chaqueta|tunic|kimono|vestido-estilos-adulto|street-hoodie/.test(generatorId);
     const sideways=zone.type==='manga' && (horizontalSleeve || source.maxX-source.minX > (source.maxY-source.minY)*1.15);
     if(zone.type==='manga') {
       // A flat sleeve contains its front and back faces. Keep those physical
       // halves separate so a motif on the front cannot appear on the back.
-      if(sideways) { const mid=(source.minY+source.maxY)/2; if(back) source.minY=mid; else source.maxY=mid; }
-      else { const mid=(source.minX+source.maxX)/2; if(back) source.minX=mid; else source.maxX=mid; }
+      const physicalBack=generatorId==='bebe-babero-mangas' ? !back : back;
+      if(sideways) { const mid=(source.minY+source.maxY)/2; if(physicalBack) source.minY=mid; else source.maxY=mid; }
+      else { const mid=(source.minX+source.maxX)/2; if(physicalBack) source.minX=mid; else source.maxX=mid; }
     }
     const center=(target.minX+target.maxX)/2;
     const repeated=zones.filter(z=>z.type===zone.type).length>1;

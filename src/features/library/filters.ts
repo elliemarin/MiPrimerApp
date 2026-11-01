@@ -64,7 +64,7 @@ const synonyms: Record<string, string[]> = {
   cremallera: ['cremallera', 'cierre'], zipper: ['cremallera', 'cierre'],
 };
 const ignoredWords = new Set(['de', 'del', 'la', 'las', 'el', 'los', 'un', 'una', 'unos', 'unas', 'para', 'con', 'sin', 'y', 'o']);
-const hasHood = (m: CatalogModel) => m.generatorId === 'sudadera-capucha-holgada' ? m.params?.capucha === 'si' : m.flat.top?.neck === 'capucha';
+const hasHood = (m: CatalogModel) => familyOf(m) === 'hoodie' || (m.generatorId === 'sudadera-capucha-holgada' ? m.params?.capucha === 'si' : m.flat.top?.neck === 'capucha');
 const is = (m: CatalogModel, ...families: CatalogFamily[]) => families.includes(familyOf(m));
 type ItemIdentity = (model: CatalogModel) => boolean;
 /** Some filter families contain several different objects. A specific noun must
@@ -78,7 +78,7 @@ const subtypeAliases: [string[], ItemIdentity][] = [
   [['banda', 'bandas', 'headband', 'headbands'], m => m.designGroup?.id === 'tipo-banda-cabello'],
   [['monedero', 'monederos'], m => is(m, 'estuche') && named(m, /\bmonedero\b/)],
   [['neceser', 'neceseres'], m => is(m, 'estuche') && named(m, /\b(neceser|maquillaje|cosmeticos)\b/)],
-  [['tunica', 'tunicas', 'tunic', 'tunics'], m => is(m, 'top') && named(m, /\btunica\b/)],
+  [['tunica', 'tunicas', 'tunic', 'tunics'], m => is(m, 'top', 'vestido') && named(m, /\btunica\b/)],
   [['parka', 'parkas'], m => is(m, 'abrigo') && named(m, /\bparka\b/)],
   [['trench'], m => is(m, 'abrigo') && named(m, /\btrench\b/)],
   [['cazadora', 'cazadoras'], m => is(m, 'chaqueta') && named(m, /\bcazadora\b/)],
@@ -112,12 +112,16 @@ function searchMatches(m: CatalogModel, raw: string): boolean {
   if (withoutHood && (hasHood(m) || m.flat.family !== 'top') || withHood && !hasHood(m)) return false;
   // Only identity, actual dimensions, supported recipients and fabrics. Broad
   // collection labels and the explanatory prose are deliberately excluded.
-  const hay = normalizeSearch(`${m.name} ${m.designGroup?.name ?? ''} ${m.variantLabel ?? ''} ${(m.searchTerms ?? []).join(' ')} ${m.recommendedFabrics.join(' ')} ${m.recipients.join(' ')} ${m.fits.join(' ')}`);
+  const identity = normalizeSearch(`${m.name} ${m.designGroup?.name ?? ''} ${m.variantLabel ?? ''} ${(m.searchTerms ?? []).join(' ')}`);
+  const hay = `${identity} ${normalizeSearch(`${m.recommendedFabrics.join(' ')} ${m.recipients.join(' ')} ${m.fits.join(' ')}`)}`;
   const detailStart = tokens.indexOf('con');
   return tokens.every((word, index) => {
     if (ignoredWords.has(word)) return true;
     if (pinafore && ['falda', 'faldas'].includes(word) || apronBib && ['peto', 'petos'].includes(word) || shortPants && ['pantalon', 'pantalones', 'pants', 'corto', 'cortos'].includes(word)) return true;
     if (word === 'capucha') return withoutHood ? !hasHood(m) : hasHood(m);
+    // “Bonete doble” describes its construction. A suggested double gauze
+    // fabric must not turn every bonnet into a double-ruffle style.
+    if (['doble', 'triple'].includes(word) && !tokens.some(token => ['gasa', 'algodon', 'tela', 'tejido'].includes(token))) return identity.includes(word);
     // In “delantal con peto” the bib is a detail of the apron, not another
     // garment category. It must still occur in the item's actual identity.
     if (detailStart >= 0 && index > detailStart && identityFamily[word]) return hay.includes(word);

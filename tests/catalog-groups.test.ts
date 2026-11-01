@@ -13,9 +13,8 @@ describe('Una base por diseño, con medidas elegidas después', () => {
     const before = JSON.stringify(CATALOG);
     const grouped = groupCatalog(patterns);
     const ids = grouped.flatMap(entry => entry.models.map(item => item.id));
-    // Forty new costume constructions and the restored baby body add designs,
-    // while dimensional presets still share their original cards.
-    expect(grouped).toHaveLength(156);
+    // Construction changes have their own cards; dimensional presets stay together.
+    expect(grouped).toHaveLength(246);
     expect(patterns.length).toBeGreaterThanOrEqual(1789);
     expect(ids).toHaveLength(patterns.length);
     expect(new Set(ids).size).toBe(ids.length);
@@ -58,8 +57,8 @@ describe('Una base por diseño, con medidas elegidas después', () => {
   it('agrupa después de buscar y filtrar, con un representante que cumple todos los filtros', () => {
     for (const q of ['hoodie', 'hoddie', 'scrunchie', 'cheve', 'tote', 'laptop 13']) {
       const found = CATALOG.filter(item => matches(item, { ...patternFilters, q }));
-      // The kids' kangaroo hoodie is its own construction next to the adult hoodie.
-      expect(groupCatalog(found), q).toHaveLength(q.startsWith('ho') ? 2 : 1);
+      // The original adult, infant and twelve new hoodie constructions stay separate.
+      expect(groupCatalog(found), q).toHaveLength(q.startsWith('ho') ? 14 : 1);
     }
     const filtered = { ...patternFilters, q: 'hoodie 66', recipient: 'mujer' as const, fit: 'oversize' as const, fabric: 'punto' as const };
     const found = CATALOG.filter(item => matches(item, filtered));

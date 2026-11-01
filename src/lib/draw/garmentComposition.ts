@@ -7,7 +7,7 @@ import { cmdsToSvg, type PathCmd } from './paths';
 export function supportsModelIllustration(spec: FlatSpec): boolean {
   // Baby garments of the kids collection are drawn at real infant size and
   // objects such as booties or towels are not worn on the croquis.
-  return !spec.pants?.torso && !(spec.kids && (spec.family === 'bebe' || spec.family === 'accesorio'));
+  return !spec.pants?.torso && !spec.babyStyle && !(spec.kids && (spec.family === 'bebe' || spec.family === 'accesorio'));
 }
 
 export interface GarmentSegment {

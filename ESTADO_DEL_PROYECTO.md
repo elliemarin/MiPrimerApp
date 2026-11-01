@@ -6,22 +6,82 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-01 (Codex: continuación y revisión del lote infantil de Claude).
+- Última actualización: 2026-11-01 (Codex: catálogo por estilos y transformaciones de prendas existentes).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 3054 pruebas: catálogo, patrones, persistencia, PDF, proyector, logos y arrastre
+npm test            # 3672 pruebas: catálogo, patrones, persistencia, PDF, proyector, logos y transformaciones
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Catálogo por estilos y transformaciones (2026-11-01)
+
+**Este es el relevo más reciente.** La petición era variedad de construcciones,
+no multiplicar tarjetas por talla o color. Se partió de `8d25d82`, con instalación,
+3,054 pruebas y compilación correctas.
+
+| Diseños con patrón disponible | Antes | Ahora |
+| --- | ---: | ---: |
+| Catálogo completo | 156 | 246 |
+| Bebé | 40 | 77 |
+| Hoodies para mujer | 1 | 13 |
+| Pantalones para mujer | 10 | 22 |
+| Vestidos para mujer | 0 | 27 |
+
+- **69 construcciones nuevas:** 12 hoodies, 12 pantalones, 27 vestidos y 18
+  diseños de bebé. Cada una tiene patrón paramétrico, piezas, márgenes,
+  instrucciones, materiales y dibujo de colocación frontal/trasero.
+- **21 estilos antes ocultos** tienen tarjeta propia: conjuntos infantiles,
+  cubrepañales con olanes/tirantes, bonetes, pichi/mono de pico, etc. Las tallas,
+  medidas y largos siguen dentro del estilo. Los IDs de las recetas y los
+  proyectos existentes se conservan.
+- **90 imágenes realistas originales de IA**, en diez láminas WebP locales.
+  Son ilustraciones; las medidas se calculan siempre desde la geometría.
+- **Navegación:** persona y tipo de prenda siempre visibles, accesos Mujer y
+  Vestidos, estilos nuevos primero. Los hoodies mantienen una búsqueda estricta;
+  «bonete doble» no encuentra otro bonete solo por recomendar gasa doble.
+- **Transformar mi ropa:** tercera sección de Biblioteca con 27 ideas y diez
+  construcciones de complementos. Incluye paneles vaqueros, cuñas setenteras,
+  cargo, bolsillos, volantes, puños y bandas. Mide la prenda existente, conserva
+  un borrador local y genera PDF de las piezas nuevas con materiales, pasos y
+  referencias de ubicación. No incluye un patrón inventado de la prenda base.
+- **Revisión de confección:** cierres separables, cruces de botones, frunces,
+  puños y curvas de paneles comprobados. Se corrigieron el largo total de manga
+  globo y pantalones con puños extensibles, y el orden de montaje de volantes.
+  El estudio excluye tapetas ocultas de los nuevos bodies y distingue las caras
+  de las mangas del babero abierto por detrás. Las rodilleras exteriores se
+  pueden colorear como pieza independiente.
+
+**Validación:** 3,672 pruebas en 79 archivos, TypeScript y compilación de Pages.
+Los recorridos móviles de 390 px verifican filtros, tallas, intervención sin
+recargar, vistas completas, materiales, persistencia y PDF. Hoodie con cierre:
+42 páginas/5 plantillas; vestido trapecio: 30/5; body con canesú: 21/11.
+Transformación de campana: 7 páginas con medidas reales 365/220 mm. Se conservaron
+los recorridos anteriores de bonete con encaje y delantal, incluyendo bordados.
+Los PDFs mantienen controles exactos de 50/100 mm y escala de impresión 100 %.
+
+**Límites y siguientes pasos para Claude:** todos los patrones nuevos siguen
+experimentales. Falta imprimir y coser muestras; las comprobaciones matemáticas
+no certifican caída ni ajuste. Los vestidos usan bloques holgados sin pinzas:
+vestidos entallados y corsetería requieren motores específicos. Transformaciones
+usa propuestas predefinidas; reconocimiento por foto y edición de la prenda usada
+en el estudio quedan pendientes. No se añadió 3D ni exportación de puntadas para
+la Singer. Priorizar muestras de cierres/puños, paneles de mezclilla, vestidos
+abotonados y aberturas infantiles antes de ampliar otra tanda.
+
+Contratos y detalles: `docs/ESTILOS_URBANOS.md`, `docs/VESTIDOS_POR_ESTILO.md`, `docs/ESTILOS_BEBE_2026.md`,
+`docs/TRANSFORMACIONES_DE_PRENDAS.md`, `docs/IMAGENES_ESTILOS.md` y
+`docs/auditoria/catalogo.csv`. Conteo total separado: 2,059 recetas, 312 tarjetas
+incluyendo inspiraciones; de ellas, 1,993 recetas/246 tarjetas tienen patrón.
+
 ## Continuación del trabajo de Claude (2026-11-01)
 
-**Este es el relevo más reciente.** Se retomó `1db95f4`, el segundo lote de ocho
+Relevo anterior. Se retomó `1db95f4`, el segundo lote de ocho
 referencias infantiles. Las cinco entregas de Claude estaban guardadas y
 publicadas. No había un PR o una rama pendiente: se continuó comprobando su
 último lote y corrigiendo los fallos reproducidos en el estudio y el PDF.

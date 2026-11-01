@@ -9,13 +9,14 @@ import { INITIAL_FILTERS, matches, modelHasPattern, sanitizeFilters, type Filter
 import { groupCatalog } from './groups';
 import { FreePatternsPanel } from './FreePatternsPanel';
 import { GIRL_FAMILIES } from '../../data/kidsCatalog';
+import { TransformationsPanel } from '../transform/TransformationsPanel';
 import './library.css';
 import './simpleLibrary.css';
 export { matches } from './filters';
 
 const start: Filters = { ...INITIAL_FILTERS, availability: 'patron' };
 const babyRows = SIZE_TABLES.find(table => table.id === 'ref-bebe-meses')!.rows;
-type CatalogMode = 'editables' | 'internet';
+type CatalogMode = 'editables' | 'internet' | 'transformar';
 const FIT_LABEL = { ajustado: 'Ajustado', regular: 'Regular', holgado: 'Holgado', oversize: 'Oversize' };
 const STRETCH_LABEL = { ninguna: 'Sin elasticidad', baja: 'Elasticidad baja', media: 'Elasticidad media', alta: 'Elasticidad alta' };
 const DIFFICULTY_LABEL = ['Cualquier nivel', 'Inicial', 'Intermedio', 'Avanzado'];
@@ -43,7 +44,10 @@ export function LibraryPage() {
     const value = saved('hilvana-simple-collection', 'todas');
     return CATALOG.some(model => (model.collection ?? model.sub) === value) ? value : 'todas';
   });
-  const [mode, setMode] = useState<CatalogMode>(() => saved('hilvana-library-mode', 'editables') === 'internet' ? 'internet' : 'editables');
+  const [mode, setMode] = useState<CatalogMode>(() => {
+    const value = saved('hilvana-library-mode', 'editables');
+    return value === 'internet' || value === 'transformar' ? value : 'editables';
+  });
   const [open, setOpen] = useState(false);
   const [limit, setLimit] = useState(24);
   const [babySize, setBabySize] = useState(() => {
@@ -66,7 +70,9 @@ export function LibraryPage() {
     return values;
   }, [all, filters, collection]);
   const list = useMemo(() => {
-    const found = groupCatalog(all.filter(model => matches(model, filters) && inCollection(model, collection)));
+    const newStyle = (model: CatalogModel) => !!(model.flat.street || model.flat.dressStyle || model.flat.babyStyle);
+    const found = groupCatalog(all.filter(model => matches(model, filters) && inCollection(model, collection)))
+      .sort((a, b) => Number(newStyle(b.representative)) - Number(newStyle(a.representative)));
     if (filters.q || filters.type !== 'todos' || filters.family !== 'todas' || collection !== 'todas') return found;
     const seen = new Set<string>();
     const featured = found.filter(group => {
@@ -124,22 +130,29 @@ export function LibraryPage() {
   const familySelected = filters.family && filters.family !== 'todas';
 
   return <div className="page page-wide simple-library">
-    <header className={`simple-library-head${mode === 'internet' ? ' compact' : ''}`}><span className="simple-wordmark">Hilvana</span>{mode === 'editables' && <><h1>¿Qué vas a crear?</h1><p>Elige un diseño, ajusta sus medidas y hazlo tuyo.</p></>}</header>
+    <header className={`simple-library-head${mode !== 'editables' ? ' compact' : ''}`}><span className="simple-wordmark">Hilvana</span>{mode === 'editables' && <><h1>¿Qué vas a crear?</h1><p>Encuentra tu estilo. Las tallas y medidas se eligen después.</p></>}</header>
     <div className="simple-library-modes" role="group" aria-label="Biblioteca de patrones">
       <button aria-pressed={mode === 'editables'} onClick={() => setMode('editables')}><Icon name="scissors" size={19}/><span>Patrones editables</span></button>
+      <button aria-pressed={mode === 'transformar'} onClick={() => setMode('transformar')}><Icon name="telas" size={19}/><span>Transformar mi ropa</span></button>
       <button aria-pressed={mode === 'internet'} onClick={() => setMode('internet')}><Icon name="download" size={19}/><span>Gratis de internet</span></button>
     </div>
-    {mode === 'internet' ? <FreePatternsPanel initialCategory={collection === 'Disfraces' ? 'disfraces' : 'todos'}/> : <>
+    {mode === 'transformar' ? <TransformationsPanel/> : mode === 'internet' ? <FreePatternsPanel initialCategory={collection === 'Disfraces' ? 'disfraces' : 'todos'}/> : <>
       <div className="simple-search-row"><div className="simple-search"><Icon name="search"/><input type="search" aria-label="Buscar prendas y accesorios" placeholder="Hoodie, pantalón, funda, bolso…" value={filters.q} onChange={event => set({ q: event.target.value })}/></div><Button icon="filter" aria-label={`Filtros${filterCount > 0 ? ` (${filterCount})` : ''}`} onClick={() => setOpen(true)}><span className="simple-filters-label">Filtros</span>{filterCount > 0 && <span className="simple-filter-count">{filterCount}</span>}</Button></div>
       <div className="simple-collections" role="group" aria-label="Tipo de proyecto">
         <button className="filter-chip" aria-pressed={!active.length} onClick={reset}>Todo</button>
         <button className="filter-chip simple-baby-shortcut" aria-pressed={filters.recipient === 'bebe'} onClick={chooseBaby}>Bebé</button>
+        <button className="filter-chip" aria-pressed={filters.recipient === 'mujer'} onClick={() => { setFilters({ ...start, recipient: 'mujer' }); setCollection('todas'); }}>Mujer</button>
         <button className="filter-chip simple-baby-shortcut" aria-pressed={collection === GIRLS} onClick={chooseGirls}>Niña</button>
         <button className="filter-chip simple-baby-shortcut" aria-pressed={collection === KIDS} onClick={() => { setFilters(start); setCollection(KIDS); }}>Infantil</button>
         <button className="filter-chip" aria-pressed={collection === TRENDS} onClick={() => { setFilters(start); setCollection(TRENDS); }}>Tendencias</button>
         <button className="filter-chip" aria-pressed={filters.family === 'hoodie'} onClick={() => set({ type: 'todos', family: 'hoodie' })}>Hoodies</button>
+        <button className="filter-chip" aria-pressed={filters.family === 'vestido'} onClick={() => set({ type: 'todos', family: 'vestido' })}>Vestidos</button>
         <button className="filter-chip" aria-pressed={collection === 'Disfraces'} onClick={() => { setFilters(current => ({ ...current, type: 'todos', family: 'todas' })); setCollection('Disfraces'); }}>Disfraces</button>
         {quickTypes.map(([type, label]) => <button key={type} className="filter-chip" aria-pressed={collection !== 'Disfraces' && !familySelected && filters.type === type} onClick={() => set({ type })}>{label}</button>)}
+      </div>
+      <div className="simple-visible-filters">
+        <Field label="Para quién" htmlFor="library-recipient"><Select id="library-recipient" value={filters.recipient} onChange={recipient => { set({ recipient }); setCollection('todas'); }} options={[{ value: 'todos' as const, label: 'Todas las personas' }, ...Object.entries(RECIPIENT_LABEL).map(([value, label]) => ({ value: value as Recipient, label }))]}/></Field>
+        <Field label="Prenda o accesorio" htmlFor="library-family"><Select id="library-family" value={filters.family ?? 'todas'} onChange={family => set({ family })} options={[{ value: 'todas' as CatalogFamily | 'todas', label: 'Todos los tipos' }, ...familyOptions]}/></Field>
       </div>
       {active.length > 0 && <div className="simple-active-filters" role="group" aria-label="Filtros activos">{active.map(filter => <button key={filter.key} className="simple-active-filter" aria-label={`Quitar filtro ${filter.label}`} onClick={filter.remove}><span>{filter.label}</span><Icon name="close" size={14}/></button>)}</div>}
       {filters.recipient === 'bebe' && <div className="simple-baby-section"><div><strong>Para bebé</strong><p>Elige los meses; después podrás ajustar las medidas.</p></div><Field label="Talla por meses" htmlFor="baby-simple"><Select id="baby-simple" value={babySize} onChange={setBabySize} options={babyRows.map(row => ({ value: row.code, label: row.label }))}/></Field></div>}
@@ -151,7 +164,7 @@ export function LibraryPage() {
         </a>;
       })}</div>}
       {limit < list.length && <div className="simple-more"><Button onClick={() => setLimit(value => value + 24)}>Ver más diseños</Button><p className="tiny muted">Mostrando {Math.min(limit, list.length)} de {list.length.toLocaleString('es-MX')}</p></div>}
-      <p className="simple-catalog-note">Cada diseño reúne sus medidas y versiones. Al continuar puedes obtener el patrón o añadir extras, colores y bordados. Los patrones experimentales requieren una muestra antes de cortar tu tela definitiva.</p>
+      <p className="simple-catalog-note">Cada tarjeta es un estilo; sus tallas están dentro. Al continuar puedes obtener el patrón o añadir extras, colores y bordados. Los patrones experimentales requieren una muestra antes de cortar tu tela definitiva.</p>
       <div className="simple-external-invite"><div><strong>¿Buscas más ideas?</strong><p>Explora patrones gratuitos de otros autores con sus instrucciones.</p></div><Button icon="link" onClick={chooseInternet}>Ver patrones de internet</Button></div>
       {open && <Sheet title="Encuentra tu base" onClose={() => setOpen(false)} footer={<Button block variant="primary" onClick={() => setOpen(false)}>Ver {list.length.toLocaleString('es-MX')} resultados</Button>}><div className="stack-lg">
         <Field label="Para quién" htmlFor="search-recipient"><Select id="search-recipient" value={filters.recipient} onChange={recipient => set({ recipient })} options={[{ value: 'todos' as const, label: 'Todas las personas' }, ...Object.entries(RECIPIENT_LABEL).map(([value, label]) => ({ value: value as Recipient, label }))]}/></Field>

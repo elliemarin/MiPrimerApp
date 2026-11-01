@@ -35,7 +35,7 @@ describe('imágenes propias para los diseños con patrón', () => {
       expect(statSync(path).size).toBeLessThan(250_000);
       bytes += file.length;
     }
-    expect(bytes).toBeLessThan(2_500_000);
+    expect(bytes).toBeLessThan(4_500_000);
   });
 
   it('muestra las mangas y proporciones de bebé sin cambiar el patrón ni duplicar tarjetas', () => {

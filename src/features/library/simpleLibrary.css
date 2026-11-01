@@ -30,10 +30,12 @@
 @media(max-width:1100px) { .simple-pattern-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
 @media(max-width:700px) { .simple-pattern-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px 12px; } .simple-pattern-art { padding: 12px; } .simple-model-layout { grid-template-columns: 1fr; gap: 20px; } .simple-model-art { max-height: 340px; } .simple-search-row .btn { padding-inline: 12px; font-size: 14px; } }
 
-.simple-library-modes { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 4px; max-width: 520px; margin-bottom: 22px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
+.simple-library-modes { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 4px; max-width: 710px; margin-bottom: 22px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); }
 .simple-library-modes button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 9px 12px; border: 1px solid transparent; border-radius: calc(var(--r-md) - 4px); background: transparent; color: var(--ink-2); font: inherit; font-size: 14px; cursor: pointer; }
 .simple-library-modes button[aria-pressed="true"] { background: var(--mat); color: #fff; font-weight: 600; }
 .simple-library-modes svg { flex: none; }
+.simple-visible-filters { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; max-width: 710px; margin: 8px 0 14px; }
+.simple-visible-filters .field { min-width: 0; margin: 0; }
 .simple-active-filters { display: flex; flex-wrap: wrap; gap: 7px; margin: 2px 0 10px; }
 .simple-active-filter { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 36px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink-2); font: inherit; font-size: 12px; cursor: pointer; text-align: left; }
 .simple-active-filter span { overflow-wrap: anywhere; }
@@ -51,7 +53,7 @@
 .simple-external-invite .btn { flex: none; }
 @media(max-width:600px) {
   .simple-library-modes { margin-bottom: 18px; }
-  .simple-library-modes button { font-size: 12px; padding-inline: 6px; gap: 5px; }
+  .simple-library-modes button { font-size: 12px; padding-inline: 6px; gap: 5px; flex-direction: column; }
   .simple-baby-section { grid-template-columns: 1fr; gap: 14px; padding: 16px; }
   .simple-external-invite { align-items: start; flex-direction: column; gap: 14px; }
 }

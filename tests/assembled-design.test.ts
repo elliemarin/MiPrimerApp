@@ -48,7 +48,10 @@ describe('prenda armada con coordenadas físicas reversibles',()=>{
           const point=center(surface),restored=inverseAssemblyPoint(surface,assemblyPoint(surface,point));
           expect(restored.x,model.id).toBeCloseTo(point.x,6);expect(restored.y,model.id).toBeCloseTo(point.y,6);
           expect(project.design!.views.some(view=>view.id===surface.viewId&&view.source.type==='pieza'&&view.source.pieceId===surface.pieceId),model.id).toBe(true);
-          expect(surface.pieceId,model.id).not.toMatch(/componente-|entretela|forro|refuerzo/);
+          expect(surface.pieceId,model.id).not.toMatch(/componente-|entretela|forro/);
+          // The work-trouser knee reinforcement is an exposed, separately
+          // cut layer and must remain available for fabric and embroidery.
+          if(surface.pieceId!=='refuerzo-rodilla') expect(surface.pieceId,model.id).not.toMatch(/refuerzo/);
         }
       }
       if(['pantalon','top','falda','bolso','bebe'].includes(model.flat.family)&&!model.generatorId?.includes('capa')) expect(scenes.map(scene=>scene.label),model.id).toEqual(['Frente','Espalda']);

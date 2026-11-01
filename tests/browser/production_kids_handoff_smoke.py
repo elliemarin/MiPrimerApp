@@ -84,7 +84,7 @@ def run():
             page.goto(BASE + '/#/biblioteca', wait_until='networkidle')
             search = page.get_by_role('searchbox', name='Buscar prendas y accesorios', exact=True)
             search.fill('bonete volante')
-            card = page.locator('.simple-pattern-card').filter(has_text='Bonete con volante')
+            card = page.locator('.simple-pattern-card[data-design-group="tipo-bonete-volante"]')
             card.wait_for()
             assert card.count() == 1
             search.fill('puntilla')
@@ -93,7 +93,7 @@ def run():
             assert 'bonete-encaje' in card.get_attribute('href'), card.get_attribute('href')
             card.click()
             page.get_by_role('button', name='Obtener patrón', exact=True).click()
-            assert page.locator('#variant-volante').input_value() == '"encaje"'
+            assert page.locator('#variant-volante').count() == 0  # Construction now has its own card.
             page.locator('#simple-child-size').select_option('B6-9')
             page.get_by_role('button', name='Preparar PDF', exact=True).click()
             page.wait_for_url('**/#/confeccion/**')
