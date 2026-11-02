@@ -1,0 +1,8 @@
+import{aB as p,aG as m}from"./index-Caxp2Zvz.js";const $={corte:"",costura:"1.4 0.9",doblez:"3.2 0.7 0.5 0.7",final:"0.8 0.6",pespunte:"0.05 0.6",referencia:"",colocacion:"2 1",hilo:"",piquete:"",bordado:"1 0.4 0.2 0.4"},h={corte:.32,costura:.18,doblez:.26,final:.18,pespunte:.22,referencia:.1,colocacion:.16,hilo:.2,piquete:.32,bordado:.25};function i(a){return a.replace(/[&<>"]/g,l=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[l])}function g(a,l){const t=p(a),n=10,d=t.minX-n,f=t.minY-n,r=t.maxX-t.minX+2*n,c=t.maxY-t.minY+2*n,e=[];for(const s of a){e.push(`<g id="${i(s.id)}"><title>${i(s.name)}</title>`);for(const o of s.paths)e.push(`<path d="${m(o.cmds)}" fill="${o.fillColor&&/^#[a-f0-9]{6}$/i.test(o.fillColor)?o.fillColor:"none"}" stroke="${o.color&&/^#[a-f0-9]{6}$/i.test(o.color)?o.color:"#000"}" stroke-width="${h[o.style]}"${$[o.style]?` stroke-dasharray="${$[o.style]}"`:""} data-linea="${o.style}"/>`);for(const o of s.grains)e.push(`<line x1="${o.a.x}" y1="${o.a.y}" x2="${o.b.x}" y2="${o.b.y}" stroke="#000" stroke-width="0.2" data-linea="hilo"/>`);for(const o of s.labels)e.push(`<text x="${o.at.x}" y="${o.at.y}" font-size="${o.size*1.38}" font-family="Helvetica, Arial, sans-serif" text-anchor="middle"${o.bold?' font-weight="bold"':""}${o.angle?` transform="rotate(${o.angle} ${o.at.x} ${o.at.y})"`:""}>${i(o.text)}</text>`);e.push("</g>")}return`<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${r}mm" height="${c}mm" viewBox="${d} ${f} ${r} ${c}">
+<title>${i(l)}</title>
+<desc>Escala 1:1. Unidades en milímetros. Generado por Hilvana.</desc>
+${e.join(`
+`)}
+</svg>
+`}export{g as p};
