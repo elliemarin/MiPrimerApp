@@ -1,57 +1,65 @@
-import { useEffect, useState } from 'react';
-import { registerSW } from 'virtual:pwa-register';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
+import { appUpdates } from '../lib/appUpdates';
 import { useApp } from '../store/app';
 import { Button } from './components';
 import './appUpdateNotice.css';
 
-let waiting = false;
-let registered = false;
-let activate: ((reloadPage?: boolean) => Promise<void>) | undefined;
-const listeners = new Set<(available: boolean) => void>();
-
 /** A release must not delete lazy chunks while an older app is still open. */
 export function AppUpdateNotice() {
-  const [available, setAvailable] = useState(waiting);
+  const { available } = useSyncExternalStore(appUpdates.subscribe, appUpdates.getSnapshot);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  useEffect(() => {
-    listeners.add(setAvailable);
-    if (!registered && 'serviceWorker' in navigator) {
-      registered = true;
-      activate = registerSW({
-        immediate: true,
-        onNeedRefresh() {
-          waiting = true;
-          listeners.forEach(listener => listener(true));
-        }
-      });
-    }
-    return () => { listeners.delete(setAvailable); };
-  }, []);
+  const notice = useRef<HTMLElement>(null);
+  // The coordinator outlives StrictMode's effect replay; subscriptions do not.
+  useEffect(() => { appUpdates.start(); }, []);
+  useLayoutEffect(() => {
+    if (!busy) return;
+    // The notice lives outside #root so the rest of the app can be made inert
+    // briefly. This also blocks keyboard edits during IndexedDB/worker waits.
+    const root = document.getElementById('root');
+    const wasInert = root?.inert ?? false;
+    if (root) root.inert = true;
+    // Editors also listen on window: inert alone does not block their shortcuts.
+    const blockShortcuts = (event: KeyboardEvent) => { event.preventDefault(); event.stopImmediatePropagation(); };
+    window.addEventListener('keydown', blockShortcuts, true);
+    return () => {
+      if (root) root.inert = wasInert;
+      window.removeEventListener('keydown', blockShortcuts, true);
+    };
+  }, [busy]);
+  useLayoutEffect(() => {
+    if (!available || !notice.current) return;
+    const element = notice.current;
+    document.documentElement.dataset.appUpdate = 'available';
+    const measure = () => document.documentElement.style.setProperty('--app-update-offset', `${Math.ceil(element.getBoundingClientRect().height)}px`);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty('--app-update-offset');
+      delete document.documentElement.dataset.appUpdate;
+    };
+  }, [available]);
 
   const update = async () => {
-    if (busy || !activate) return;
+    if (busy) return;
     setBusy(true); setError('');
-    const reload = () => window.location.reload();
     try {
-      // Drafts are persisted before the explicitly requested worker activation.
-      const saved = await useApp.getState().saveNow();
-      if (!saved) throw new Error('No se pudo guardar tu diseño. Reintenta antes de actualizar.');
-      // Workbox does not mark every controlling event as isUpdate (for example
-      // a second release during the very first session). This listener is only
-      // installed after the person's explicit action and successful save.
-      navigator.serviceWorker.addEventListener('controllerchange', reload, { once: true });
-      await activate(true);
+      await appUpdates.apply(() => useApp.getState().saveNow(), () => window.location.reload());
     } catch (cause) {
-      navigator.serviceWorker.removeEventListener('controllerchange', reload);
       setError(cause instanceof Error ? cause.message : 'No se pudo actualizar. Puedes seguir trabajando.');
       setBusy(false);
     }
   };
 
   if (!available) return null;
-  return <aside className="app-update-notice" aria-label="Nueva versión disponible">
-    <span>{error || 'Hay mejoras disponibles. Puedes actualizar cuando termines este paso.'}</span>
-    <Button size="sm" onClick={update} disabled={busy}>{busy ? 'Guardando…' : 'Guardar y actualizar'}</Button>
-  </aside>;
+  return createPortal(<>
+    <aside ref={notice} className="app-update-notice" aria-label="Nueva versión disponible" aria-busy={busy}>
+      <span aria-live="polite">{error || 'Hay mejoras listas. Termina o cancela el formulario actual antes de actualizar.'}</span>
+      <Button size="sm" onClick={update} disabled={busy}>{busy ? 'Guardando…' : 'Guardar y actualizar'}</Button>
+    </aside>
+    {busy && <div className="app-update-progress" role="status">Guardando y preparando la actualización…</div>}
+  </>, document.body);
 }

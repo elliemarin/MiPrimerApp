@@ -89,8 +89,11 @@ láminas `infantil-04` e `infantil-05`.
 | 7–9 | Culotte de encaje (tallas S, M y M–L) | `culotte-encaje`, `culotte-punto-picot` | Las tres eran el mismo patrón. Se cortan con un 15 % menos de cadera (encaje del 30 %); refuerzo de algodón añadido. |
 
 Generadores en `adultBatch.ts` y `menBatch.ts`; tarjetas en
-`src/data/digitizedAdultCatalog.ts`; lámina dibujada `lote-adultos-01` para los
-diseños que aún no tienen foto IA; pruebas en `tests/digitized-adults.test.ts`.
+`src/data/digitizedAdultCatalog.ts`; fotografías IA específicas de las quince
+recetas en `digitizedPhotosA.ts` y `digitizedPhotosB.ts`, con variantes infantiles
+sin cordones para el palazzo y el buzo. Sustituyen la lámina histórica
+`lote-adultos-01`. Pruebas de patronaje en `tests/digitized-adults.test.ts`;
+la fotografía no valida la confección ni cambia el estado experimental.
 
 ## Archivos
 

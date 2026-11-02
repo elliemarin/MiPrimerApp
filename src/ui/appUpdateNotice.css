@@ -1,4 +1,26 @@
-.app-update-notice { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--surface); color: var(--ink-2); font-size: 12px; line-height: 1.4; }
+.app-update-notice {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 70;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: calc(var(--safe-top) + 10px) max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
+  border-bottom: 1px solid var(--line-strong); box-shadow: var(--shadow-pop);
+  background: var(--surface); color: var(--ink); font-size: 12px; line-height: 1.4;
+}
 .app-update-notice span { flex: 1; min-width: 0; }
 .app-update-notice .btn { flex: none; }
-@media(max-width:500px) { .app-update-notice { align-items: flex-start; flex-wrap: wrap; } }
+.app-update-progress {
+  position: fixed; inset: var(--app-update-offset) 0 0; z-index: 69;
+  display: grid; place-items: center; padding: 24px; text-align: center;
+  background: var(--surface); color: var(--ink); font-size: 16px;
+}
+/* Reserve real, measured space even when the notice wraps or displays an error. */
+html[data-app-update] .main { padding-top: var(--app-update-offset); }
+html[data-app-update] .editor { top: var(--app-update-offset); }
+html[data-app-update] .sheet { max-height: min(92vh, calc(100dvh - var(--app-update-offset) - 8px)); }
+@media (min-width: 900px) {
+  html[data-app-update] .sidebar { top: var(--app-update-offset); height: calc(100vh - var(--app-update-offset)); margin-top: var(--app-update-offset); }
+  html[data-app-update] .sheet {
+    top: calc(50% + var(--app-update-offset) / 2);
+    max-height: min(86vh, calc(100dvh - var(--app-update-offset) - 24px));
+  }
+}
+@media (max-width: 500px) { .app-update-notice { align-items: flex-start; flex-wrap: wrap; } }

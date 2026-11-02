@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CATALOG, findModel, type CatalogModel, type Recipient } from '../src/data/catalog';
-import { PENDING_PHOTO_SHEETS, catalogImageBounds, catalogImageCaption, catalogImageFor, type CatalogImageSource } from '../src/data/catalogImages';
+import { catalogImageBounds, catalogImageCaption, catalogImageFor, type CatalogImageSource } from '../src/data/catalogImages';
+import { DIGITIZED_ADULT_CATALOG } from '../src/data/digitizedAdultCatalog';
 import { modelHasPattern } from '../src/features/library/filters';
 import { groupCatalog } from '../src/features/library/groups';
 import { CatalogImage } from '../src/ui/CatalogImage';
@@ -14,6 +15,7 @@ import { CatalogImage } from '../src/ui/CatalogImage';
 const TECHNICAL_SHEETS = new Set([
   'ninas-01', 'bebe-02', 'tendencia-01', 'tendencia-02', 'tendencia-03',
   'infantil-01', 'infantil-02', 'infantil-03', 'infantil-04', 'infantil-05',
+  'lote-adultos-01',
 ]);
 
 function sourceFor(model: CatalogModel, recipient?: Recipient): CatalogImageSource {
@@ -47,8 +49,7 @@ describe('fotografías completas del catálogo y sus variantes', () => {
         const source = sourceFor(model, recipient);
         const context = `${model.id} / ${recipient ?? 'sin filtro'} / ${source.sheet}/${source.cell}`;
         expect(TECHNICAL_SHEETS.has(source.sheet), context).toBe(false);
-        // Only the digitized constructions without an AI photo yet may use the drawn sheet, and they say so.
-        expect(catalogImageCaption(source), context).toBe(PENDING_PHOTO_SHEETS.has(source.sheet) ? 'Ilustración dibujada a partir del patrón real.' : 'Ilustración generada con IA.');
+        expect(catalogImageCaption(source), context).toBe('Ilustración generada con IA.');
       }
     }
   });
@@ -103,6 +104,13 @@ describe('fotografías completas del catálogo y sus variantes', () => {
     ['barrel-bebe', 'barrel-infantil'],
     ['baggy-bebe', 'pantalon-baggy'],
     ['body-bebe-manga-larga', 'body-bebe'],
+    ['barrel-elastico', 'pantalon-barrel'],
+    ['palazzo-elastico', 'baggy-felpa'],
+    ['jogger-oversize-felpa', 'jogger'],
+    ['sobrecamisa-cuello-tira', 'sobrecamisa-leñadora'],
+    ['sudadera-media-cremallera-lisa', 'sudadera-bloques'],
+    ['chaqueta-campo', 'chaqueta-safari'],
+    ['culotte-punto-picot', 'culotte-encaje'],
   ])('conserva una fotografía distinta para %s y %s dentro del mismo diseño', (variantId, baseId) => {
     const variant = findModel(variantId)!, base = findModel(baseId)!;
     expect(variant.designGroup?.id ?? variant.id).toBe(base.designGroup?.id ?? base.id);
@@ -116,5 +124,27 @@ describe('fotografías completas del catálogo y sus variantes', () => {
     expect(baby).not.toEqual(adult);
     expect(baby).not.toEqual(bow);
     expect(catalogImageFor(findModel('sombrero-pescador-bebe')!, 'bebe')).toEqual(baby);
+  });
+
+  it('da una foto propia a las quince recetas digitalizadas, incluso si comparten tarjeta', () => {
+    const sources = DIGITIZED_ADULT_CATALOG.map(model => {
+      const source = sourceFor(model);
+      expect(source.sheet, model.id).toMatch(/^realistas-adultos-nuevos-[ab]$/);
+      return `${source.sheet}/${source.cell}`;
+    });
+    expect(sources).toHaveLength(15);
+    expect(new Set(sources).size).toBe(15);
+  });
+
+  it.each(['palazzo-elastico', 'buzo-murcielago'])('muestra %s sin cordón para niños y conserva los datos de patronaje', id => {
+    const model = findModel(id)!, before = JSON.stringify(model);
+    const adult = sourceFor(model, 'mujer');
+    const child = sourceFor(model, 'infantil');
+    expect(child).not.toEqual(adult);
+    for (const recipient of model.recipients.filter(value => ['bebe', 'toddler', 'infantil'].includes(value))) {
+      expect(sourceFor(model, recipient)).toEqual(child);
+    }
+    expect(sourceFor(model)).toEqual(adult);
+    expect(JSON.stringify(model)).toBe(before);
   });
 });

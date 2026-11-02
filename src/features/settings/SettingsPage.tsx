@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { appUpdates, UPDATE_STATUS_TEXT } from '../../lib/appUpdates';
 import { useApp } from '../../store/app';
 import { Button, Chip, Confirm, Field, Notice, PageHead, Segmented, SaveIndicator, TextInput } from '../../ui/components';
 import { GitHubStore } from '../../lib/sync/github';
@@ -14,6 +15,7 @@ export function SettingsPage() {
   const counts = useApp((s) => ({ p: Object.keys(s.projects).length, f: Object.keys(s.fabrics).length, pr: Object.keys(s.profiles).length }));
   const [confirmWipe, setConfirmWipe] = useState(false);
   const [usage, setUsage] = useState<{ used: number; quota: number; persisted: boolean } | null>(null);
+  const update = useSyncExternalStore(appUpdates.subscribe, appUpdates.getSnapshot);
   useEffect(() => {
     void (async () => {
       const est = await navigator.storage?.estimate?.();
@@ -51,7 +53,10 @@ export function SettingsPage() {
         </section>
         <section className="stack">
           <h2 className="section-title" style={{ margin: 0 }}>Acerca de</h2>
-          <p className="small muted">Hilvana 0.1 · Diseño de prendas, patronaje a medida e intervención textil. <a href="#/ayuda">Ayuda</a></p>
+          <p className="small muted">Hilvana · Diseño de prendas, patronaje a medida e intervención textil. <a href="#/ayuda">Ayuda</a></p>
+          <span className="tiny muted" data-app-build={__APP_BUILD__.id}>Versión {__APP_BUILD__.id} · {__APP_BUILD__.date}</span>
+          <div><Button size="sm" icon="sync" onClick={() => void appUpdates.check(true)} disabled={update.status === 'checking' || update.status === 'unsupported'}>{update.status === 'checking' ? 'Buscando…' : 'Buscar actualizaciones'}</Button></div>
+          <p className="small muted app-update-status" role="status">{UPDATE_STATUS_TEXT[update.status]}</p>
         </section>
       </div>
       {confirmWipe && (
