@@ -6,119 +6,60 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-01 (Claude: tercer lote de diseños, **a medias**; antes, Codex: fotografías antes/después).
+- Última actualización: 2026-11-02 (Claude: tercer y cuarto lote de diseños: tendencias, hombre y lencería).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 3694 pruebas: catálogo, fotos, patrones, persistencia, PDF, proyector, logos y transformaciones
+npm test            # 3726 pruebas: catálogo, fotos, patrones, persistencia, PDF, proyector, logos y transformaciones
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
-## Tercer lote de diseños (11 fotos) — EN CURSO, sigue aquí
+## Tercer y cuarto lote: tendencias, hombre y lencería (2026-11-02)
 
-**Este es el relevo más reciente y está a medias.** Claude dejó hecha la parte
-de patrones (generadores y opciones, validados en todas las tallas). Falta
-conectarla al catálogo, hacer las imágenes, las pruebas y la documentación.
-Hasta entonces nada de esto se ve en la app.
+**Este es el relevo más reciente.** 20 fotos de referencia (11 del tercer lote
+y 9 del cuarto, de hombre y lencería). Detalle imagen por imagen en
+`docs/DISENOS_DIGITALIZADOS.md` («Tercer lote» y «Cuarto lote»). Todo es
+**experimental**: nada se ha impreso ni cosido.
 
-Petición de la usuaria: hacer los patrones con cambio de talla lo más precisos
-posible e inspirarse en los dibujos de cada prenda terminada para que las
-imágenes del catálogo se distingan entre sí.
+- Generadores nuevos: `adultBatch.ts` (sudadera de media cremallera con o sin
+  bloques, chaqueta ranglan de manga en dos piezas, buzo murciélago con capucha)
+  y `menBatch.ts` (cazadora de mezclilla con canesú y paneles, chaqueta de campo
+  o safari, culotte de encaje de una pieza por lado).
+- Opciones nuevas: pantalón elástico (`cintura: pretina` con abertura lateral y
+  botones, `amplitudBajo`, `bolsillos: costado`, `cordon` solo adulto, `volante`,
+  `alforzas`); jeans (`pinzas`); sobrecamisa (`cuelloTipo: tira`, `bolsillos:
+  grandes`); chaqueta de campo (`cierre`, `cuelloTipo`, `largoExtra`).
+- Catálogo: `src/data/digitizedAdultCatalog.ts` con 15 tarjetas y 5 inspiraciones
+  que ahora generan patrón y conservan su foto (`pantalon-palazzo`,
+  `pantalon-pinzas`, `cazadora-mezclilla`, `cazadora-denim-corta`,
+  `chaqueta-safari`). Familia nueva **Lencería**.
+- Imágenes: los 6 diseños nuevos sin foto IA (pantalón con volante, chaqueta
+  ranglan, sudadera de media cremallera, buzo murciélago, culotte, palazzo con
+  botones laterales) y 2 variantes se dibujan desde sus piezas en la lámina
+  `lote-adultos-01`. La ficha lo dice («Ilustración dibujada a partir del patrón
+  real») y `PENDING_PHOTO_SHEETS` lo permite en las pruebas.
+  **Pendiente:** generar fotos IA en el estilo de Codex y quitar la lámina de la lista.
+- Seguridad: sin cordones en tallas infantiles; el culotte solo existe en
+  tallas de mujer y en punto con ≥ 20 % de elasticidad.
+- Herramienta: `npx vite-node scripts/sweep-generators.ts [ids]` barre todas las
+  tallas y variantes; solo fallan rechazos intencionales (jeans con pretina y
+  oversize en bebé, cazadora corta en tallas infantiles).
+- `scripts/render-kids-sheets.ts` importa `flats.ts` primero: con otro orden
+  falla por una importación circular de `babyStyleFlats.ts`.
+- Validación: **3,726 pruebas en 82 archivos** (`tests/digitized-adults.test.ts`
+  nueva) y `npm run build`.
 
-### Hecho (commit «Relevo: patrones del tercer lote…»)
-
-- `src/lib/pattern/generators/pants.ts` (`pantalon-cintura-elastica`), opciones nuevas:
-  `cintura: 'pretina'` (cadera moldeada, pinzas calculadas desde el contorno real,
-  pretina con botón, abertura lateral con vista y tapeta), `amplitudBajo`
-  (factor de ancho del bajo, p. ej. 1,5 para palazzo), `bolsillos: 'costado'`,
-  `cordon: 'si'` (solo adulto; en niños sale un aviso), `volante: 'si'` +
-  `altoVolante` + `fruncidoVolante`, y `alforzas` (0–4, ya compensadas en el largo).
-  Todo está en `applyPantsOptions()`.
-- `jeans.ts` (`pantalon-mezclilla`): `pinzas: 'no' | 'una' | 'dos'` (pinzas
-  delanteras; la pretina queda embebida y la cadera lo compensa).
-- `oversize.ts`: `cuelloTipo: 'tira'` (cuello de tira sin pala) y
-  `bolsillos: 'grandes'` (bolsillos de parche grandes con cartera) para la sobrecamisa.
-- `kidsBlocks.ts`: el punto medio de la sisa deja 3 cm × escala bajo la axila
-  cuando el hombro va caído (antes se cruzaba el corte).
-- `adultBatch.ts` (registrado en `index.ts`): 3 generadores nuevos, sin tallas de bebé:
-  `sudadera-media-cremallera` (con o sin `bloques` de color), `chaqueta-ranglan`
-  (manga ranglán de dos piezas resuelta para que todas las costuras midan igual,
-  cuello alto, banda, puños, bolsillos de vivo) y `buzo-murcielago` (manga
-  murciélago con paneles, capucha, banda, puños; cordón solo en adulto).
-- Dibujos por piezas en `src/data/kidsFlats.ts` (BUILDERS
-  `sudadera-bloques`, `sudadera-media-cremallera`, `chaqueta-ranglan`,
-  `buzo-murcielago`) y `ruffle` en el pantalón genérico de `src/data/flats.ts`.
-  **Aún ninguna tarjeta los usa.**
-- `scripts/sweep-generators.ts`: barrido de todas las tallas y variantes
-  (`npx vite-node scripts/sweep-generators.ts chaqueta-ranglan ...`). Los
-  4 generadores tocados dan 762 casos sin fallas.
-- Tras fusionar el trabajo de Codex: `npm test` (3694 en 81 archivos) y `npm run build` pasan; el barrido completo (2559 casos) solo falla en los rechazos intencionales de jeans con pretina y oversize en talla bebé.
-
-### Qué hacer con cada foto (falta crear las tarjetas)
-
-| # | Foto | Tarjeta propuesta |
-| --- | --- | --- |
-| 1 | Pantalón barrel con cintura elástica y rayas | `barrel-elastico`, grupo `pantalon-barrel` (`pantalon-mezclilla`, `silueta: barrel`, `cintura: elastica`, `bolsillos: frontales`) |
-| 2 | Palazzo con pretina y botones laterales | Codex ya creó `street-pantalon-palazzo` (palazzo con bragueta delantera). Este es distinto: abertura lateral con botones. Crear `palazzo-botones-laterales` en el grupo `pantalon-palazzo` con `generatorId: 'pantalon-cintura-elastica'`, `params: { estilo: 'ancho', cintura: 'pretina', amplitudBajo: 1.5, bolsillos: 'costado' }`. La tarjeta de inspiración `pantalon-palazzo` puede seguir como está o pasar a patrón; decídelo según las pruebas de inspiración (66). |
-| 3 | Palazzo ancho con cordón y rayas | `palazzo-elastico`, grupo `pantalon-palazzo` (`estilo: ancho`, `amplitudBajo: 1.4`, `cordon: si`, `bolsillos: costado`) |
-| 4 | Pantalón con volante en el bajo y alforzas | `pantalon-volante`, grupo nuevo (`estilo: ancho`, `volante: si`, `alforzas: 3`; dibujo genérico con `ruffle: true`) |
-| 5 | Pantalón ancho oversize con pinzas | Convertir `pantalon-pinzas`: `generatorId: 'pantalon-mezclilla'`, `params: { silueta: 'ancho', cintura: 'pretina', bolsillos: 'cinco', tiro: 'alto', pinzas: 'dos' }` |
-| 6–7 | Jeans anchos crema y ciruela | Ya existe `jeans-ancho`; no crear tarjeta nueva |
-| 8 | Chaqueta ranglán con cuello alto | `chaqueta-ranglan`, grupo nuevo (dibujo `chaqueta-ranglan`) |
-| 9 | Sobrecamisa oversize con cuello de tira y bolsillos grandes | `sobrecamisa-cuello-tira`, grupo `tipo-sobrecamisa` (`oversize-hombro-caido`, `prenda: sobrecamisa`, `cuelloTipo: tira`, `bolsillos: grandes`) |
-| 10 | Sudadera de media cremallera en bloques de color | `sudadera-bloques` (`bloques: si`) y `sudadera-media-cremallera-lisa` (`bloques: no`), grupo `sudadera-media-cremallera` |
-| 11 | Buzo corto murciélago con capucha y paneles | `buzo-murcielago`, familia hoodie |
-
-Todas con colección `Tendencias`, destinatarios adultos (y niños donde el
-generador lo permite) y estado **experimental**. No usar marcas ni copiar las
-medidas de las fotos.
-
-### Pasos que faltan, en orden
-
-0. Antes de empezar: `git pull`, `npm install`, `npm test` (con el trabajo de
-   Codex ya fusionado deben pasar todas).
-1. **Tarjetas**: crear `src/data/digitizedAdultCatalog.ts` (copiar la forma de
-   `digitizedKidsCatalog.ts`) y unirlo en `src/data/catalog.ts`; convertir
-   `pantalon-palazzo` y `pantalon-pinzas`.
-2. **Taxonomía** (`src/data/catalogTaxonomy.ts`): añadir a `DESIGNS`
-   `pantalon-volante` (pantalón), `chaqueta-ranglan` (chaqueta),
-   `sudadera-media-cremallera` (sudadera) y `buzo-murcielago` (hoodie); y
-   `constructionFacets` para los generadores nuevos y para las opciones de
-   pantalón (pinzas, botones, frunces). Cada tarjeta necesita `designGroup`,
-   entrada en `DESIGNS` y celda de imagen; las pruebas lo exigen.
-3. **Imágenes**: Codex cambió todo el catálogo a **fotografías realistas**
-   (láminas `realistas-*`, `estilos-*`; ver `docs/IMAGENES_CATALOGO_IA.md` y
-   `src/data/completedAdultImages.ts`, `styleCatalogImages.ts`).
-   `tests/catalog-photo-completeness.test.ts` ya no acepta las láminas técnicas
-   SVG, así que **no uses `scripts/render-kids-sheets.ts`** para estas tarjetas:
-   cada tarjeta nueva necesita su foto realista en ese mismo estilo (rayas,
-   vichy y bloques de color visibles, como en las fotos de la usuaria). Los
-   dibujos técnicos de `kidsFlats.ts` siguen sirviendo para la vista armada.
-4. **Pruebas**: subir los conteos fijos (catalog-taxonomy, catalog-groups,
-   kids-collection, catalog-images, búsqueda «hoodie») y añadir pruebas de las
-   opciones nuevas (pretina, volante, alforzas, pinzas, cuello de tira) y de los
-   3 generadores (todas las tallas, costuras iguales en la ranglán, paso de
-   cabeza en el buzo y en la media cremallera).
-5. **Docs**: sección «Tercer lote» en `docs/DISENOS_DIGITALIZADOS.md` (tabla
-   imagen por imagen y medidas incoherentes), este archivo e
-   `docs/IMAGENES_CATALOGO_IA.md`.
-6. Revisar en tamaño iPhone (chip Tendencias, tarjetas nuevas, un PDF),
-   `npm test`, `npm run build`, commit en español y push a `main`.
-
-Reglas para no romper nada:
-
-- Nunca añadas `KIDS_SURFACE_PIECES` a un generador que también usa dibujos
-  genéricos (como el pantalón); para piezas de conjuntos usa `PART_BINDINGS`.
-- En el JSON de configuración del renderizador escribe `0.8`, no `.8`.
+Siguiente paso sugerido: coser muestras (cazadora, culotte, palazzo con pretina)
+y generar las fotos IA pendientes.
 
 ## Transformar mi ropa con imágenes realistas (2026-11-01)
 
-Relevo anterior (Codex, terminado). El catálogo ya tenía fotografías, pero la
+Relevo anterior (Codex). El catálogo ya tenía fotografías, pero la
 sección de transformaciones seguía mostrando siluetas genéricas y tarjetas solo
 de texto. Se partió de `d01eb92`, con instalación, 3,689 pruebas y build correctos.
 

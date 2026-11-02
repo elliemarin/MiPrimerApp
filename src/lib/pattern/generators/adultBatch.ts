@@ -231,6 +231,7 @@ export function batwingDefaults(ctx: GeneratorContext): Params {
 
 export function generateBatwing(ctx: GeneratorContext, params: Params): GeneratorResult {
   if (ctx.kind === 'bebe') return notBaby('buzo-murcielago-talla');
+  if (ctx.fabric !== 'punto') return invalid('buzo-murcielago-tela', 'Este buzo se corta en tela de punto (felpa o french terry): en tela plana el escote no pasa la cabeza.');
   const p = { ...batwingDefaults(ctx), ...params }, k = kidBody(ctx), s = sizeFactor(ctx), child = isChild(ctx.kind);
   const total = num(p, 'largo'), ease = num(p, 'holgura'), SL = num(p, 'largoManga'), bh = num(p, 'altoBanda'), cuffH = num(p, 'altoPuno'), sa = num(p, 'margen');
   const cord = str(p, 'cordon') === 'si' && !child, pockets = str(p, 'bolsillos') === 'si', lined = str(p, 'forroCapucha') === 'si';

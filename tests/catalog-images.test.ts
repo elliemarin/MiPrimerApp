@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { CATALOG, findModel } from '../src/data/catalog';
-import { CATALOG_IMAGES, CATALOG_IMAGE_SHEETS, catalogImageBounds, catalogImageCaption, catalogImageFor } from '../src/data/catalogImages';
+import { CATALOG_IMAGES, CATALOG_IMAGE_SHEETS, PENDING_PHOTO_SHEETS, catalogImageBounds, catalogImageCaption, catalogImageFor } from '../src/data/catalogImages';
 import { groupCatalog } from '../src/features/library/groups';
 
 describe('imágenes propias para todos los diseños y referencias del catálogo', () => {
@@ -10,7 +10,8 @@ describe('imágenes propias para todos los diseños y referencias del catálogo'
     const models = CATALOG, groups = groupCatalog(models);
     expect(Object.keys(CATALOG_IMAGES).sort()).toEqual(groups.map(group => group.id).sort());
     for (const [id, image] of Object.entries(CATALOG_IMAGES)) {
-      expect(catalogImageCaption(image), id).toBe('Ilustración generada con IA.');
+      // Designs digitized after the photo pass are drawn from their real pieces until an AI photo is generated.
+      expect(catalogImageCaption(image), id).toBe(PENDING_PHOTO_SHEETS.has(image.sheet) ? 'Ilustración dibujada a partir del patrón real.' : 'Ilustración generada con IA.');
     }
     const cells = groups.map(group => {
       const image = catalogImageFor(group.representative);

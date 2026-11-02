@@ -50,6 +50,8 @@ export const CATALOG_IMAGE_SHEETS: Record<string, readonly string[]> = {
   'infantil-03': [],
   'infantil-04': ['tipo-bonete-volante','tipo-delantal-pichi','tipo-mono-tirantes','peto-infantil','tipo-blusa-trapecio','pantalon-capri-infantil'],
   'infantil-05': [],
+  // Third and fourth digitized batches: new constructions drawn from their real pieces until an AI photo exists.
+  'lote-adultos-01': ['pantalon-volante', 'chaqueta-ranglan', 'sudadera-media-cremallera', 'buzo-murcielago', 'culotte-encaje', 'palazzo-botones-laterales'],
 };
 
 export const CATALOG_IMAGES: Readonly<Record<string, CatalogImageSource>> = {
@@ -140,7 +142,9 @@ const VARIANT_IMAGES: Record<string, CatalogImageSource> = {
   'bonete-encaje': { sheet: 'infantil-05', cell: 0 },
   'blusa-trapecio-volante': { sheet: 'infantil-05', cell: 1 },
   'conjunto-trapecio': { sheet: 'infantil-05', cell: 2 },
-  'conjunto-vichy': { sheet: 'infantil-05', cell: 3 }
+  'conjunto-vichy': { sheet: 'infantil-05', cell: 3 },
+  'sudadera-media-cremallera-lisa': { sheet: 'lote-adultos-01', cell: 6 },
+  'chaqueta-campo': { sheet: 'lote-adultos-01', cell: 7 }
 };
 
 export function catalogImageFor(model: CatalogModel, recipient?: Recipient): CatalogImageSource | undefined {
@@ -153,8 +157,11 @@ export function catalogImageFor(model: CatalogModel, recipient?: Recipient): Cat
   return CATALOG_IMAGES[id];
 }
 
+/** New constructions drawn from their real pieces while their AI photo is pending. */
+export const PENDING_PHOTO_SHEETS: ReadonlySet<string> = new Set(['lote-adultos-01']);
+
 /** Sheets drawn as vectors from the real technical drawing, not AI images. */
-const DRAWN_SHEETS = new Set(['ninas-01', 'bebe-02', 'tendencia-01', 'tendencia-02', 'tendencia-03', 'infantil-01', 'infantil-02', 'infantil-03', 'infantil-04', 'infantil-05']);
+const DRAWN_SHEETS = new Set(['ninas-01', 'bebe-02', 'tendencia-01', 'tendencia-02', 'tendencia-03', 'infantil-01', 'infantil-02', 'infantil-03', 'infantil-04', 'infantil-05', 'lote-adultos-01']);
 export function catalogImageCaption(source: CatalogImageSource): string {
   return DRAWN_SHEETS.has(source.sheet) ? 'Ilustración dibujada a partir del patrón real.' : 'Ilustración generada con IA.';
 }

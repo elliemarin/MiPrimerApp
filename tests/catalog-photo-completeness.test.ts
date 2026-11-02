@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CATALOG, findModel, type CatalogModel, type Recipient } from '../src/data/catalog';
-import { catalogImageBounds, catalogImageCaption, catalogImageFor, type CatalogImageSource } from '../src/data/catalogImages';
+import { PENDING_PHOTO_SHEETS, catalogImageBounds, catalogImageCaption, catalogImageFor, type CatalogImageSource } from '../src/data/catalogImages';
 import { modelHasPattern } from '../src/features/library/filters';
 import { groupCatalog } from '../src/features/library/groups';
 import { CatalogImage } from '../src/ui/CatalogImage';
@@ -30,14 +30,14 @@ function imageForId(id: string): CatalogImageSource {
 
 describe('fotografías completas del catálogo y sus variantes', () => {
   it('mantiene todas las recetas y distingue patrones disponibles de inspiraciones', () => {
-    expect(CATALOG).toHaveLength(2059);
-    expect(groupCatalog(CATALOG)).toHaveLength(312);
+    expect(CATALOG).toHaveLength(2074);
+    expect(groupCatalog(CATALOG)).toHaveLength(318);
     const available = CATALOG.filter(modelHasPattern);
     const inspiration = CATALOG.filter(model => !modelHasPattern(model));
-    expect(available).toHaveLength(1993);
-    expect(groupCatalog(available)).toHaveLength(246);
-    expect(inspiration).toHaveLength(66);
-    expect(groupCatalog(inspiration)).toHaveLength(66);
+    expect(available).toHaveLength(2013);
+    expect(groupCatalog(available)).toHaveLength(257);
+    expect(inspiration).toHaveLength(61);
+    expect(groupCatalog(inspiration)).toHaveLength(61);
   });
 
   it('resuelve cada receta y destinatario a una imagen IA, también al cambiar de variante', () => {
@@ -47,7 +47,8 @@ describe('fotografías completas del catálogo y sus variantes', () => {
         const source = sourceFor(model, recipient);
         const context = `${model.id} / ${recipient ?? 'sin filtro'} / ${source.sheet}/${source.cell}`;
         expect(TECHNICAL_SHEETS.has(source.sheet), context).toBe(false);
-        expect(catalogImageCaption(source), context).toBe('Ilustración generada con IA.');
+        // Only the digitized constructions without an AI photo yet may use the drawn sheet, and they say so.
+        expect(catalogImageCaption(source), context).toBe(PENDING_PHOTO_SHEETS.has(source.sheet) ? 'Ilustración dibujada a partir del patrón real.' : 'Ilustración generada con IA.');
       }
     }
   });
@@ -81,7 +82,7 @@ describe('fotografías completas del catálogo y sus variantes', () => {
     }
   });
 
-  it('presenta los 312 diseños con imagen sin caer al dibujo técnico en la tarjeta', () => {
+  it('presenta los 318 diseños con imagen sin caer al dibujo técnico en la tarjeta', () => {
     for (const group of groupCatalog(CATALOG)) {
       const markup = renderToStaticMarkup(createElement(CatalogImage, { model: group.representative }));
       expect(markup, group.id).toContain('class="catalog-photo-atlas"');

@@ -19,7 +19,7 @@ describe('Biblioteca ampliada de prendas y accesorios',()=>{
    if(m.generatorId){expect(getGenerator(m.generatorId),m.id).toBeDefined();expect(m.status,m.id).toBe('experimental');}
    else expect(m.status,m.id).toBe('pendiente');
   }
-  for(const id of ['cazadora-mezclilla','gabardina-cruzada','chaqueta-acolchada','mono-camisero']) expect(CATALOG.find(m=>m.id===id)?.generatorId).toBeUndefined();
+  for(const id of ['chaqueta-biker','gabardina-cruzada','chaqueta-acolchada','mono-camisero']) expect(CATALOG.find(m=>m.id===id)?.generatorId).toBeUndefined();
   // The bomber now has its own drop-shoulder construction, never the haori engine.
   expect(CATALOG.find(m=>m.id==='bomber-clasica')?.generatorId).toBe('oversize-hombro-caido');
  });

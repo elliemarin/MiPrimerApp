@@ -13,7 +13,7 @@ export const FAMILY_LABEL = {
   chaleco: 'Chalecos', cardigan: 'Cárdigans', abrigo: 'Abrigos y parkas',
   poncho: 'Ponchos', ruana: 'Ruanas', capa: 'Capas',
   camiseta: 'Camisetas', camisa: 'Camisas', top: 'Blusas, tops y túnicas', sueter: 'Suéteres',
-  pantalon: 'Pantalones', jogger: 'Joggers', short: 'Shorts', falda: 'Faldas',
+  pantalon: 'Pantalones', jogger: 'Joggers', lenceria: 'Lencería', short: 'Shorts', falda: 'Faldas',
   vestido: 'Vestidos', peto: 'Petos y jumpers', mono: 'Monos y enterizos', pijama: 'Pijamas',
   body: 'Pañaleros / bodies', mameluco: 'Mamelucos', babero: 'Baberos', gorro: 'Gorros y bonetes',
   cubrepanal: 'Cubrepañales y bombachos', patucos: 'Patucos de bebé', 'saco-dormir': 'Sacos de dormir', toalla: 'Toallas con capucha', conjunto: 'Conjuntos de bebé',
@@ -36,9 +36,9 @@ export type CatalogFamily = keyof typeof FAMILY_LABEL;
 /** Reviewed construction IDs, including inspirations with no pattern engine.
  * Adding a design requires classifying it here; the audit test rejects omissions. */
 const DESIGNS: Partial<Record<CatalogFamily, readonly string[]>> = {
-  hoodie: ['hoodie', 'tipo-hoodie', 'sudadera-canguro-infantil'],
-  sudadera: ['sudadera', 'tipo-sudadera'],
-  chaqueta: ['chaqueta-cierre', 'tipo-bomber', 'cazadora-mezclilla', 'cazadora-denim-corta', 'tipo-sobrecamisa', 'chaqueta-trabajo', 'chaqueta-acolchada', 'chaqueta-biker', 'chaqueta-safari', 'chaqueta-varsity', 'anorak-canguro', 'bolero-corto', 'tipo-chaqueta-hombro-caido', 'chaqueta-collage-bandas', 'chaqueta-patchwork-franjas', 'chaqueta-patchwork-cuadros', 'chaqueta-canesu-diagonal', 'chaqueta-collage-irregular', 'chaqueta-polar-infantil', 'chaqueta-acolchada-infantil', 'chaqueta-capucha-infantil'],
+  hoodie: ['hoodie', 'tipo-hoodie', 'sudadera-canguro-infantil', 'buzo-murcielago'],
+  sudadera: ['sudadera', 'tipo-sudadera', 'sudadera-media-cremallera'],
+  chaqueta: ['chaqueta-cierre', 'tipo-bomber', 'cazadora-mezclilla', 'cazadora-denim-corta', 'tipo-sobrecamisa', 'chaqueta-trabajo', 'chaqueta-acolchada', 'chaqueta-biker', 'chaqueta-safari', 'chaqueta-varsity', 'anorak-canguro', 'bolero-corto', 'tipo-chaqueta-hombro-caido', 'chaqueta-collage-bandas', 'chaqueta-patchwork-franjas', 'chaqueta-patchwork-cuadros', 'chaqueta-canesu-diagonal', 'chaqueta-collage-irregular', 'chaqueta-polar-infantil', 'chaqueta-acolchada-infantil', 'chaqueta-capucha-infantil', 'chaqueta-ranglan'],
   chaleco: ['chaleco', 'chaleco-acolchado', 'chaleco-punto-v', 'tipo-chaleco-abierto', 'tipo-chaleco-infantil'],
   cardigan: ['tipo-cardigan-abierto'],
   abrigo: ['abrigo', 'gabardina-cruzada', 'trench-corto', 'abrigo-acolchado-largo', 'parka-capucha'],
@@ -47,8 +47,8 @@ const DESIGNS: Partial<Record<CatalogFamily, readonly string[]>> = {
   camiseta: ['camiseta-basica', 'camiseta-larga', 'tipo-camiseta-oversize'], camisa: ['camisa-clasica', 'camisa-boxy'],
   top: ['blusa-v', 'tunica-suelta', 'tipo-top-cuadrado', 'tipo-top-cuadrado-sin-mangas', 'tipo-blusa-campesina', 'blusa-botones-infantil', 'tipo-blusa-trapecio'],
   sueter: ['sueter-oversize', 'sueter-tortuga', 'sueter-corto'],
-  pantalon: ['tipo-pantalon-recto', 'tipo-pantalon-amplio', 'pantalon-baggy', 'pantalon-barrel', 'pantalon-cargo', 'pantalon-palazzo', 'pantalon-pinzas', 'pantalon-pitillo', 'pantalon-acampanado', 'jeans-recto', 'jeans-mom', 'jeans-ancho', 'pantalon-bombacho-infantil', 'pantalon-capri-infantil'],
-  jogger: ['tipo-jogger'], short: ['short-elastico'], pijama: ['pantalon-pijama', 'pijama-camisa'],
+  pantalon: ['tipo-pantalon-recto', 'tipo-pantalon-amplio', 'pantalon-baggy', 'pantalon-barrel', 'pantalon-cargo', 'pantalon-palazzo', 'pantalon-pinzas', 'pantalon-pitillo', 'pantalon-acampanado', 'jeans-recto', 'jeans-mom', 'jeans-ancho', 'pantalon-bombacho-infantil', 'pantalon-capri-infantil', 'pantalon-volante', 'palazzo-botones-laterales'],
+  jogger: ['tipo-jogger'], lenceria: ['culotte-encaje'], short: ['short-elastico'], pijama: ['pantalon-pijama', 'pijama-camisa'],
   falda: ['tipo-falda-fruncida', 'falda-recta', 'falda-a', 'tipo-falda-circular', 'falda-tableada', 'tipo-falda-tul', 'tipo-falda-olanes'],
   vestido: ['vestido-camisero', 'tipo-vestido-trapecio', 'tipo-vestido-tirantes', 'vestido-jareta-infantil'], peto: ['overol', 'tipo-jumper-falda', 'peto-bermuda', 'peto-palazzo', 'tipo-peto-bebe', 'peto-infantil'],
   mono: ['mono-camisero', 'mono-mecanico', 'mono-palazzo', 'mono-cruzado', 'playsuit-camisero', 'mono-baggy', 'pelele-volantes', 'tipo-mono-tirantes'],
@@ -92,7 +92,7 @@ export function modelSupportsRecipient(model: CatalogModel, recipient: Recipient
 
 const FAMILY_TYPE: Partial<Record<CatalogFamily, GarmentType>> = {
   tote: 'bolsos', 'bolsa-jareta': 'bolsos', estuche: 'bolsos', bandolera: 'bolsos',
-  peto: 'monos', mono: 'monos', jogger: 'inferiores', babero: 'accesorios', gorro: 'accesorios',
+  peto: 'monos', mono: 'monos', jogger: 'inferiores', lenceria: 'inferiores', babero: 'accesorios', gorro: 'accesorios',
   cubrepanal: 'bebe', patucos: 'bebe', 'saco-dormir': 'bebe', toalla: 'bebe', conjunto: 'bebe'
 };
 /** Individual inconsistencies found while reviewing all legacy records. */
@@ -115,8 +115,10 @@ function constructionFacets(model: CatalogModel): Pick<CatalogModel, 'difficulty
   let techniques: Technique[];
   switch (model.generatorId) {
     case 'pantalon-cintura-elastica':
-      difficulty = p.estilo === 'jogger' ? 2 : 1;
-      techniques = p.estilo === 'jogger' ? ['costura-recta', 'jareta', 'puno', 'tejido-punto'] : p.estilo === 'bombacho' ? ['costura-recta', 'jareta'] : ['costura-recta', 'jareta', 'dobladillo']; break;
+      difficulty = p.cintura === 'pretina' ? 3 : p.estilo === 'jogger' || p.volante === 'si' ? 2 : 1;
+      techniques = p.cintura === 'pretina' ? ['costura-recta', 'pinzas', 'botones', 'dobladillo'] : p.estilo === 'jogger' ? ['costura-recta', 'jareta', 'puno', 'tejido-punto'] : p.estilo === 'bombacho' ? ['costura-recta', 'jareta'] : p.volante === 'si' ? ['costura-recta', 'jareta', 'frunces'] : ['costura-recta', 'jareta', 'dobladillo'];
+      if (p.bolsillos === 'costado') techniques.push('bolsillos');
+      break;
     case 'falda-fruncida-elastica': techniques = ['costura-recta', 'jareta', 'frunces', 'dobladillo']; break;
     case 'chaqueta-hombro-caido':
     case 'top-hombro-caido':
@@ -158,7 +160,7 @@ function constructionFacets(model: CatalogModel): Pick<CatalogModel, 'difficulty
     case 'babero-bandana': techniques = ['costura-recta', 'forro']; break;
     case 'pantalon-mezclilla':
       if (p.cintura === 'elastica') techniques = ['costura-recta', 'jareta', 'dobladillo', ...(p.bolsillos !== 'ninguno' ? ['bolsillos' as const] : [])];
-      else { difficulty = 3; techniques = ['costura-recta', 'cierre', 'botones', 'bolsillos', 'dobladillo']; }
+      else { difficulty = 3; techniques = ['costura-recta', 'cierre', 'botones', 'bolsillos', 'dobladillo', ...(p.pinzas === 'una' || p.pinzas === 'dos' ? ['pinzas' as const] : [])]; }
       break;
     case 'oversize-hombro-caido':
       if (p.prenda === 'bomber') { difficulty = 3; techniques = ['costura-recta', 'cierre', 'forro', 'puno', 'bolsillos']; }
@@ -185,6 +187,12 @@ function constructionFacets(model: CatalogModel): Pick<CatalogModel, 'difficulty
     case 'delantal-pichi-infantil': difficulty = p.volantes === 'no' ? 1 : 2; techniques = ['costura-recta', ...(p.volantes !== 'no' ? ['frunces' as const] : []), ...(p.bolsillo !== 'no' ? ['bolsillos' as const] : [])]; break;
     case 'mono-tirantes-infantil': difficulty = 2; techniques = ['costura-recta', 'botones', ...(p.bolsillos !== 'no' ? ['bolsillos' as const] : []), ...(p.bajo === 'volante' ? ['frunces' as const] : [])]; break;
     case 'blusa-trapecio-infantil': difficulty = 2; techniques = ['costura-recta', 'botones', p.volanteBajo === 'si' ? 'frunces' : 'dobladillo']; break;
+    case 'sudadera-media-cremallera': difficulty = 2; techniques = ['tejido-punto', 'cierre', 'jareta']; break;
+    case 'chaqueta-ranglan': difficulty = 3; techniques = ['costura-recta', 'cierre', 'puno', ...(p.bolsillos !== 'no' ? ['bolsillos' as const] : [])]; break;
+    case 'buzo-murcielago': difficulty = 2; techniques = ['tejido-punto', 'puno', ...(p.bolsillos !== 'no' ? ['bolsillos' as const] : [])]; break;
+    case 'cazadora-mezclilla': difficulty = 3; techniques = ['costura-recta', 'botones', ...(p.bolsillos !== 'ninguno' ? ['bolsillos' as const] : [])]; break;
+    case 'chaqueta-campo': difficulty = 3; techniques = ['costura-recta', p.cierre === 'botones' ? 'botones' : 'cierre', 'dobladillo', ...(p.bolsillos !== 'ninguno' ? ['bolsillos' as const] : [])]; break;
+    case 'culotte-encaje': difficulty = 2; techniques = ['tejido-punto', ...(p.acabado === 'elastico' ? ['dobladillo' as const] : [])]; break;
     default: return { difficulty: model.difficulty, techniques: model.techniques };
   }
   return { difficulty, techniques };

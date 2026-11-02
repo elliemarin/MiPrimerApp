@@ -20,10 +20,10 @@ export const cases:Record<string,{kinds:string[],variants:any[],fabric?:string}>
  'diadema-lazo':{kinds:K,variants:[{}],fabric:'punto'},
  'gorro-duende':{kinds:K,variants:[{forro:'si'},{forro:'no'}]},
  'gorro-orejeras':{kinds:K,variants:[{orejas:'gato'},{orejas:'oso'},{orejas:'ninguna'}]},
- 'pantalon-cintura-elastica':{kinds:[...K,'mujer','hombre'],variants:[{estilo:'bombacho'},{estilo:'bombacho',volantito:15},{estilo:'recto'},{estilo:'jogger'},{estilo:'ancho',corte:'capri'},{estilo:'recto',corte:'bermuda'},{estilo:'jogger',corte:'capri'},{estilo:'ancho',cintura:'pretina',amplitudBajo:1.5,bolsillos:'costado'},{estilo:'ancho',amplitudBajo:1.4,cordon:'si',bolsillos:'costado'},{estilo:'ancho',volante:'si',alforzas:3},{estilo:'recto',cintura:'pretina'},{estilo:'ancho',cintura:'pretina',corte:'capri',volante:'si'}]},
+ 'pantalon-cintura-elastica':{kinds:[...K,'mujer','hombre'],variants:[{estilo:'bombacho'},{estilo:'bombacho',volantito:15},{estilo:'recto'},{estilo:'jogger'},{estilo:'ancho',corte:'capri'},{estilo:'recto',corte:'bermuda'},{estilo:'jogger',corte:'capri'},{estilo:'ancho',cintura:'pretina',amplitudBajo:1.5,bolsillos:'costado'},{estilo:'ancho',amplitudBajo:1.4,cordon:'si',bolsillos:'costado'},{estilo:'ancho',volante:'si',alforzas:3},{estilo:'recto',cintura:'pretina'},{estilo:'jogger',holguraCadera:250,bolsillos:'costado',cordon:'si'},{estilo:'ancho',holguraCadera:200,bolsillos:'costado',cordon:'si'},{estilo:'ancho',cintura:'pretina',corte:'capri',volante:'si'}]},
  'cubrepanal-bebe':{kinds:['bebe','toddler'],variants:[{tirantes:'cruzados',lazo:'si'},{tirantes:'cruzados',olanes:'si'},{}]},
  'sombrero-pescador':{kinds:[...K,'mujer','hombre'],variants:[{lazo:'si'},{lazo:'si',barbiquejo:'si'},{}]},
- 'pantalon-mezclilla':{kinds:[...K,'mujer','hombre'],variants:[{silueta:'barrel',cintura:'elastica',bolsillos:'frontales'},{silueta:'recto',cintura:'pretina',bolsillos:'frontales'},{silueta:'ancho',cintura:'pretina',bolsillos:'cinco',pinzas:'dos',tiro:'alto'},{silueta:'baggy',cintura:'pretina',bolsillos:'parche',pinzas:'una'},{silueta:'barrel',cintura:'elastica',bolsillos:'frontales',tiro:'alto'}]},
+ 'pantalon-mezclilla':{kinds:[...K,'mujer','hombre'],variants:[{silueta:'barrel',cintura:'elastica',bolsillos:'frontales'},{silueta:'recto',cintura:'pretina',bolsillos:'frontales'},{silueta:'ancho',cintura:'pretina',bolsillos:'cinco',pinzas:'dos',tiro:'alto'},{silueta:'baggy',cintura:'pretina',bolsillos:'parche',pinzas:'una'},{silueta:'barrel',cintura:'elastica',bolsillos:'frontales',tiro:'alto'},{silueta:'recto',cintura:'pretina',bolsillos:'cargo'}]},
  'bonete-volante':{kinds:K,variants:[{volante:'tela'},{volante:'doble'},{volante:'encaje'},{volante:'ninguno'}]},
  'delantal-pichi-infantil':{kinds:['toddler','infantil'],variants:[{volantes:'si',bolsillo:'si'},{volantes:'no',bolsillo:'no'}]},
  'mono-tirantes-infantil':{kinds:K,variants:[{forma:'pichi'},{forma:'pico',bajo:'volante',lazos:'si'},{forma:'peto',largo:'largo',bajo:'vuelta'},{forma:'pichi',largo:'largo',entrepierna:'cerrada'},{forma:'peto',bolsillos:'no'},{forma:'pico',largo:'largo'}]},
@@ -32,6 +32,9 @@ export const cases:Record<string,{kinds:string[],variants:any[],fabric?:string}>
  'sudadera-media-cremallera':{kinds:['toddler','infantil','mujer','hombre'],variants:[{bloques:'si'},{bloques:'no'}],fabric:'punto'},
  'chaqueta-ranglan':{kinds:['toddler','infantil','mujer','hombre'],variants:[{bolsillos:'si'},{bolsillos:'no'}]},
  'buzo-murcielago':{kinds:['toddler','infantil','mujer','hombre'],variants:[{},{cordon:'no',bolsillos:'no',forroCapucha:'no'}],fabric:'punto'},
+ 'cazadora-mezclilla':{kinds:['infantil','mujer','hombre'],variants:[{bolsillos:'pecho-vivo'},{bolsillos:'pecho',largoExtra:-110},{bolsillos:'pecho'},{bolsillos:'ninguno'}]},
+ 'chaqueta-campo':{kinds:['infantil','mujer','hombre'],variants:[{bolsillos:'cuatro'},{bolsillos:'cuatro',cierre:'botones',cuelloTipo:'camisero'},{bolsillos:'pecho',largoExtra:-150},{bolsillos:'pecho'},{bolsillos:'ninguno'}]},
+ 'culotte-encaje':{kinds:['mujer'],variants:[{},{acabado:'elastico',refuerzo:'no'},{bajadaCintura:30,subidaPierna:40}],fabric:'punto'},
  'conjunto-bebe':{kinds:['bebe','toddler'],variants:[{conjunto:'verano'},{conjunto:'invierno'},{conjunto:'recien-nacido'},{conjunto:'vestido'},{conjunto:'pelele-diadema'},{conjunto:'campesino'},{conjunto:'rayas'},{conjunto:'trapecio'},{conjunto:'vichy'}]},
 };
 let total=0,fails=0; const seen=new Map<string,number>();

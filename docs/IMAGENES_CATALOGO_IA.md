@@ -34,3 +34,13 @@ Las celdas posteriores a la lista de grupos muestran variantes exactas
 (`VARIANT_IMAGES` en `src/data/catalogImages.ts`); `tendencia-03` solo tiene
 celdas de variante y se registra con lista vacía para que su archivo se pruebe. Si más adelante se generan
 fotos con IA para estos diseños, conserva ids y celdas y cambia el texto.
+
+## Lámina pendiente de foto IA (2026-11-02)
+
+`lote-adultos-01` dibuja, desde sus piezas reales, los diseños del tercer y
+cuarto lote que no tienen foto IA: pantalón con volante, chaqueta ranglan,
+sudadera de media cremallera (y su variante lisa), buzo murciélago, culotte,
+palazzo con botones laterales y chaqueta de campo. Está en `DRAWN_SHEETS` y en
+`PENDING_PHOTO_SHEETS` (`src/data/catalogImages.ts`); las pruebas solo aceptan
+el dibujo en esas celdas. Al generar las fotos, conserva ids y celdas, sácala de
+`PENDING_PHOTO_SHEETS` y cambia el texto.

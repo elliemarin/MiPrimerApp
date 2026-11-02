@@ -1,6 +1,6 @@
 # Diseños infantiles digitalizados desde fotos
 
-> Dos lotes: 16 imágenes en el primero y 8 en el segundo (al final de la primera tabla).
+> Cuatro lotes: 16 y 8 imágenes infantiles, 11 de tendencias y 9 de hombre y lencería.
 
 Entrega de Claude del 2026-11-01. La usuaria envió 16 imágenes de diseños de
 niños y bebés con su patrón y pidió «digitalizarlos y estandarizarlos para poder
@@ -60,6 +60,37 @@ Opciones nuevas de este lote: `corte` en el pantalón elástico (`completo`, `ca
 `bermuda`, `short`; los cortes cortos no llevan línea de rodilla), conjuntos
 `trapecio` y `vichy`. Generadores en `src/lib/pattern/generators/kidsBatch2.ts`;
 láminas `infantil-04` e `infantil-05`.
+
+## Tercer lote (11 imágenes, tendencias)
+
+| # | Referencia | Resultado en Hilvana | Notas |
+| --- | --- | --- | --- |
+| 1 | Pantalón barrel con cintura elástica y rayas | `barrel-elastico` (grupo `pantalon-barrel`) | Jeans con `cintura: elastica` y bolsillos inclinados. |
+| 2 | Palazzo con pretina y botones laterales | `palazzo-botones-laterales` (grupo propio) | Opción nueva `cintura: pretina`: cadera moldeada, pinzas calculadas desde el contorno real, abertura lateral con vista, cartera y botones. |
+| 3 | Palazzo ancho con cordón y rayas | `palazzo-elastico` (grupo `tipo-pantalon-amplio`) | Cordón solo en tallas de adulto. |
+| 4 | Pantalón con volante y alforzas | `pantalon-volante` | El largo descuenta el volante y suma la tela de las alforzas. |
+| 5 | Pantalón ancho oversize con pinzas | `pantalon-palazzo` (antes inspiración) y `pantalon-pinzas` | Opción nueva `pinzas` en jeans; la pretina queda embebida. |
+| 6–7 | Jeans anchos crema y ciruela | Ya existía `jeans-ancho` | — |
+| 8 | Chaqueta ranglan con cuello alto | `chaqueta-ranglan` | Manga en dos piezas; el reparto trasero del bíceps se resuelve para que el bajo brazo mida igual. |
+| 9 | Shacket con cuello de tira y bolsillos grandes | `sobrecamisa-cuello-tira` | Opciones `cuelloTipo: tira` y `bolsillos: grandes`. |
+| 10 | Sudadera de media cremallera en bloques | `sudadera-bloques`, `sudadera-media-cremallera-lisa` | Las piezas de la referencia medían 43 y 64 cm de alto, sin coherencia. |
+| 11 | Buzo corto murciélago con capucha | `buzo-murcielago` | Necesita punto; banda de rib sin cordón en niños. |
+
+## Cuarto lote (9 imágenes, hombre y lencería)
+
+| # | Referencia | Resultado en Hilvana | Notas |
+| --- | --- | --- | --- |
+| 1 | Buzo corto con capucha y manga murciélago (talle 40/M) | `buzo-murcielago` (tercer lote) | Mismas piezas: delantero y espalda al doblez, recortes con manga, capucha forrada, fondos de bolsillo y puños de rib. |
+| 2 | Jogger oversize de felpa (XL) | `jogger-oversize-felpa` (grupo `tipo-jogger`) | Cadera de 136 cm para XL ≈ +25 cm de holgura; el puño de 60 cm era más ancho que el bajo de 56 cm. |
+| 3 | Cazadora de mezclilla clásica (talla 50) | `cazadora-mezclilla`, `cazadora-denim-corta` (antes inspiraciones) | Medidas coherentes (pecho 100 cm), usadas como comprobación. Manga de una pieza en vez de dos. |
+| 4 | Chaqueta verde de cuello alto y cuatro bolsillos | `chaqueta-campo` y `chaqueta-safari` (antes inspiración) | Imagen de IA: puño de 5 cm de ancho y copa de 12 cm, imposibles. |
+| 5 | Pantalón cargo de hombre | `cargo-recto` (grupo `pantalon-cargo`) | Imagen de IA: largo exterior de 82 cm menor que la entrepierna de 81 + tiro de 28. |
+| 6 | Pantalón baggy de hombre | `baggy-felpa` (grupo `tipo-pantalon-amplio`) | Elástico por talla de la referencia solo como comprobación. |
+| 7–9 | Culotte de encaje (tallas S, M y M–L) | `culotte-encaje`, `culotte-punto-picot` | Las tres eran el mismo patrón. Se cortan con un 15 % menos de cadera (encaje del 30 %); refuerzo de algodón añadido. |
+
+Generadores en `adultBatch.ts` y `menBatch.ts`; tarjetas en
+`src/data/digitizedAdultCatalog.ts`; lámina dibujada `lote-adultos-01` para los
+diseños que aún no tienen foto IA; pruebas en `tests/digitized-adults.test.ts`.
 
 ## Archivos
 

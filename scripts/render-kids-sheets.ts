@@ -15,9 +15,10 @@
 import { writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
-import { buildKidsFlat } from '../src/data/kidsFlats';
+// flats.ts loads first: the baby style drawings call buildKidsFlat while their module initialises.
 import { buildFlat, type FlatView } from '../src/data/flats';
 import { findModel } from '../src/data/catalog';
+import { buildKidsFlat } from '../src/data/kidsFlats';
 
 interface Cell { key: string; color: string; accents?: Record<string, string>; view?: 'frente' | 'espalda'; /** Catalog model drawn from its own technical drawing. */ model?: boolean }
 const SHEETS: Record<string, Cell[]> = {
@@ -125,6 +126,18 @@ const SHEETS: Record<string, Cell[]> = {
     { key: 'blusa-trapecio-volante', model: true, color: '#c4cfae', accents: { 'volante-bajo': '#b9c5a1' } },
     { key: 'conjunto-trapecio', model: true, color: '#9ec0e3', accents: { 'cubrepanal-delantero': '#94b6da' } },
     { key: 'conjunto-vichy', model: true, color: '#c4cfae', accents: { 'blusa-volante-bajo': '#b9c5a1', 'pantalon-pretina': '#b9c5a1' } }
+  ],
+  // Third and fourth digitized batches (adults): new constructions without an AI photo yet.
+  'lote-adultos-01': [
+    { key: 'pantalon-volante', model: true, color: '#e3d3b8', accents: { 'volante-a': '#dac8aa', 'volante-b': '#dac8aa', pretina: '#dac8aa' } },
+    { key: 'chaqueta-ranglan', model: true, color: '#5b6b4e', accents: { 'manga-delantera--1': '#c9b48a', 'manga-delantera--2': '#c9b48a', 'manga-trasera--1': '#c9b48a', 'manga-trasera--2': '#c9b48a', cuello: '#4f5e43', banda: '#4f5e43', 'puno--1': '#4f5e43', 'puno--2': '#4f5e43' } },
+    { key: 'sudadera-bloques', model: true, color: '#ece3d3', accents: { 'delantero-inferior': '#7d8f6b', 'manga-inferior--1': '#7d8f6b', 'manga-inferior--2': '#7d8f6b', cuello: '#e3d8c5' } },
+    { key: 'buzo-murcielago', model: true, color: '#c4c6c8', accents: { 'lateral--1': '#f4f1ea', 'lateral--2': '#f4f1ea', 'puno--1': '#d8bd98', 'puno--2': '#d8bd98', banda: '#f4f1ea' } },
+    { key: 'culotte-encaje', model: true, color: '#b54a5d' },
+    { key: 'palazzo-botones-laterales', model: true, color: '#e8dfcc', accents: { pretina: '#dfd4bd' } },
+    // Variant cells (6–7).
+    { key: 'sudadera-media-cremallera-lisa', model: true, color: '#8ea5bb', accents: { cuello: '#859cb2' } },
+    { key: 'chaqueta-campo', model: true, color: '#3f6b4c' }
   ]
 };
 const viewFor = (cell: Cell): FlatView => {

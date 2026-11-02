@@ -6,6 +6,7 @@ import { COSTUME_EXPANSION_CATALOG } from './costumeExpansion';
 import { KIDS_CATALOG, withKidsPatterns } from './kidsCatalog';
 import { TREND_CATALOG, withTrendPatterns } from './trendCatalog';
 import { DIGITIZED_KIDS_CATALOG } from './digitizedKidsCatalog';
+import { DIGITIZED_ADULT_CATALOG, withAdultPatterns } from './digitizedAdultCatalog';
 import { STREET_STYLE_CATALOG } from './streetStyleCatalog';
 import { BABY_STYLE_CATALOG } from './babyStyleCatalog';
 import { DRESS_STYLE_CATALOG } from './dressStyleCatalog';
@@ -758,13 +759,14 @@ const BASE_CATALOG: CatalogModel[] = [
   ...KIDS_CATALOG,
   ...TREND_CATALOG,
   ...DIGITIZED_KIDS_CATALOG,
+  ...DIGITIZED_ADULT_CATALOG,
   ...STREET_STYLE_CATALOG,
   ...BABY_STYLE_CATALOG,
   ...DRESS_STYLE_CATALOG
 ];
 const ACCESSORY_IDS=new Set(['cojin','funda-cheve','funda-vaso','dona-cabello','bandana-reversible','individual-reversible','posavasos-textil','servilleta-reversible','marcapaginas-textil','tapete-maquina','delantal-estudio','antifaz-estudio','banderin-estudio']);
 const UPGRADED_ACCESSORY:Record<string,string>={'delantal-estudio':'delantal-peto','antifaz-estudio':'antifaz-forrado','banderin-estudio':'banderin-jareta'};
-export const CATALOG:CatalogModel[]=BASE_CATALOG.map(withBabyPatterns).map(withKidsPatterns).map(withTrendPatterns).map(m=>{
+export const CATALOG:CatalogModel[]=BASE_CATALOG.map(withBabyPatterns).map(withKidsPatterns).map(withTrendPatterns).map(withAdultPatterns).map(m=>{
   const gen=UPGRADED_ACCESSORY[m.id];
   return withCatalogTaxonomy(withStyleIdentity(withDesignGroup({...m,type:ACCESSORY_IDS.has(m.id)?'accesorios':m.type,...(gen?{generatorId:gen,status:'experimental' as const,studioOnly:false,description:'Plantilla de diseño y patrón paramétrico con medidas editables del objeto, márgenes y pasos de confección. Nueva construcción experimental: prueba una muestra.'}:{})})));
 });

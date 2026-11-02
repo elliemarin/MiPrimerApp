@@ -84,6 +84,8 @@ export interface PantsOpts {
   pockets?: 'ninguno' | 'laterales' | 'cargo' | 'parche';
   /** Gathered ruffle below the hem, with pintucks above it. */
   ruffle?: boolean;
+  /** false: waistband without a front fly (side opening with buttons). */
+  fly?: boolean;
 }
 
 function pantsGeometry(o: PantsOpts) {
@@ -125,7 +127,7 @@ function legPath(o: PantsOpts, g: ReturnType<typeof pantsGeometry>): string {
 
 function pantsView(key: FlatViewKey, o: PantsOpts): FlatView {
   const g = pantsGeometry(o);
-  const { wb, waistHalf, Hh, L, legCenter, hemHalf, crotchY } = g;
+  const { wb, waistHalf, Hh, L, legCenter, hemHalf, crotchY, hipY } = g;
   const leftLeg = legPath(o, g);
   const mirror = (d: string) => d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x, y) => `${f(-Number(x))} ${y}`);
   const rightLeg = mirror(leftLeg);
@@ -145,7 +147,8 @@ function pantsView(key: FlatViewKey, o: PantsOpts): FlatView {
     }
   } else {
     details.push({ d: line([-waistHalf, wb - 6], [waistHalf, wb - 6]), style: 'pespunte' });
-    if (!back) details.push({ d: `${M([0, wb])} ${Lp([30, wb])} ${Lp([30, wb + 150])} ${Q([30, wb + 175], [0, wb + 190])}`, style: 'pespunte' });
+    if (!back && o.fly !== false) details.push({ d: `${M([0, wb])} ${Lp([30, wb])} ${Lp([30, wb + 150])} ${Q([30, wb + 175], [0, wb + 190])}`, style: 'pespunte' });
+    else if (!back) details.push({ d: `${M([-waistHalf + 6, wb])} ${Q([-Hh + 4, wb + 90], [-Hh + 6, hipY - 10])}`, style: 'pespunte' });
     for (const x of [-waistHalf + 60, waistHalf - 60, -40, 40]) details.push({ d: rect(x - 5, 2, 10, wb - 4), style: 'costura' });
   }
   const shortLeg = L - crotchY < 300;
@@ -226,6 +229,8 @@ function pantsSide(key: 'costado-der' | 'costado-izq', o: PantsOpts): FlatView {
 export type TopType = 'camiseta' | 'camisa' | 'blusa' | 'sudadera' | 'hoodie' | 'chaleco' | 'chaqueta' | 'abrigo' | 'pijama';
 export type JacketStyle = 'bomber' | 'denim' | 'trench' | 'acolchada' | 'biker' | 'safari' | 'varsity' | 'anoraq' | 'haori' | 'cardigan' | 'poncho' | 'capa' | 'bolero' | 'shacket' | 'parka' | 'bluson';
 export interface TopOpts {
+  /** false: no decorative yoke on denim/shacket/safari drawings (the pattern has none). */
+  canesu?: boolean;
   /** Modelo sin bandas de rib: bajos y puños con dobladillo simple. */
   plainHem?: boolean;
   style?: JacketStyle;
@@ -591,7 +596,7 @@ function jacketDetails(o: TopOpts, back: boolean, zones: Zone[], details: FlatVi
   const L=o.length, style=o.style;
   if(!style) return;
   if(style==='denim'||style==='shacket'||style==='safari') {
-    zones.push(zone('canesu-estilo','Canesú','canesu',poly([[-half+20,110],[half-20,110],[half,190],[-half,190]])));
+    if(o.canesu!==false) zones.push(zone('canesu-estilo','Canesú','canesu',poly([[-half+20,110],[half-20,110],[half,190],[-half,190]])));
     if(!back) for(const sign of [-1,1]) {
       const x=sign*half*.55-55;
       zones.push(zone(`pecho-${sign}`,'Bolsillo con tapa','bolsillo',rect(x,210,110,130)));

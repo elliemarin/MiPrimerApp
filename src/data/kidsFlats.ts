@@ -15,6 +15,7 @@ import { generateButtonTop, generateCasingDress, generatePeasant, generateRuffle
 import { generateEarflap, generatePixie } from '../lib/pattern/generators/kidsHats';
 import { generatePinaforeApron, generateRuffleBonnet, generateStrapRomper, generateTrapezeTop } from '../lib/pattern/generators/kidsBatch2';
 import { generateBatwing, generateHalfZip, generateRaglanJacket } from '../lib/pattern/generators/adultBatch';
+import { generateBoyshort } from '../lib/pattern/generators/menBatch';
 
 /* Dibujos técnicos de la colección Niña y de la ampliación de Bebé.
  * Las siluetas salen de las piezas reales de una talla de referencia; cada
@@ -79,6 +80,7 @@ export const KIDS_SURFACE_PIECES: Record<string, Partial<Record<FlatViewKey, Kid
     frente: [S('centro-delantero', 'centro-delantero', false, true), ...pair('lateral'), S('capucha'), S('banda'), ...pair('puno')],
     espalda: [S('centro-espalda', 'centro-espalda', false, true), ...pair('lateral'), S('capucha'), S('banda'), ...pair('puno')]
   },
+  'culotte-encaje': { frente: pair('culotte'), espalda: pair('culotte') },
   'blusa-trapecio-infantil': {
     frente: [S('delantero', 'delantero', false, true), S('volante-bajo', 'volante-bajo', false, true)],
     espalda: [...pair('espalda'), S('volante-bajo', 'volante-bajo', false, true)]
@@ -693,6 +695,26 @@ function batwingFlat(): FlatView[] {
   return [views(false), views(true)];
 }
 
+/** Lace boyshort: front and back halves drawn from the real piece (one piece per side, no side seam). */
+function lingerieFlat(): FlatView[] {
+  const r = generateBoyshort({ body: findSize('ref-mujer-busto', 'M88')!.values, kind: 'mujer', fabric: 'punto', stretch: 30, fit: 'regular' }, {}), pc = piece(r, 'culotte');
+  const [F0, B0, , , FI] = pc.nodes, side = pc.lines.find(l => l.id === 'costado')!, sx = side.a.x, bottom = FI.y, topS = F0.y * .5;
+  // Seen flat on the body the leg line climbs from the crotch to the side (the piece's side rise plus the thigh's slope).
+  const legSide = topS + (side.b.y - topS) * .62;
+  const half = (sign: number, w: number, topC: number, crotch: number, deep: number) => {
+    const X = (x: number) => r1(sign * x);
+    return `M0 ${r1(topC)} C${X(w * .4)} ${r1(topC + (topS - topC) * .1)} ${X(w * .75)} ${r1(topS)} ${X(w)} ${r1(topS)} L${X(w * 1.03)} ${r1(legSide)} C${X(w * .8)} ${r1(legSide + (bottom - legSide) * deep)} ${X(crotch * 2.2)} ${r1(bottom - (bottom - legSide) * .12)} ${X(crotch)} ${r1(bottom)} L0 ${r1(bottom)} Z`;
+  };
+  const views = (back: boolean) => {
+    const w = back ? B0.x - sx + 6 : sx - F0.x, topC = back ? B0.y : F0.y, crotch = back ? 46 : 32, deep = back ? .6 : .35;
+    const zones: Zone[] = [zone('culotte--1', back ? 'Trasero izquierdo' : 'Delantero izquierdo', back ? 'espalda' : 'delantero', half(-1, w, topC, crotch, deep)), zone('culotte--2', back ? 'Trasero derecho' : 'Delantero derecho', back ? 'espalda' : 'delantero', half(1, w, topC, crotch, deep))];
+    const trim = (y0: number) => `M${r1(-w)} ${r1(topS + y0)} C${r1(-w * .6)} ${r1(topS + y0)} ${r1(-w * .3)} ${r1(topC + y0)} 0 ${r1(topC + y0)} C${r1(w * .3)} ${r1(topC + y0)} ${r1(w * .6)} ${r1(topS + y0)} ${r1(w)} ${r1(topS + y0)}`;
+    const details: Details = [{ d: `M0 ${r1(topC)} L0 ${r1(bottom)}`, style: 'costura' }, { d: trim(9), style: 'pespunte' }, { d: trim(16), style: 'pliegue' }];
+    return view(back ? 'espalda' : 'frente', zones, details, [], 'Cintura');
+  };
+  return [views(false), views(true)];
+}
+
 const BUILDERS: Record<string, () => FlatView[]> = {
   'peto-corto': () => overallFlat(false), 'peto-largo': () => overallFlat(true), 'gorro-oso': () => earHatFlat('oso'), 'gorro-gato': () => earHatFlat('gato'), 'gorro-conejo': () => earHatFlat('conejo'),
   'conjunto-verano': () => setFlat('verano'), 'conjunto-invierno': () => setFlat('invierno'), 'conjunto-recien-nacido': () => setFlat('recien-nacido'),
@@ -701,7 +723,7 @@ const BUILDERS: Record<string, () => FlatView[]> = {
   'gorro-duende': () => pixieFlat(true), 'gorro-duende-fieltro': () => pixieFlat(false),
   'bonete-volante': () => ruffleBonnetFlat('tela'), 'bonete-volante-doble': () => ruffleBonnetFlat('doble'), 'bonete-encaje': () => ruffleBonnetFlat('encaje'),
   'delantal-pichi': () => apronFlat(true), 'delantal-pichi-liso': () => apronFlat(false), 'mono-pichi': () => strapRomperFlat('pichi'), 'mono-pico': () => strapRomperFlat('pico'), 'peto-infantil': () => strapRomperFlat('peto'),
-  'sudadera-bloques': () => halfZipFlat(true), 'sudadera-media-cremallera': () => halfZipFlat(false), 'chaqueta-ranglan': raglanFlat, 'buzo-murcielago': batwingFlat,
+  'sudadera-bloques': () => halfZipFlat(true), 'sudadera-media-cremallera': () => halfZipFlat(false), 'chaqueta-ranglan': raglanFlat, 'buzo-murcielago': batwingFlat, 'culotte-encaje': lingerieFlat,
   'blusa-trapecio': () => trapezeTopFlat(false), 'blusa-trapecio-volante': () => trapezeTopFlat(true), 'conjunto-trapecio': () => setFlat('trapecio'), 'conjunto-vichy': () => setFlat('vichy'), 'gorro-orejeras-gato': () => earflapFlat('gato'), 'gorro-orejeras-oso': () => earflapFlat('oso'), diadema: headbandFlat,
   'vestido-trapecio': () => trapezeFlat(false), 'vestido-trapecio-volante': () => trapezeFlat(true), 'vestido-tirantes': sundressFlat,
   'falda-tul': tulleFlat, 'falda-olanes': tieredFlat, 'falda-circular': () => circleFlat(true), 'falda-medio-circulo': () => circleFlat(false),

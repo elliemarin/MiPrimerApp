@@ -113,11 +113,14 @@ describe('colección Niña y ampliación de Bebé', () => {
 
   it('enlaza cada zona de los dibujos con una pieza física del patrón', () => {
     const models = CATALOG.filter(m => m.flat.kids);
-    expect(models.length).toBe(50);
+    expect(models.length).toBe(56);
     for (const model of models) {
       const gen = getGenerator(model.generatorId!)!, kinds = SUPPORTED[gen.id] ?? (model.recipients.filter(r => ['bebe', 'toddler', 'infantil'].includes(r)) as PersonKind[]);
       const kind = kinds[0] === 'bebe' ? 'bebe' : kinds.includes('infantil') ? 'infantil' : 'toddler';
-      const ctx = kind === 'bebe' ? at('ref-bebe-meses', 'B0-3', 'bebe') : at('ref-infantil-estatura', kind === 'infantil' ? 'E116' : 'E92', kind);
+      const adultOnly = !model.recipients.some(r => ['bebe', 'toddler', 'infantil'].includes(r));
+      const base = adultOnly ? at('ref-mujer-busto', 'M88', 'mujer') : kind === 'bebe' ? at('ref-bebe-meses', 'B0-3', 'bebe') : at('ref-infantil-estatura', kind === 'infantil' ? 'E116' : 'E92', kind);
+      // Knit-only designs (batwing hoodie, lace boyshort) are generated in knit, as the card asks.
+      const ctx = model.fabrics.includes('plano') ? base : { ...base, fabric: 'punto' as const, stretch: 30 };
       const pieces = gen.generate(ctx, { ...gen.defaults(ctx), ...model.params }).pieces.map(p => p.id);
       for (const view of buildFlat(model.id, model.flat).views) {
         expect(view.zones.length, model.id).toBeGreaterThan(0);

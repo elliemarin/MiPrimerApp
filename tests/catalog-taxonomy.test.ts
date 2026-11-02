@@ -11,9 +11,9 @@ const patternSearch = (q: string) => CATALOG.filter(model => matches(model, { ..
 
 describe('Auditoría completa de identidad y destinatario del catálogo', () => {
   it('clasifica cada receta e inspiración mediante una asignación explícita de su diseño', () => {
-    expect(CATALOG).toHaveLength(2059);
+    expect(CATALOG).toHaveLength(2074);
     expect(new Set(CATALOG.map(model => model.id)).size).toBe(CATALOG.length);
-    expect(CATALOG.filter(modelHasPattern)).toHaveLength(1993);
+    expect(CATALOG.filter(modelHasPattern)).toHaveLength(2013);
     const designIds = new Set(CATALOG.map(model => model.designGroup?.id ?? model.id));
     expect(Object.keys(FAMILY_BY_DESIGN).sort()).toEqual([...designIds].sort());
     for (const model of CATALOG) {
@@ -80,9 +80,9 @@ describe('Auditoría completa de identidad y destinatario del catálogo', () => 
 
   it.each(['hoodie', 'hoodies', 'hoddie', 'hoddies', 'hoody', ' HÓÓDIE '])('%s nunca incluye capas, parkas, ponchos, chaquetas ni sudaderas sin capucha', query => {
     const found = search(query);
-    expect(found).toHaveLength(86); // 72 dimension presets, one inspiration, an infant hoodie and twelve adult constructions.
+    expect(found).toHaveLength(87); // 72 dimension presets, one inspiration, an infant hoodie, twelve adult constructions and the batwing hoodie.
     expect(found.every(model => familyOf(model) === 'hoodie')).toBe(true);
-    expect(groupCatalog(patternSearch(query)).map(group => group.id).sort()).toEqual(['sudadera-canguro-infantil', 'tipo-hoodie', ...['cierre', 'chaleco', 'canguro', 'globo', 'peplum', 'diagonal', 'bandas', 'canesu', 'panel-central', 'patchwork', 'chaleco-cierre', 'poncho'].map(style => `street-hoodie-${style}`)].sort());
+    expect(groupCatalog(patternSearch(query)).map(group => group.id).sort()).toEqual(['buzo-murcielago', 'sudadera-canguro-infantil', 'tipo-hoodie', ...['cierre', 'chaleco', 'canguro', 'globo', 'peplum', 'diagonal', 'bandas', 'canesu', 'panel-central', 'patchwork', 'chaleco-cierre', 'poncho'].map(style => `street-hoodie-${style}`)].sort());
     for (const id of ['capa-capucha', 'parka-capucha', 'poncho-capucha-inspiracion', 'anorak-canguro', 'tipo-sudadera']) {
       expect(found.some(model => model.id === id || model.designGroup?.id === id), id).toBe(false);
     }
