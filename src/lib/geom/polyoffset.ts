@@ -62,3 +62,23 @@ export function intersectPolygons(a: Pt[][], b: Pt[][]): Pt[][] {
   c.Execute(ClipperLib.ClipType.ctIntersection, sol, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
   return sol.map(toPt);
 }
+
+/** Diferencia a − b de dos conjuntos de polígonos (regla no nula). */
+export function differencePolygons(a: Pt[][], b: Pt[][]): Pt[][] {
+  if (!b.length) return unionPolygons(a);
+  const c = new ClipperLib.Clipper();
+  c.AddPaths(a.filter((p) => p.length >= 3).map(toInt), ClipperLib.PolyType.ptSubject, true);
+  c.AddPaths(b.filter((p) => p.length >= 3).map(toInt), ClipperLib.PolyType.ptClip, true);
+  const sol: IntPt[][] = [];
+  c.Execute(ClipperLib.ClipType.ctDifference, sol, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+  return sol.map(toPt);
+}
+
+/** Trazo grueso de una polilínea abierta (extremos redondeados): tallos, antenas, espirales. */
+export function strokePolyline(pts: Pt[], width: number): Pt[][] {
+  const co = new ClipperLib.ClipperOffset(2, 0.05 * SCALE);
+  co.AddPath(toInt(pts), ClipperLib.JoinType.jtRound, ClipperLib.EndType.etOpenRound);
+  const sol: IntPt[][] = [];
+  co.Execute(sol, (width / 2) * SCALE);
+  return sol.map(toPt);
+}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { CATALOG, RECIPIENT_LABEL, TECHNIQUE_LABEL, TYPE_LABEL, type CatalogModel, type GarmentType, type Recipient, type Technique } from '../../data/catalog';
 import { catalogFamilyOptions, FAMILY_LABEL, familyOf, type CatalogFamily } from '../../data/catalogTaxonomy';
 import { Button, Empty, Field, Select, Sheet } from '../../ui/components';
@@ -10,13 +10,14 @@ import { groupCatalog } from './groups';
 import { FreePatternsPanel } from './FreePatternsPanel';
 import { GIRL_FAMILIES } from '../../data/kidsCatalog';
 import { TransformationsPanel } from '../transform/TransformationsPanel';
+const FiguresPanel = lazy(() => import('../figures/FiguresPanel').then(m => ({ default: m.FiguresPanel })));
 import './library.css';
 import './simpleLibrary.css';
 export { matches } from './filters';
 
 const start: Filters = { ...INITIAL_FILTERS, availability: 'patron' };
 const babyRows = SIZE_TABLES.find(table => table.id === 'ref-bebe-meses')!.rows;
-type CatalogMode = 'editables' | 'internet' | 'transformar';
+type CatalogMode = 'editables' | 'internet' | 'transformar' | 'figuras';
 const FIT_LABEL = { ajustado: 'Ajustado', regular: 'Regular', holgado: 'Holgado', oversize: 'Oversize' };
 const STRETCH_LABEL = { ninguna: 'Sin elasticidad', baja: 'Elasticidad baja', media: 'Elasticidad media', alta: 'Elasticidad alta' };
 const DIFFICULTY_LABEL = ['Cualquier nivel', 'Inicial', 'Intermedio', 'Avanzado'];
@@ -46,7 +47,7 @@ export function LibraryPage() {
   });
   const [mode, setMode] = useState<CatalogMode>(() => {
     const value = saved('hilvana-library-mode', 'editables');
-    return value === 'internet' || value === 'transformar' ? value : 'editables';
+    return value === 'internet' || value === 'transformar' || value === 'figuras' ? value : 'editables';
   });
   const [open, setOpen] = useState(false);
   const [limit, setLimit] = useState(24);
@@ -134,9 +135,10 @@ export function LibraryPage() {
     <div className="simple-library-modes" role="group" aria-label="Biblioteca de patrones">
       <button aria-pressed={mode === 'editables'} onClick={() => setMode('editables')}><Icon name="scissors" size={19}/><span>Patrones editables</span></button>
       <button aria-pressed={mode === 'transformar'} onClick={() => setMode('transformar')}><Icon name="telas" size={19}/><span>Transformar mi ropa</span></button>
+      <button aria-pressed={mode === 'figuras'} onClick={() => setMode('figuras')}><Icon name="leaf" size={19}/><span>Figuras de tela</span></button>
       <button aria-pressed={mode === 'internet'} onClick={() => setMode('internet')}><Icon name="download" size={19}/><span>Gratis de internet</span></button>
     </div>
-    {mode === 'transformar' ? <TransformationsPanel/> : mode === 'internet' ? <FreePatternsPanel initialCategory={collection === 'Disfraces' ? 'disfraces' : 'todos'}/> : <>
+    {mode === 'figuras' ? <Suspense fallback={<p className="muted" aria-busy="true">Cargando figuras…</p>}><FiguresPanel/></Suspense> : mode === 'transformar' ? <TransformationsPanel/> : mode === 'internet' ? <FreePatternsPanel initialCategory={collection === 'Disfraces' ? 'disfraces' : 'todos'}/> : <>
       <div className="simple-search-row"><div className="simple-search"><Icon name="search"/><input type="search" aria-label="Buscar prendas y accesorios" placeholder="Hoodie, pantalón, funda, bolso…" value={filters.q} onChange={event => set({ q: event.target.value })}/></div><Button icon="filter" aria-label={`Filtros${filterCount > 0 ? ` (${filterCount})` : ''}`} onClick={() => setOpen(true)}><span className="simple-filters-label">Filtros</span>{filterCount > 0 && <span className="simple-filter-count">{filterCount}</span>}</Button></div>
       <div className="simple-collections" role="group" aria-label="Tipo de proyecto">
         <button className="filter-chip" aria-pressed={!active.length} onClick={reset}>Todo</button>

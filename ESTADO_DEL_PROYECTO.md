@@ -6,22 +6,42 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-02 (Claude: tercer y cuarto lote de diseños: tendencias, hombre y lencería).
+- Última actualización: 2026-11-03 (Claude: figuras de tela por capas con PDF ajustable).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 3726 pruebas: catálogo, fotos, patrones, persistencia, PDF, proyector, logos y transformaciones
+npm test            # 3738 pruebas: catálogo, fotos, patrones, persistencia, PDF, proyector, logos y transformaciones
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Figuras de tela por capas (2026-11-03)
+
+**Este es el relevo más reciente.** Detalle en `docs/FIGURAS_DE_TELA.md`.
+
+- Cuarto modo de la biblioteca, **Figuras de tela**: 156 diseños originales en
+  13 categorías (flores, plantas y hongos, cielo y mar, animales, casas, frutas y
+  verduras, juguetes, caras y ojos, cuerpo, geometría, abstractos, psicodélicos
+  y arte). Se carga aparte (`React.lazy`), así no pesa en la biblioteca.
+- Motor `src/lib/applique/figure.ts`: parte visible, solapa bajo la pieza de
+  encima, ahorro de tela sin agujeros pequeños, capa real, margen de doblado y
+  avisos de piezas finas. Formas en `src/lib/applique/shapes.ts`.
+- PDF ajustable: portada con orden de colocación y telas, guía 1:1 y piezas 1:1
+  (en espejo para la termoadhesiva). Ancho de 4 a 150 cm.
+- `scripts/render-kids-sheets.ts` sigue igual; las miniaturas de figuras se
+  dibujan en vivo desde las piezas.
+- Validación: **3,738 pruebas en 83 archivos** (`tests/fabric-figures.test.ts`
+  nueva) y `npm run build`.
+
+Siguiente paso sugerido: coser muestras y permitir llevar una figura al Estudio.
+
 ## Tercer y cuarto lote: tendencias, hombre y lencería (2026-11-02)
 
-**Este es el relevo más reciente.** 20 fotos de referencia (11 del tercer lote
+Relevo anterior. 20 fotos de referencia (11 del tercer lote
 y 9 del cuarto, de hombre y lencería). Detalle imagen por imagen en
 `docs/DISENOS_DIGITALIZADOS.md` («Tercer lote» y «Cuarto lote»). Todo es
 **experimental**: nada se ha impreso ni cosido.

@@ -68,12 +68,13 @@ profesional de patronaje 2D (estilo Seamly2D), pero con una interfaz muy simple.
 | `src/lib/pattern` | Modelo de pieza, márgenes, validación, motor, generadores |
 | `src/lib/pdf` | Mosaico carta, PDF vectorial, calibración |
 | `src/lib/draw` | Trayectos, dibujables, SVG |
+| `src/lib/applique` | Figuras de tela por capas: formas (`shapes.ts`) y motor de solapas y profundidad (`figure.ts`) |
 | `src/lib/sizes` | Medidas y tablas de tallas |
 | `src/lib/db.ts` | IndexedDB |
 | `src/lib/zip.ts` | Proyecto completo en ZIP |
 | `src/lib/sync` | Sincronización con repositorio privado de GitHub |
 | `src/store` | Estado global (zustand), tipos, versiones y exportaciones |
-| `src/data` | Catálogo, dibujos técnicos paramétricos, figuras orgánicas |
+| `src/data` | Catálogo, dibujos técnicos paramétricos, figuras orgánicas; `fabricFigures/` = 156 figuras de tela por capas |
 | `src/features/*` | Pantallas: biblioteca, patronaje, estudio, telas, proyectos, medidas, ayuda, ajustes |
 | `src/ui` | Componentes, iconos, lienzo con zoom (`Board.tsx`), historial |
 | `tests` | Pruebas de geometría, PDF y persistencia (vitest) |
