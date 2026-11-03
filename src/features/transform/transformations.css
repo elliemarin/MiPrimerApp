@@ -10,7 +10,7 @@
 .transform-preview .transformation-photo { border-radius: 16px; }
 .transform-photo-switch { display: flex; justify-content: center; gap: 4px; width: fit-content; max-width: 100%; padding: 4px; margin: 12px auto 0; border: 1px solid var(--line); border-radius: 999px; background: var(--paper, #fff); }
 .transform-photo-switch button { appearance: none; font: inherit; font-size: 13px; line-height: 1.3; min-height: 44px; padding: 10px 20px; border: 0; border-radius: 999px; background: transparent; color: var(--ink-2); cursor: pointer; }
-.transform-photo-switch button[aria-pressed="true"] { background: var(--ink, #25352c); color: #fff; }
+.transform-photo-switch button[aria-pressed="true"] { background: var(--ink, #25352c); color: var(--paper, #fff); }
 .transform-photo-switch button:focus-visible { outline: 2px solid var(--ink, #25352c); outline-offset: 3px; }
 .transform-preview figcaption { font-size: 12px; text-align: center; margin-top: 12px; line-height: 1.5; color: var(--ink-2); }
 .transform-detail > .transform-preview { align-self: center; }

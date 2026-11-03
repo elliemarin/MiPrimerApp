@@ -6,13 +6,13 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-03 (Claude: figuras de tela por capas con PDF ajustable).
+- Última actualización: 2026-11-03 (Claude: figuras de tela por capas con PDF ajustable; antes, Codex: fotos del lote nuevo).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 3738 pruebas: catálogo, fotos, patrones, persistencia, PDF, proyector, logos y transformaciones
+npm test            # 3766 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
 npm run dev         # http://localhost:5173/
 npm run build
 ```
@@ -34,14 +34,65 @@ Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
   (en espejo para la termoadhesiva). Ancho de 4 a 150 cm.
 - `scripts/render-kids-sheets.ts` sigue igual; las miniaturas de figuras se
   dibujan en vivo desde las piezas.
-- Validación: **3,738 pruebas en 83 archivos** (`tests/fabric-figures.test.ts`
+- Validación tras fusionar el trabajo de Codex: **3,766 pruebas en 84 archivos** (`tests/fabric-figures.test.ts`
   nueva) y `npm run build`.
 
 Siguiente paso sugerido: coser muestras y permitir llevar una figura al Estudio.
 
+## Fotografías del lote nuevo y actualización visible (2026-11-02)
+
+Relevo anterior (Codex). Se parte del trabajo de Claude en
+`7703fac`, conservando sus nuevos generadores y recetas. Baseline: instalación,
+3,726 pruebas / 82 archivos y compilación correctos.
+
+- Las seis prendas de la captura de la usuaria ya mostraban fotos en la web
+  pública; el esquema `TransformationDiagram` de su segunda captura había sido
+  retirado. Se reprodujo una app antigua abierta que no buscaba actualizaciones
+  al volver, con el aviso fuera de pantalla al desplazarse y oculto tras un Sheet.
+- El lote posterior de Claude sí tenía dibujos pendientes y variantes con
+  fotos compartidas poco precisas. Se generaron **17 fotos IA nuevas**: las
+  15 recetas de `digitizedAdultCatalog.ts` y versiones infantiles sin cordones
+  del palazzo elástico y buzo murciélago. Dos WebP, **218,168 bytes** adicionales.
+- Las recetas distinguen cuello Mao, puños, cierres, bolsillos, alforzas,
+  encaje/picot y bloques de color. Los mapas por receta tienen prioridad sobre
+  las portadas de grupo; los alias antiguos mantienen las identidades.
+- Se elimina `PENDING_PHOTO_SHEETS`. Pruebas y auditoría prohíben todas las
+  láminas vectoriales históricas en las recetas activas, incluida `lote-adultos-01`.
+  Inventario: **2,074 recetas / 318 grupos**, 257 con patrón, 56 inspiraciones
+  y cinco referencias de estudio; **8,304 selecciones**, 345 celdas en 41 láminas,
+  cero fuentes vectoriales y cero archivos ausentes.
+- Se corrige el contraste de «Antes / Con el cambio» en modo oscuro.
+- El aviso se fija sobre los diálogos y reserva espacio para sus controles.
+  La app busca versiones al recuperar foco, visibilidad y conexión; Ajustes
+  ofrece «Buscar actualizaciones» y muestra el commit/fecha publicados. Activar
+  sigue siendo explícito: bloqueo breve de edición, guardado antes de activar
+  y otro guardado antes de recargar. Los fallos permiten continuar trabajando.
+
+**Revisión visual:** 257 tarjetas disponibles, 77 al filtrar bebé, 141 fichas
+fotográficas y 18 galerías en Chromium móvil; quince recetas nuevas y dos
+variantes infantiles, seis cambios de variante y las seis prendas exactas de
+la captura. Sin errores ni imágenes ausentes. Contraste oscuro de la comparación:
+15.18:1. Repetido sobre el build de Pages: las 41 láminas se decodifican sin
+conexión desde el worker, forzando `cache: reload` y sin depender de la caché
+de imágenes en memoria. Suite completa: **3,754 pruebas en 83 archivos**.
+Compilación de Pages correcta. La prueba de dos publicaciones pasa: instalación
+limpia sin falso aviso, detección natural, aviso/cierre/acción inferior accesibles
+con scroll y diálogo oscuro, tres rutas diferidas antiguas funcionando mientras
+la nueva versión espera, fallo de guardado recuperable sin activar, aceptación
+explícita y conservación de proyecto, extra y borrador tras recarga y sin red.
+La corrección de actualización no puede modificar una sesión antigua
+ya abierta; las indicaciones de migración sin borrar datos están en
+`docs/ACTUALIZACIONES_Y_FOTOS.md`.
+
+Prompts, procedencia, celdas y revisión visual:
+`docs/IMAGENES_ADULTOS_NUEVOS_A.md`, `docs/IMAGENES_ADULTOS_NUEVOS_B.md`.
+Inventario reproducible: `node scripts/audit-catalog-photos.mjs` y
+`docs/auditoria/fotos-catalogo.csv`. No cambian tallas, medidas, geometría,
+certificación ni estados experimentales. Las muestras físicas siguen pendientes.
+
 ## Tercer y cuarto lote: tendencias, hombre y lencería (2026-11-02)
 
-Relevo anterior. 20 fotos de referencia (11 del tercer lote
+Relevo anterior (Claude). 20 fotos de referencia (11 del tercer lote
 y 9 del cuarto, de hombre y lencería). Detalle imagen por imagen en
 `docs/DISENOS_DIGITALIZADOS.md` («Tercer lote» y «Cuarto lote»). Todo es
 **experimental**: nada se ha impreso ni cosido.
@@ -58,12 +109,10 @@ y 9 del cuarto, de hombre y lencería). Detalle imagen por imagen en
   que ahora generan patrón y conservan su foto (`pantalon-palazzo`,
   `pantalon-pinzas`, `cazadora-mezclilla`, `cazadora-denim-corta`,
   `chaqueta-safari`). Familia nueva **Lencería**.
-- Imágenes: los 6 diseños nuevos sin foto IA (pantalón con volante, chaqueta
-  ranglan, sudadera de media cremallera, buzo murciélago, culotte, palazzo con
-  botones laterales) y 2 variantes se dibujan desde sus piezas en la lámina
-  `lote-adultos-01`. La ficha lo dice («Ilustración dibujada a partir del patrón
-  real») y `PENDING_PHOTO_SHEETS` lo permite en las pruebas.
-  **Pendiente:** generar fotos IA en el estilo de Codex y quitar la lámina de la lista.
+- Imágenes de esa entrega: seis diseños nuevos y dos variantes usaban
+  `lote-adultos-01`, dibujada desde sus piezas. **Resuelto por Codex arriba:**
+  fotografías específicas para las quince recetas, dos variantes infantiles
+  adicionales y eliminación de la excepción vectorial en las pruebas.
 - Seguridad: sin cordones en tallas infantiles; el culotte solo existe en
   tallas de mujer y en punto con ≥ 20 % de elasticidad.
 - Herramienta: `npx vite-node scripts/sweep-generators.ts [ids]` barre todas las
@@ -74,8 +123,7 @@ y 9 del cuarto, de hombre y lencería). Detalle imagen por imagen en
 - Validación: **3,726 pruebas en 82 archivos** (`tests/digitized-adults.test.ts`
   nueva) y `npm run build`.
 
-Siguiente paso sugerido: coser muestras (cazadora, culotte, palazzo con pretina)
-y generar las fotos IA pendientes.
+Siguiente paso sugerido: coser muestras (cazadora, culotte, palazzo con pretina).
 
 ## Transformar mi ropa con imágenes realistas (2026-11-01)
 

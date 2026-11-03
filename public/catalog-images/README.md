@@ -26,3 +26,17 @@ Originales PNG conservados en `/workspace/generated_images/` durante la sesión:
 
 Conversión de formato: `ffmpeg -i ORIGINAL.png -c:v libwebp -quality 86 -compression_level 6 DESTINO.webp`.
 No necesita una API, credenciales ni red para mostrar estas imágenes instaladas.
+
+## Ampliaciones y cierre de fotografías
+
+Las entregas posteriores conservan su procedencia y correspondencia en
+`docs/IMAGENES_CATALOGO_COMPLETO.md`, `docs/IMAGENES_ESTILOS.md` y
+`docs/IMAGENES_CATALOGO_IA.md`. El inventario activo reproducible está en
+`docs/auditoria/fotos-catalogo.csv`.
+
+El 2 de noviembre se añaden `realistas-adultos-nuevos-a.webp` (100,768 bytes)
+y `realistas-adultos-nuevos-b.webp` (117,400 bytes): quince recetas y dos
+variantes infantiles. Prompts exactos, hashes, originales y recortes revisados
+en `docs/IMAGENES_ADULTOS_NUEVOS_A.md` y `docs/IMAGENES_ADULTOS_NUEVOS_B.md`.
+Las láminas vectoriales históricas permanecen por compatibilidad, pero ninguna
+receta activa las utiliza como portada o fotografía de su variante.

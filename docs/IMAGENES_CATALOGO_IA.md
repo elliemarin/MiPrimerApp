@@ -1,5 +1,10 @@
 # Imágenes profesionales del catálogo — 30 octubre 2026
 
+**Estado actual (2 de noviembre):** 318 diseños, 2,074 recetas y todas sus
+selecciones tienen fotografía IA. La auditoría completa está en
+[`auditoria/fotos-catalogo.csv`](auditoria/fotos-catalogo.csv). Las cifras de
+110 diseños y 13 láminas que siguen describen la primera entrega.
+
 Los **110 diseños editables** tienen una ilustración original de producto generada con `image_gen`: prendas, accesorios, hogar, pañalero y los 44 diseños de disfraces. No se multiplicaron tarjetas por medidas. El pañalero tiene imágenes de manga corta/larga; los pantalones, shorts, joggers y pijamas cambian a proporciones infantiles al filtrar Bebé.
 
 ## Archivos y presentación
@@ -25,22 +30,33 @@ Los archivos se codificaron en WebP con FFmpeg, calidad 86; no se recortaron ni 
 
 Para añadir un diseño nativo, generar una imagen acorde con las piezas reales, registrar la celda y revisar la hoja de contacto. Una nueva construcción debe tener su propia imagen; cambiar sólo el tamaño sigue siendo una variante dentro de la misma tarjeta. Las referencias de IA ilustran el diseño: la correspondencia exacta de costuras, escala y ubicación de extras se consulta en las vistas armadas y el patrón generado.
 
-## Láminas vectoriales (2026-11-01)
+## Láminas vectoriales históricas (2026-11-01)
 
 `ninas-01`, `bebe-02`, `tendencia-01/02/03` e `infantil-01` a `infantil-05` no son IA: `scripts/render-kids-sheets.ts` las dibuja desde
 el dibujo técnico real de cada diseño, con textura y sombra suaves. Para ellas la
-ficha dice «Ilustración dibujada a partir del patrón real» (`catalogImageCaption`).
+leyenda original dice «Ilustración dibujada a partir del patrón real» (`catalogImageCaption`).
 Las celdas posteriores a la lista de grupos muestran variantes exactas
 (`VARIANT_IMAGES` en `src/data/catalogImages.ts`); `tendencia-03` solo tiene
-celdas de variante y se registra con lista vacía para que su archivo se pruebe. Si más adelante se generan
-fotos con IA para estos diseños, conserva ids y celdas y cambia el texto.
+celdas de variante y se registra con lista vacía para que su archivo se pruebe.
+**Ya están sustituidas en el catálogo activo:** `REALISTIC_SOURCE_MAP` y los
+mapas por receta conservan sus identidades y resuelven a fotografías nuevas.
+No se cambia la leyenda de un dibujo para presentarlo como IA. Ver
+[`IMAGENES_CATALOGO_COMPLETO.md`](IMAGENES_CATALOGO_COMPLETO.md).
 
-## Lámina pendiente de foto IA (2026-11-02)
+## Tercer y cuarto lote con fotografía IA (2026-11-02)
 
-`lote-adultos-01` dibuja, desde sus piezas reales, los diseños del tercer y
-cuarto lote que no tienen foto IA: pantalón con volante, chaqueta ranglan,
-sudadera de media cremallera (y su variante lisa), buzo murciélago, culotte,
-palazzo con botones laterales y chaqueta de campo. Está en `DRAWN_SHEETS` y en
-`PENDING_PHOTO_SHEETS` (`src/data/catalogImages.ts`); las pruebas solo aceptan
-el dibujo en esas celdas. Al generar las fotos, conserva ids y celdas, sácala de
-`PENDING_PHOTO_SHEETS` y cambia el texto.
+`realistas-adultos-nuevos-a/b.webp` incorporan **17 imágenes**: una por cada
+una de las 15 recetas digitalizadas y dos versiones infantiles sin cordones.
+Incluyen también las variantes que compartían una foto poco precisa: barrel
+elástico, palazzo elástico, jogger y baggy de felpa, cargo recto, sobrecamisa de
+cuello Mao y culotte de punto con picot. Total: 218,168 bytes adicionales.
+
+`digitizedPhotosA.ts` y `digitizedPhotosB.ts` contienen fuentes y recortes.
+El resolutor prioriza destinatario infantil y receta antes que el grupo. Los
+ocho alias de `lote-adultos-01` apuntan a fotos, sin alterar los ids del catálogo.
+Se eliminó `PENDING_PHOTO_SHEETS`: las pruebas y la auditoría rechazan todas
+las láminas vectoriales históricas para cualquier receta activa.
+
+Prompts, originales, hashes y revisión de las prendas:
+[`IMAGENES_ADULTOS_NUEVOS_A.md`](IMAGENES_ADULTOS_NUEVOS_A.md) y
+[`IMAGENES_ADULTOS_NUEVOS_B.md`](IMAGENES_ADULTOS_NUEVOS_B.md).

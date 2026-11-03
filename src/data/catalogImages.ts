@@ -4,15 +4,28 @@ import { COMPLETED_INFANT_SHEETS, COMPLETED_INFANT_SOURCE_MAP, COMPLETED_INFANT_
 import { COMPLETED_ADULT_SHEETS, COMPLETED_ADULT_SOURCE_MAP, COMPLETED_ADULT_BOUNDS } from './completedAdultImages';
 import { INSPIRATION_A_SHEETS, INSPIRATION_A_IMAGES, INSPIRATION_A_BOUNDS } from './inspirationAImages';
 import { INSPIRATION_B_SHEETS, INSPIRATION_B_IMAGES, INSPIRATION_B_BOUNDS } from './inspirationBImages';
+import { DIGITIZED_PHOTOS_A, DIGITIZED_CHILD_PHOTOS_A, DIGITIZED_PHOTO_SHEETS_A, DIGITIZED_PHOTO_BOUNDS_A } from './digitizedPhotosA';
+import { DIGITIZED_PHOTOS_B, DIGITIZED_CHILD_PHOTOS_B, DIGITIZED_PHOTO_SHEETS_B, DIGITIZED_PHOTO_BOUNDS_B } from './digitizedPhotosB';
 
 /** Original AI product illustrations. A 3 × 3 atlas keeps the entire library
  * lightweight; these images never supply geometry or scale to the patterns. */
 export interface CatalogImageSource { sheet: string; cell: number }
 
+const DIGITIZED_PHOTOS = { ...DIGITIZED_PHOTOS_A, ...DIGITIZED_PHOTOS_B };
+const DIGITIZED_CHILD_PHOTOS = { ...DIGITIZED_CHILD_PHOTOS_A, ...DIGITIZED_CHILD_PHOTOS_B };
+
 /** Resolve the exact former drawing, including recipe-specific sleeve lengths,
  * closures and proportions. Group-only replacement would leave variants drawn. */
 const REALISTIC_SOURCE_MAP: Readonly<Record<string, CatalogImageSource>> = {
-  ...COMPLETED_INFANT_SOURCE_MAP, ...COMPLETED_ADULT_SOURCE_MAP
+  ...COMPLETED_INFANT_SOURCE_MAP, ...COMPLETED_ADULT_SOURCE_MAP,
+  'lote-adultos-01/0': DIGITIZED_PHOTOS['pantalon-volante'],
+  'lote-adultos-01/1': DIGITIZED_PHOTOS['chaqueta-ranglan'],
+  'lote-adultos-01/2': DIGITIZED_PHOTOS['sudadera-bloques'],
+  'lote-adultos-01/3': DIGITIZED_PHOTOS['buzo-murcielago'],
+  'lote-adultos-01/4': DIGITIZED_PHOTOS['culotte-encaje'],
+  'lote-adultos-01/5': DIGITIZED_PHOTOS['palazzo-botones-laterales'],
+  'lote-adultos-01/6': DIGITIZED_PHOTOS['sudadera-media-cremallera-lisa'],
+  'lote-adultos-01/7': DIGITIZED_PHOTOS['chaqueta-campo'],
 };
 function realisticSource(source: CatalogImageSource): CatalogImageSource {
   return REALISTIC_SOURCE_MAP[`${source.sheet}/${source.cell}`] ?? source;
@@ -23,7 +36,10 @@ export const CATALOG_IMAGE_SHEETS: Record<string, readonly string[]> = {
   ...INSPIRATION_A_SHEETS,
   ...INSPIRATION_B_SHEETS,
   // Replacement resources retain the original group/recipe identities below.
-  ...Object.fromEntries([...Object.keys(COMPLETED_INFANT_SHEETS), ...Object.keys(COMPLETED_ADULT_SHEETS)].map(sheet => [sheet, []])),
+  ...Object.fromEntries([
+    ...Object.keys(COMPLETED_INFANT_SHEETS), ...Object.keys(COMPLETED_ADULT_SHEETS),
+    ...Object.keys(DIGITIZED_PHOTO_SHEETS_A), ...Object.keys(DIGITIZED_PHOTO_SHEETS_B),
+  ].map(sheet => [sheet, []])),
   'prendas-01': ['tipo-pantalon-recto','tipo-jogger','tipo-pantalon-amplio','short-elastico','pantalon-pijama','tipo-falda-fruncida','tipo-sudadera','tipo-hoodie','tipo-chaqueta-hombro-caido'],
   'prendas-02': ['tipo-cardigan-abierto','tipo-chaleco-abierto','tipo-poncho','tipo-ruana','tipo-jumper-falda','tipo-top-cuadrado','tipo-top-cuadrado-sin-mangas','babero','gorro'],
   'accesorios-01': ['tipo-bolsa-tote','tipo-cojin','tipo-funda-bebida','tipo-dona-cabello','tipo-bandana','tipo-delantal','tipo-antifaz','tipo-banderin','tipo-estuche-cierre'],
@@ -50,7 +66,7 @@ export const CATALOG_IMAGE_SHEETS: Record<string, readonly string[]> = {
   'infantil-03': [],
   'infantil-04': ['tipo-bonete-volante','tipo-delantal-pichi','tipo-mono-tirantes','peto-infantil','tipo-blusa-trapecio','pantalon-capri-infantil'],
   'infantil-05': [],
-  // Third and fourth digitized batches: new constructions drawn from their real pieces until an AI photo exists.
+  // Historical cells retain their group identities; realisticSource resolves each to its AI photograph.
   'lote-adultos-01': ['pantalon-volante', 'chaqueta-ranglan', 'sudadera-media-cremallera', 'buzo-murcielago', 'culotte-encaje', 'palazzo-botones-laterales'],
 };
 
@@ -99,7 +115,8 @@ const IMAGE_BOUNDS: Record<string, ImageBounds> = {
 
 export function catalogImageBounds(source: CatalogImageSource): ImageBounds {
   const key = `${source.sheet}/${source.cell}`;
-  return COMPLETED_INFANT_BOUNDS[key] ?? COMPLETED_ADULT_BOUNDS[key] ?? INSPIRATION_A_BOUNDS[key] ?? INSPIRATION_B_BOUNDS[key]
+  return DIGITIZED_PHOTO_BOUNDS_A[key] ?? DIGITIZED_PHOTO_BOUNDS_B[key]
+    ?? COMPLETED_INFANT_BOUNDS[key] ?? COMPLETED_ADULT_BOUNDS[key] ?? INSPIRATION_A_BOUNDS[key] ?? INSPIRATION_B_BOUNDS[key]
     ?? STYLE_CATALOG_IMAGE_BOUNDS[key] ?? IMAGE_BOUNDS[key] ?? [(source.cell % 3) * 418, Math.floor(source.cell / 3) * 418, 418, 418];
 }
 
@@ -149,6 +166,10 @@ const VARIANT_IMAGES: Record<string, CatalogImageSource> = {
 
 export function catalogImageFor(model: CatalogModel, recipient?: Recipient): CatalogImageSource | undefined {
   const id = model.designGroup?.id ?? model.id;
+  // Children use their own cord-free reference, matching the generator. Exact
+  // recipe photos precede shared group art so closures and finishes stay distinct.
+  if (recipient && ['bebe', 'toddler', 'infantil'].includes(recipient) && DIGITIZED_CHILD_PHOTOS[model.id]) return DIGITIZED_CHILD_PHOTOS[model.id];
+  if (DIGITIZED_PHOTOS[model.id]) return DIGITIZED_PHOTOS[model.id];
   if (COMPLETED_INFANT_RECIPE_MAP[model.id]) return COMPLETED_INFANT_RECIPE_MAP[model.id];
   if (STYLE_CATALOG_IMAGES[id]) return STYLE_CATALOG_IMAGES[id];
   if (VARIANT_IMAGES[model.id]) return realisticSource(VARIANT_IMAGES[model.id]);
@@ -156,9 +177,6 @@ export function catalogImageFor(model: CatalogModel, recipient?: Recipient): Cat
   if ((recipient === 'bebe' || model.recipients.every(value => value === 'bebe' || value === 'toddler')) && BABY_IMAGES[id]) return BABY_IMAGES[id];
   return CATALOG_IMAGES[id];
 }
-
-/** New constructions drawn from their real pieces while their AI photo is pending. */
-export const PENDING_PHOTO_SHEETS: ReadonlySet<string> = new Set(['lote-adultos-01']);
 
 /** Sheets drawn as vectors from the real technical drawing, not AI images. */
 const DRAWN_SHEETS = new Set(['ninas-01', 'bebe-02', 'tendencia-01', 'tendencia-02', 'tendencia-03', 'infantil-01', 'infantil-02', 'infantil-03', 'infantil-04', 'infantil-05', 'lote-adultos-01']);

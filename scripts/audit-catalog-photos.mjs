@@ -21,6 +21,7 @@ try {
   const technicalSheets = new Set([
     'ninas-01', 'bebe-02', 'tendencia-01', 'tendencia-02', 'tendencia-03',
     'infantil-01', 'infantil-02', 'infantil-03', 'infantil-04', 'infantil-05',
+    'lote-adultos-01',
   ]);
   const files = new Map();
   const cells = new Set();

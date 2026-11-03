@@ -408,12 +408,23 @@ medidas editables; `costumeFlats.ts` enlaza cada superficie a una pieza real,
 incluidos reversos y copias en espejo. Nuevas familias y recetas se clasifican
 explícitamente, se registran en `generators/index.ts` y se auditan en CSV.
 
-La PWA usa `registerType: prompt`. `AppUpdateNotice` espera confirmación explícita
-dentro de la app y un `saveNow()` exitoso antes de activar el worker; los módulos
-viejos siguen disponibles mientras su página los necesita. `store/app.ts` evita
-que una carga tardía sobrescriba cambios, incluidos los ya autoguardados. La
-migración desde el antiguo worker requiere cerrar la última pestaña una vez.
-Prueba reproducible de dos despliegues: `tests/browser/upgrade_navigation_smoke.py`.
+La PWA usa `registerType: prompt`, sin registro inyectado. `lib/appUpdates.ts`
+registra una sola vez el worker nativo, detecta `waiting` y comprueba nuevas
+versiones al recuperar foco, visibilidad o conexión, con límite de frecuencia
+de 30 segundos e intervalo de cinco minutos mientras la app está visible.
+Buscar no activa ni recarga. Ajustes permite buscar manualmente y muestra el
+hash/fecha del commit compilado. `AppUpdateNotice` queda fijo sobre los diálogos
+y reserva su altura real para mantener accesibles el cierre y las acciones.
+
+La activación exige una acción explícita y `saveNow()` correcto. El aviso pide
+terminar o cancelar formularios locales antes de actualizar: no pretende
+confirmarlos automáticamente. `store/app.ts` evita que una carga tardía
+sobrescriba cambios, incluidos los ya autoguardados. Los módulos antiguos se
+conservan mientras el nuevo worker espera. Las versiones antiguas que ya se
+están ejecutando no reciben esta corrección hasta actualizarse; puede ser
+necesario cerrar la última ventana una vez. No borrar IndexedDB para hacerlo.
+Ver `ACTUALIZACIONES_Y_FOTOS.md` y las pruebas de dos publicaciones
+`tests/browser/update_delivery_smoke.py` y `upgrade_navigation_smoke.py`.
 
 
 `catalogImages.ts` y `ui/CatalogImage.tsx` presentan imágenes de IA originales
@@ -422,6 +433,13 @@ revisado vive en el mapa de cada celda, conserva la proporción y evita vecinos.
 Las fotos ilustrativas nunca proporcionan coordenadas ni medidas al motor.
 Las vistas técnicas y el figurín siguen usando geometría editable; los recursos
 WebP se precargan para uso sin conexión. Ver `IMAGENES_CATALOGO_IA.md`.
+
+Las ampliaciones posteriores completan 318 grupos y 2,074 recetas; el
+inventario activo está en `auditoria/fotos-catalogo.csv`. `digitizedPhotosA/B.ts`
+agregan 17 imágenes del tercer/cuarto lote. El resolutor prioriza la variante
+infantil sin cordón y la receta exacta antes de usar el grupo. Las fuentes
+vectoriales antiguas conservan su identidad histórica, pero los alias apuntan
+a fotos nuevas. Las pruebas rechazan cualquier receta que vuelva a ellas.
 
 ## 21. Logos raster y selección accesible (2026-10-31)
 
