@@ -4,14 +4,14 @@ import { pieceDrawable } from '../../lib/draw/drawable';
 import { IDENTITY, bboxOf, bboxW, bboxH } from '../../lib/geom/vec';
 import { formatLength } from '../../lib/units';
 import type { Params } from '../../lib/pattern/generator';
-import type { ToyCard } from '../../data/toys';
+import type { PlushCard } from '../../data/toys';
 import { exportDrawables } from '../figures/export';
 import { prepareToy } from './prepare';
 
 const FABRIC: Record<string, string> = { principal: 'Tela principal', contraste: 'Tela de contraste', forro: 'Forro', entretela: 'Entretela', 'punto-elastico': 'Punto elástico' };
 
 /** Uses the regular pattern pieces (seam line, cut line, notches) at 1:1, never a scaled drawing. */
-export async function buildToyPdf(card: ToyCard, input: Params) {
+export async function buildToyPdf(card: PlushCard, input: Params) {
   const { built, generator, params } = prepareToy(card, input);
   const errors = built.issues.filter(i => i.level === 'error');
   if (errors.length || !built.result || !built.pieces.length) throw new Error(errors.map(i => i.message).join('\n') || 'No se pudieron generar las piezas.');

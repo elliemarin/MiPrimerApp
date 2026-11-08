@@ -99,6 +99,13 @@ total) y una sexta categoría, **Casitas**. Generadores nuevos en
   diseñadora concreta sirvieron de inspiración de construcción, sin copiar
   piezas, medidas ni nombres.
 
+## Proyectar (2026-11-08)
+
+La ficha de juguetes es ahora la ficha común `src/features/toys/PlushCatalog.tsx`
+(también la usan los cojines). Además del PDF tiene **«Proyectar sobre la
+tela»**, que crea un proyecto con el patrón y abre el proyector a tamaño real.
+Los dibujos usan los ayudantes de `src/features/toys/art.ts`.
+
 ## Pendiente
 
 - Coser muestras (muñeca con ropa, conejo 3D, oso 3D, conejo sentado y casa

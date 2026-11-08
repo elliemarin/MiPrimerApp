@@ -1,48 +1,12 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Pt } from '../../lib/geom/vec';
 import type { GeneratorResult, Params } from '../../lib/pattern/generator';
-import type { Piece } from '../../lib/pattern/types';
-import { nodeById, pieceSeamPath, pointOnEdge, edgeLength, seamPolygon } from '../../lib/pattern/outline';
-import { circle, ellipse, inter, leaf, poly, rect, rrect, uni, type Shape, type ShapeLike } from '../../lib/applique/shapes';
+import { pieceSeamPath, seamPolygon } from '../../lib/pattern/outline';
+import { circle, ellipse, inter, leaf, poly, rect, rrect, uni } from '../../lib/applique/shapes';
 import { polysPath } from '../../lib/applique/figure';
-import type { ToyCard } from '../../data/toys';
-
-/** One drawn layer of the illustration (millimetres of the real pattern, or design units). */
-export interface Item { d: string; fill?: string; stroke?: string; sw?: number; transform?: string; dash?: string }
-const P = (x: number, y: number): Pt => ({ x, y });
-const shape = (s: Shape | Shape[number], fill: string, extra: Partial<Item> = {}): Item => ({ d: polysPath(Array.isArray(s[0]) ? s as Shape : [s as Shape[number]]), fill, ...extra });
-const line = (pts: Pt[], color: string, sw: number, transform?: string): Item => ({ d: `M${pts.map(p => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' L')}`, stroke: color, sw, transform });
-
-function runPoints(piece: Piece, run: string): Pt[] {
-  const es = piece.edges.filter(e => e.id === run || new RegExp(`^${run}-\\d+$`).test(e.id));
-  return es.length ? [P(nodeById(piece, es[0].from).x, nodeById(piece, es[0].from).y), P(nodeById(piece, es[es.length - 1].to).x, nodeById(piece, es[es.length - 1].to).y)] : [P(0, 0), P(0, 0)];
-}
-function pointAlong(piece: Piece, run: string, s: number): Pt {
-  let left = s;
-  for (const e of piece.edges.filter(x => x.id === run || new RegExp(`^${run}-\\d+$`).test(x.id))) {
-    const l = edgeLength(piece, e);
-    if (left <= l) return pointOnEdge(piece, e, left).p;
-    left -= l;
-  }
-  const last = piece.edges[piece.edges.length - 1];
-  return P(nodeById(piece, last.to).x, nodeById(piece, last.to).y);
-}
-const mid = (a: Pt, b: Pt) => P((a.x + b.x) / 2, (a.y + b.y) / 2);
-const embroidery = (pc: Piece, color: string, transform: string): Item[] => pc.lines.filter(l => l.kind === 'pespunte' && !/^pinza/.test(l.id)).map(l => line([l.a, l.b], color, Math.max(0.9, 1.6), transform));
-const moved = (pts: Pt[], dx: number, dy: number) => pts.map(q => P(q.x + dx, q.y + dy));
-/** Fabric print (gingham, plaid or stripes) clipped to a shape; `step` is the repeat in drawing units. */
-function printOver(s: ShapeLike, c: ToyCard['colors'], step: number): Item[] {
-  if (!c.print || !c.ropa2) return [];
-  const big = 1e4, n = Math.ceil(2 * big / step);
-  const v = uni(...Array.from({ length: Math.min(n, 400) }, (_, i) => rect(-200 * step + i * step, -big, step * (c.print === 'rayas' ? 0.32 : 0.5), 2 * big)));
-  const out: Item[] = [shape(inter(s, v), `${c.ropa2}${c.print === 'rayas' ? 'aa' : '66'}`, { stroke: 'none' })];
-  if (c.print !== 'rayas') {
-    const h = uni(...Array.from({ length: Math.min(n, 400) }, (_, i) => rect(-big, -200 * step + i * step, 2 * big, step * 0.5)));
-    out.push(shape(inter(s, h), `${c.ropa2}66`, { stroke: 'none' }));
-    if (c.print === 'cuadros') out.push(shape(inter(s, uni(...Array.from({ length: Math.min(n, 400) }, (_, i) => rect(-200 * step + i * step + step * 0.7, -big, step * 0.06, 2 * big)))), '#f6e7c8aa', { stroke: 'none' }));
-  }
-  return out;
-}
+import type { PlushCard } from '../../data/toys';
+import { P, embroidery, line, mid, moved, pointAlong, printOver, runPoints, shape, type Item, type Scene } from './art';
+type ToyCard = PlushCard;
 
 /** Rag dolls and animals, drawn from their real pieces in a front view. */
 function ragScene(card: ToyCard, r: GeneratorResult, p: Params): Item[] {
@@ -281,8 +245,8 @@ export function toyScene(card: ToyCard, result: GeneratorResult | null, params: 
   return [];
 }
 
-export function ToyArt({ card, result, params, label }: { card: ToyCard; result: GeneratorResult | null; params: Params; label?: string }) {
-  const items = useMemo(() => toyScene(card, result, params), [card, result, params]);
+export function ToyArt({ card, result, params, label, scene = toyScene }: { card: PlushCard; result: GeneratorResult | null; params: Params; label?: string; scene?: Scene }) {
+  const items = useMemo(() => scene(card, result, params), [scene, card, result, params]);
   const ref = useRef<SVGGElement>(null);
   const [vb, setVb] = useState('-60 -80 360 360');
   // Pieces are placed with transforms: measure the drawn group and frame it square with a margin.

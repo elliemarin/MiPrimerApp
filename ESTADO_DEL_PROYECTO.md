@@ -6,23 +6,43 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-08 (Claude: segundo lote de juguetes: ositos, conejos y casitas).
+- Última actualización: 2026-11-08 (Claude: sección de cojines y proyector para juguetes y cojines).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 3777 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
+npm test            # 3786 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Cojines (2026-11-08)
+
+**Este es el relevo más reciente.** Detalle en `docs/COJINES.md`.
+
+- Sexto modo de la biblioteca, **Cojines**: 16 fotos de patrones revisados como
+  patronista → 18 tarjetas, 17 generadores en
+  `src/lib/pattern/generators/cushions.ts` (kit `cushionKit.ts`: vivo, fuelle,
+  cierre, tiras partidas, franjas cortadas de una silueta).
+- Cada referencia lleva anotado qué medidas se respetan y qué se corrige (tabla
+  en el documento).
+- **Todo se puede proyectar**: la ficha común de juguetes y cojines
+  (`src/features/toys/PlushCatalog.tsx`) tiene «Proyectar sobre la tela», que crea
+  un proyecto con el patrón y abre el proyector a 1:1.
+- Validación: pruebas nuevas en `tests/cushions.test.ts`; el barrido de 207
+  combinaciones no da errores. El recuento total de pruebas está en la línea de
+  `npm test` de arriba.
+
+Siguiente paso sugerido: coser muestras del pino, el cojín de lactancia y el
+puf conejo; llevar el proyector también a las figuras de tela.
+
 ## Juguetes y peluches, segundo lote (2026-11-08)
 
-**Este es el relevo más reciente.** Detalle en `docs/JUGUETES_Y_PELUCHES.md`
-(sección «Segundo lote»).
+Relevo anterior. Detalle en `docs/JUGUETES_Y_PELUCHES.md` (sección «Segundo
+lote»).
 
 - 10 fotos nuevas → 10 tarjetas más (26 en total) y sexta categoría **Casitas**.
 - Generadores nuevos en `src/lib/pattern/generators/toys2.ts`: osito o

@@ -11,14 +11,16 @@ export type ToyCategory = keyof typeof TOY_CATEGORY_LABEL;
 export interface ToyColors {
   piel: string; ropa: string; contraste: string; detalle: string; ropa2?: string;
   /** Estampado de la tela principal en el dibujo, en el color `ropa2`. */
-  print?: 'vichy' | 'cuadros' | 'rayas';
+  print?: 'vichy' | 'cuadros' | 'rayas' | 'lunares';
 }
-export interface ToyCard {
-  id: string; name: string; category: ToyCategory; description: string; tags: string[];
+/** Tarjeta de un patrón con dibujo (juguetes y cojines). */
+export interface PlushCard<C extends string = string> {
+  id: string; name: string; category: C; description: string; tags: string[];
   generatorId: string; params: Params; colors: ToyColors;
   /** Qué foto de referencia inspiró la construcción. */
   reference: string;
 }
+export type ToyCard = PlushCard<ToyCategory>;
 
 const card = (c: ToyCard) => c;
 export const TOY_CARDS: ToyCard[] = [
@@ -96,7 +98,7 @@ export const TOY_CARDS: ToyCard[] = [
 
 export const TOY_CATEGORIES = (Object.keys(TOY_CATEGORY_LABEL) as ToyCategory[]).map(id => ({ id, label: TOY_CATEGORY_LABEL[id], count: TOY_CARDS.filter(c => c.category === id).length }));
 const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-export function toyMatches(c: ToyCard, category: ToyCategory | 'todas', q: string) {
+export function toyMatches<C extends string>(c: PlushCard<C>, category: C | 'todas', q: string) {
   if (category !== 'todas' && c.category !== category) return false;
   const text = fold([c.name, c.description, ...c.tags].join(' '));
   return fold(q).split(/\s+/).filter(Boolean).every(w => text.includes(w));
