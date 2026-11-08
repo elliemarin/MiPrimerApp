@@ -24,12 +24,15 @@ const problems = (r: ReturnType<typeof gen>) => [
 ];
 
 describe('catálogo de juguetes', () => {
-  it('tiene 16 juguetes con generador existente, en cinco grupos', () => {
-    expect(TOY_CARDS).toHaveLength(16);
+  it('tiene 26 juguetes con generador existente, en seis grupos', () => {
+    expect(TOY_CARDS).toHaveLength(26);
+    expect(TOY_CATEGORIES).toHaveLength(6);
     expect(new Set(TOY_CARDS.map(c => c.id)).size).toBe(TOY_CARDS.length);
     for (const c of TOY_CARDS) expect(getGenerator(c.generatorId), c.id).toBeDefined();
     expect(TOY_CATEGORIES.every(c => c.count > 0)).toBe(true);
-    expect(TOY_CARDS.filter(c => toyMatches(c, 'todas', 'conejo')).map(c => c.id)).toEqual(expect.arrayContaining(['conejita-peto', 'conejo-patchwork', 'conejo-3d']));
+    expect(TOY_CARDS.filter(c => toyMatches(c, 'todas', 'conejo')).map(c => c.id)).toEqual(expect.arrayContaining(['conejita-peto', 'conejo-patchwork', 'conejo-3d', 'conejita-vichy', 'conejo-sombrero', 'conejo-blusa', 'conejo-sentado', 'conejo-orejon']));
+    expect(TOY_CARDS.filter(c => toyMatches(c, 'todas', 'oso')).map(c => c.id)).toEqual(['osito-lazo', 'oso-cuadros', 'oso-recuerdo']);
+    expect(TOY_CARDS.filter(c => toyMatches(c, 'casitas', '')).map(c => c.id)).toEqual(['casa-hongo', 'casita-gnomos']);
   });
 
   it('cada tarjeta genera sus piezas sin errores, con ilustración', () => {
@@ -44,12 +47,54 @@ describe('catálogo de juguetes', () => {
 
 describe('generadores de juguetes', () => {
   it('muñecos de trapo: todos los personajes y ropas validan a 22, 30, 45 y 70 cm', () => {
-    for (const personaje of ['muneca', 'conejita', 'gatito', 'perrito', 'patito', 'abeja', 'flor'])
-      for (const ropa of ['ninguna', 'peto', 'peto-largo', 'vestido', 'vestido-chaqueta', 'pantalon-chaqueta'])
+    for (const personaje of ['muneca', 'conejita', 'conejo', 'gatito', 'perrito', 'patito', 'abeja', 'flor'])
+      for (const ropa of ['ninguna', 'peto', 'peto-largo', 'vestido', 'vestido-chaqueta', 'pantalon-chaqueta', 'blusa-pantalon'])
         for (const alto of [220, 300, 450, 700]) expect(problems(gen('muneco-trapo', { personaje, ropa, alto, accesorio: 'zapatos', parche: 'patchwork' })), `${personaje}/${ropa}/${alto}`).toEqual([]);
     for (const [id, key, values] of [['peluche-bichito', 'alto', [140, 220, 500]], ['fieltro-hada', 'alto', [120, 200, 400]], ['peluche-libelula', 'largo', [300, 420, 900]], ['peluche-conejo-3d', 'alto', [220, 320, 700]]] as const)
       for (const v of values) expect(problems(gen(id, { [key]: v })), `${id}/${v}`).toEqual([]);
     expect(gen('muneco-trapo', { alto: 150 }).notices[0].code).toBe('trapo-medidas');
+  });
+
+  it('segundo lote: ositos, conejos y casitas validan en todo su rango', () => {
+    for (const personaje of ['oso', 'conejita']) for (const alto of [200, 270, 360, 600]) for (const margen of [4, 6, 10])
+      expect(problems(gen('peluche-plano', { personaje, alto, margen, hocico: alto > 300 ? 'si' : 'no' })), `plano/${personaje}/${alto}/${margen}`).toEqual([]);
+    for (const alto of [250, 400, 700]) for (const margen of [4, 10]) expect(problems(gen('peluche-oso-3d', { alto, margen })), `oso3d/${alto}/${margen}`).toEqual([]);
+    for (const alto of [200, 330, 600]) for (const orejas of ['largas', 'medianas']) expect(problems(gen('peluche-conejo-sentado', { alto, orejas, margen: 10 })), `sentado/${alto}/${orejas}`).toEqual([]);
+    for (const alto of [160, 260, 500]) for (const gajos of [5, 6, 7, 8]) expect(problems(gen('peluche-casa-hongo', { alto, gajos })), `hongo/${alto}/${gajos}`).toEqual([]);
+    for (const alto of [120, 200, 400]) expect(problems(gen('fieltro-casa-gnomos', { alto })), `gnomos/${alto}`).toEqual([]);
+    for (const personaje of ['muneca', 'conejo', 'gatito']) expect(problems(gen('muneco-trapo', { personaje, accesorio: 'sombrero', alto: 220 })), personaje).toEqual([]);
+    expect(gen('peluche-casa-hongo', { gajos: 9 }).notices[0].code).toBe('casa-hongo-medidas');
+  });
+
+  it('segundo lote: las piezas que se unen miden lo mismo', () => {
+    const bear = gen('peluche-oso-3d', { alto: 450 });
+    expect(runLength(piece(bear, 'cabeza-lateral'), 'nuca')).toBeCloseTo(runLength(piece(bear, 'cabeza-trasera'), 'lado'), 3);
+    expect(runLength(piece(bear, 'cuerpo-delantero'), 'costado')).toBeCloseTo(runLength(piece(bear, 'cuerpo-trasero'), 'costado'), 3);
+    expect(runLength(piece(bear, 'cabeza-lateral'), 'cuello')).toBeCloseTo(runLength(piece(bear, 'cuerpo-delantero'), 'cuello'), 3);
+    expect(runLength(piece(bear, 'cabeza-trasera'), 'cuello')).toBeCloseTo(runLength(piece(bear, 'cuerpo-trasero'), 'cuello'), 3);
+    expect(runLength(piece(bear, 'fuelle'), 'lado')).toBeCloseTo(runLength(piece(bear, 'cabeza-lateral'), 'fuelle'), 1);
+    expect(runLength(piece(bear, 'base'), 'contorno')).toBeCloseTo(2 * runLength(piece(bear, 'cuerpo-delantero'), 'base') + 2 * runLength(piece(bear, 'cuerpo-trasero'), 'base'), 1);
+    expect(piece(bear, 'cuerpo-trasero').lines.filter(l => l.id.startsWith('pinza')).length).toBe(4);
+    const bunny = gen('peluche-conejo-sentado');
+    expect(runLength(piece(bunny, 'cabeza-delantera'), 'nuca')).toBeCloseTo(runLength(piece(bunny, 'cabeza-trasera'), 'nuca'), 3);
+    expect(2 * runLength(piece(bunny, 'cuerpo'), 'cuello')).toBeCloseTo(2 * runLength(piece(bunny, 'cabeza-delantera'), 'cuello') + 2 * runLength(piece(bunny, 'cabeza-trasera'), 'cuello'), 3);
+    expect(runLength(piece(bunny, 'suela'), 'contorno')).toBeCloseTo(2 * runLength(piece(bunny, 'pata-trasera'), 'planta'), 1);
+    for (const gajos of [5, 8]) {
+      const house = gen('peluche-casa-hongo', { gajos });
+      expect(piece(house, 'pared').cut.qty).toBe(gajos);
+      expect(gajos * runLength(piece(house, 'pared'), 'abajo')).toBeCloseTo(runLength(piece(house, 'base'), 'contorno'), 3);
+      expect(gajos * runLength(piece(house, 'pared'), 'arriba')).toBeCloseTo(runLength(piece(house, 'tapa'), 'contorno'), 3);
+      expect(gajos * runLength(piece(house, 'techo'), 'borde')).toBeCloseTo(runLength(piece(house, 'bajo-techo'), 'borde'), 3);
+    }
+    const flat = gen('peluche-plano', { alto: 200, margen: 10 });
+    expect(runLength(piece(flat, 'cabeza'), 'cuello')).toBeCloseTo(runLength(piece(flat, 'cuerpo'), 'cuello'), 3);
+    expect(piece(flat, 'cuerpo').edges.filter(e => e.id.startsWith('entrepierna')).every(e => e.allowance === 5)).toBe(true);
+    const rabbit = gen('muneco-trapo', { personaje: 'conejo', ropa: 'blusa-pantalon', accesorio: 'sombrero' });
+    expect(['oreja', 'hocico', 'blusa-delantero', 'blusa-espalda', 'volante', 'pantalon', 'sombrero-ala', 'sombrero-copa'].every(id => rabbit.pieces.some(p => p.id === id))).toBe(true);
+    const hem = 2 * runLength(piece(rabbit, 'blusa-delantero'), 'bajo') + 2 * runLength(piece(rabbit, 'blusa-espalda'), 'bajo');
+    expect(2 * runLength(piece(rabbit, 'volante'), 'union') / hem).toBeCloseTo(1.7, 3);
+    const brimLine = piece(rabbit, 'sombrero-ala').lines.filter(l => l.kind === 'colocacion').reduce((s, l) => s + Math.hypot(l.b.x - l.a.x, l.b.y - l.a.y), 0);
+    expect(2 * runLength(piece(rabbit, 'sombrero-copa'), 'base')).toBeCloseTo(brimLine, 1);
   });
 
   it('escala la figura pero no el margen de costura', () => {
@@ -83,8 +128,7 @@ describe('generadores de juguetes', () => {
   });
 
   it('el fieltro se corta sin margen y la libélula se frunce a su largo', () => {
-    const fairy = gen('fieltro-hada');
-    expect(fairy.pieces.every(p => p.edges.every(e => e.allowance === 0))).toBe(true);
+    for (const felt of [gen('fieltro-hada'), gen('fieltro-casa-gnomos')]) expect(felt.pieces.every(p => p.edges.every(e => e.allowance === 0))).toBe(true);
     const fly = gen('peluche-libelula', { largo: 600 });
     expect(fly.checks[0].measured).toBeCloseTo(600, 0);
     expect(piece(fly, 'cuerpo').lines.filter(l => l.id.startsWith('frunce')).length).toBeGreaterThan(8);
@@ -98,11 +142,12 @@ describe('generadores de juguetes', () => {
   });
 
   it('genera el PDF con las piezas a tamaño real y las costuras comprobadas', async () => {
-    const card = TOY_CARDS.find(c => c.id === 'conejo-3d')!;
-    const out = await buildToyPdf(card, { alto: 400 });
-    expect(new TextDecoder().decode(out.bytes.slice(0, 4))).toBe('%PDF');
-    expect((await PDFDocument.load(out.bytes)).getPageCount()).toBe(out.pageCount);
-    expect(out.patternStartPage).toBeGreaterThan(1);
-    expect(out.manifest.seams.every(s => s.ok)).toBe(true);
+    for (const [id, input] of [['conejo-3d', { alto: 400 }], ['casa-hongo', { alto: 300, gajos: 7 }]] as const) {
+      const out = await buildToyPdf(TOY_CARDS.find(c => c.id === id)!, input);
+      expect(new TextDecoder().decode(out.bytes.slice(0, 4))).toBe('%PDF');
+      expect((await PDFDocument.load(out.bytes)).getPageCount()).toBe(out.pageCount);
+      expect(out.patternStartPage).toBeGreaterThan(1);
+      expect(out.manifest.seams.every(s => s.ok)).toBe(true);
+    }
   });
 });

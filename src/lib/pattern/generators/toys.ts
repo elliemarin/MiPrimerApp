@@ -1,9 +1,10 @@
 import { num, str, type GeneratorContext, type GeneratorResult, type Params, type PatternGenerator } from '../generator';
 import type { Issue, Piece, SeamRelation } from '../types';
-import { P, cm, invalid, rectangle, edge, solve } from './kidsShared';
+import { P, cm, invalid, rectangle, edge, ratio, solve } from './kidsShared';
 import { bowPieces } from './kidsBlocks';
-import { MIN_TURN_WIDTH, ellipsePiece, embroider, insertion, match, notchAt, plush, polyPiece, runLength, side, sleepyEye, smile, type A, type ToyScale } from './toyKit';
+import { MIN_TURN_WIDTH, altoParam, ellipsePiece, embroider, equal2, exp, fiber, insertion, margin, match, notchAt, placeOval, plush, polyPiece, runLength, safety, side, sleepyEye, smile, turnCheck, type A, type ToyScale } from './toyKit';
 import { ellipse, leaf, uni } from '../../applique/shapes';
+import { TOY_GENERATORS_2 } from './toys2';
 
 /* Juguetes y peluches (2026-11-08), reconstruidos a partir de las fotos de la
  * usuaria como diseños propios: muñecos de trapo (muñeca, conejita, gatito,
@@ -12,21 +13,8 @@ import { ellipse, leaf, uni } from '../../applique/shapes';
  * cabeza, panza y suelas. Todo se escala con el alto; los márgenes se suman
  * después, en milímetros. No hay medidas corporales. */
 
-const TOY_CTX_NOTE = 'Para menores de 3 años: ojos y detalles bordados, sin botones, cuentas, alambre ni piezas que se suelten.';
-const margin = { key: 'margen', label: 'Margen de costura', group: 'margenes' as const, type: 'length' as const, min: 4, max: 10 };
-const altoParam = (min: number, max: number) => ({ key: 'alto', label: 'Alto del juguete terminado', group: 'diseno' as const, type: 'length' as const, min, max });
-const exp = (what: string): Issue => ({ level: 'aviso', code: 'juguete-experimental', message: `${what} experimental: imprime al 100 %, comprueba la escala y cose una prueba antes de cortar la tela definitiva.` });
-const safety: Issue = { level: 'aviso', code: 'juguete-seguridad', message: TOY_CTX_NOTE };
-const fiber = (grams: number) => ({ id: 'relleno', label: 'Relleno de fibra hueca (poliéster siliconado)', qty: `unos ${Math.max(10, Math.round(grams / 5) * 5)} g` });
-
-/** A turnable width check for every stuffed part. */
-function turnCheck(parts: [string, number][], issues: Issue[]) {
-  const narrow = parts.filter(([, w]) => w < MIN_TURN_WIDTH);
-  if (narrow.length) issues.push({ level: 'error', code: 'juguete-estrecho', message: `A este alto no se pueden voltear: ${narrow.map(([n, w]) => `${n} (${cm(w)})`).join(', ')}. Sube el alto o elige fieltro.` });
-}
-
 // ================================================================== Muñecos de trapo
-type Character = 'muneca' | 'conejita' | 'gatito' | 'perrito' | 'patito' | 'abeja' | 'flor';
+type Character = 'muneca' | 'conejita' | 'conejo' | 'gatito' | 'perrito' | 'patito' | 'abeja' | 'flor';
 interface Body {
   head: A[]; body: A[]; arm: A[]; leg: A[];
   headH: number; bodyH: number; legLen: number; neckW: number;
@@ -44,6 +32,7 @@ const DOLL: Body = { head: DOLL_HEAD, body: DOLL_BODY, arm: DOLL_ARM, leg: DOLL_
 const BODIES: Record<Character, Body> = {
   muneca: DOLL,
   conejita: { ...DOLL, head: [[52, 2, 'contorno'], [90, 12], [107, 50], [97, 82], [69, 98, 'cuello', 'cl'], [35, 98, 'contorno', 'c'], [7, 82], [-3, 50], [14, 12]], headH: 96 },
+  conejo: { ...DOLL, head: [[52, 4, 'contorno'], [88, 12], [106, 48], [98, 82], [69, 98, 'cuello', 'cl'], [35, 98, 'contorno', 'c'], [6, 82], [-2, 48], [16, 12]], headH: 94 },
   gatito: { ...DOLL, head: [[52, 10, 'contorno'], [72, 7], [88, -16, undefined, 'c'], [102, 14], [108, 50], [97, 82], [69, 98, 'cuello', 'cl'], [35, 98, 'contorno', 'c'], [7, 82], [-4, 50], [2, 14], [16, -16, undefined, 'c'], [32, 7]], headH: 114 },
   perrito: { ...DOLL, head: [[52, 0, 'contorno'], [92, 8], [110, 46], [99, 80], [69, 98, 'cuello', 'cl'], [35, 98, 'contorno', 'c'], [5, 80], [-6, 46], [12, 8]] },
   patito: {
@@ -59,10 +48,11 @@ const BODIES: Record<Character, Body> = {
   },
   flor: DOLL
 };
-const NAME: Record<Character, string> = { muneca: 'Muñeca de trapo', conejita: 'Conejita', gatito: 'Gatito', perrito: 'Perrito', patito: 'Patito', abeja: 'Abeja', flor: 'Muñeca flor' };
+const NAME: Record<Character, string> = { muneca: 'Muñeca de trapo', conejita: 'Conejita', conejo: 'Conejo de orejas largas', gatito: 'Gatito', perrito: 'Perrito', patito: 'Patito', abeja: 'Abeja', flor: 'Muñeca flor' };
 const FACE: Record<Character, (cx: number) => { id: string; pts: [number, number][]; label: string }[]> = {
   muneca: c => [{ id: 'ojo-i', pts: sleepyEye(c - 17, 52, 14), label: 'Bordar ojos dormidos' }, { id: 'ojo-d', pts: sleepyEye(c + 17, 52, 14), label: '' }, { id: 'boca', pts: smile(c, 68, 12), label: 'Bordar sonrisa' }],
   conejita: c => [{ id: 'ojo-i', pts: sleepyEye(c - 18, 56, 14), label: 'Bordar ojos dormidos' }, { id: 'ojo-d', pts: sleepyEye(c + 18, 56, 14), label: '' }, { id: 'nariz', pts: [[c - 5, 63], [c, 67], [c + 5, 63]], label: 'Bordar nariz' }, { id: 'boca', pts: [[c, 67], [c, 71], [c - 4, 74]], label: '' }],
+  conejo: c => [{ id: 'ojo-i', pts: sleepyEye(c - 19, 50, 13), label: 'Bordar ojos dormidos' }, { id: 'ojo-d', pts: sleepyEye(c + 19, 50, 13), label: '' }],
   gatito: c => [{ id: 'ojo-i', pts: sleepyEye(c - 18, 56, 13), label: 'Bordar ojos' }, { id: 'ojo-d', pts: sleepyEye(c + 18, 56, 13), label: '' }, { id: 'nariz', pts: [[c - 5, 64], [c + 5, 64], [c, 69], [c - 5, 64]], label: 'Bordar nariz' }, { id: 'bigote-i', pts: [[c - 10, 70], [c - 32, 66]], label: 'Bordar bigotes' }, { id: 'bigote-d', pts: [[c + 10, 70], [c + 32, 66]], label: '' }],
   perrito: c => [{ id: 'ojo-i', pts: sleepyEye(c - 20, 52, 13, true), label: 'Bordar ojos' }, { id: 'ojo-d', pts: sleepyEye(c + 20, 52, 13, true), label: '' }, { id: 'nariz', pts: [[c - 7, 62], [c + 7, 62], [c, 70], [c - 7, 62]], label: 'Bordar nariz' }, { id: 'boca', pts: [[c, 70], [c, 76]], label: '' }],
   patito: c => [{ id: 'ojo-i', pts: [[c - 22, 50], [c - 18, 54], [c - 22, 58], [c - 26, 54], [c - 22, 50]], label: 'Bordar ojos' }, { id: 'ojo-d', pts: [[c + 22, 50], [c + 26, 54], [c + 22, 58], [c + 18, 54], [c + 22, 50]], label: '' }],
@@ -124,13 +114,25 @@ export function generateRag(ctx: GeneratorContext, params: Params): GeneratorRes
 
   // ---------- Character extras
   const ear = (id: string, name: string, a: A[], qty: number, fabric: 'principal' | 'contraste') => plush(id, name, a, t, { qty, mirrorPairs: true, fabric });
-  if (who === 'conejita') {
-    const e = ear('oreja', 'Oreja (2 de tela y 2 de contraste)', [[18, 0, 'contorno'], [37, 30], [34, 100], [30, 128, 'union', 'cl'], [6, 128, 'contorno', 'c'], [0, 100], [0, 30]], 4, 'principal');
+  if (who === 'conejita' || who === 'conejo') {
+    // The long-eared bunny has longer, wider ears and an appliquéd muzzle.
+    const long = who === 'conejo', eW = long ? 26 : 24;
+    const e = ear('oreja', long ? 'Oreja larga (2 de tela y 2 de contraste)' : 'Oreja (2 de tela y 2 de contraste)', long
+      ? [[20, 0, 'contorno'], [42, 36], [40, 130], [33, 168, 'union', 'cl'], [7, 168, 'contorno', 'c'], [-1, 130], [-2, 36]]
+      : [[18, 0, 'contorno'], [37, 30], [34, 100], [30, 128, 'union', 'cl'], [6, 128, 'contorno', 'c'], [0, 100], [0, 30]], 4, 'principal');
     pieces.push(e);
     const H = runLength(head, 'contorno');
-    notchAt(head, 'contorno', 10 * k, 'Oreja', 'oreja-d-a'); notchAt(head, 'contorno', 10 * k + 24 * k, 'Oreja', 'oreja-d-b');
-    notchAt(head, 'contorno', H - 10 * k - 24 * k, 'Oreja', 'oreja-i-a'); notchAt(head, 'contorno', H - 10 * k, 'Oreja', 'oreja-i-b');
-    turnCheck([['orejas', 24 * k]], notices);
+    notchAt(head, 'contorno', 10 * k, 'Oreja', 'oreja-d-a'); notchAt(head, 'contorno', 10 * k + eW * k, 'Oreja', 'oreja-d-b');
+    notchAt(head, 'contorno', H - 10 * k - eW * k, 'Oreja', 'oreja-i-a'); notchAt(head, 'contorno', H - 10 * k, 'Oreja', 'oreja-i-b');
+    turnCheck([['orejas', eW * k]], notices);
+    if (long) {
+      const muzzle = ellipsePiece('hocico', 'Hocico (borde doblado, un poco de relleno)', 24, 17, 'borde', t, { qty: 1, fabric: 'contraste', labels: { borde: 'Borde: doblar 5 mm y coser sobre la cara' } });
+      muzzle.edges.forEach(x => { x.finish = 'dobladillo'; x.allowance = 5; });
+      embroider(muzzle, 'nariz', [[-6, -7], [6, -7], [0, 0], [-6, -7]], k, 'Bordar nariz y boca');
+      embroider(muzzle, 'boca', [[0, 0], [0, 5], [-5, 9]], k, ''); embroider(muzzle, 'boca-b', [[0, 5], [5, 9]], k, '');
+      head.marks.push({ id: 'hocico', kind: 'cruz', at: P(52 * k, 70 * k), label: 'Centro del hocico (solo delante)' });
+      pieces.push(muzzle);
+    }
   }
   if (who === 'perrito') {
     pieces.push(ear('oreja', 'Oreja caída (2 de tela y 2 de forro)', [[0, 0, 'union', 'cl'], [22, 0, 'contorno', 'c'], [30, 40], [26, 80], [12, 90], [0, 76], [-4, 36]], 4, 'principal'));
@@ -154,6 +156,7 @@ export function generateRag(ctx: GeneratorContext, params: Params): GeneratorRes
   pieces.push(...g.pieces); seams.push(...g.seams); notices.push(...g.notices);
   if (acc === 'moño') pieces.push(...bowPieces('', 34 * k, 14 * k, sa, 'contraste'));
   if (acc === 'bolso') pieces.push(...bag(t, sa, B));
+  if (acc === 'sombrero') { const h = hat(B, t); pieces.push(...h.pieces); seams.push(...h.seams); notices.push(h.notice); }
   if (acc === 'hueso') pieces.push(plush('hueso', 'Hueso de juguete (2 piezas)', [[10, 0, 'contorno'], [20, 6], [30, 4], [60, 4], [70, 6], [80, 0], [90, 8], [86, 18], [90, 28], [80, 36], [70, 30], [60, 28], [30, 28], [20, 30], [10, 36], [0, 28], [4, 18], [0, 8]], t, { qty: 2, fabric: 'contraste' }));
   if (acc === 'bufanda') pieces.push(rectangle('bufanda', 'Bufanda (doblar a lo largo)', 2.4 * B.neckW * 2 * 0.95 * k + 60 * k, 2 * 16 * k, [edge('canto', 'Canto largo', 'costura', sa), edge('extremo', 'Extremo (flecos o costura)', 'costura', sa), edge('canto-b', 'Canto largo', 'costura', sa), edge('extremo-b', 'Extremo', 'costura', sa)], { qty: 1, fabric: 'contraste' }, true));
   if (acc === 'zapatos') { const s = shoes(B, t); pieces.push(...s.pieces); seams.push(...s.seams); }
@@ -202,14 +205,24 @@ function garments(B: Body, ropa: string, t: ToyScale, sa: number, who: Character
     seams.push(match('peto-costado', 'Costados del peto', side(front, 'costado'), side(back, 'costado')), match('peto-entrepierna', 'Entrepiernas del peto', side(front, 'entrepierna'), side(back, 'entrepierna')));
     return { pieces, seams, notices, step: 'Dobladilla peto, lados y cintura delantera. Une costados y entrepiernas, dobladilla los bajos. Cose los tirantes a la cintura trasera, crúzalos y abróchalos al peto.' };
   }
-  const vestido = ropa === 'vestido' || ropa === 'vestido-chaqueta';
-  if (vestido) {
-    const chestHalf = circ(B.chestW, 14) / 4, neck = 2 * B.neckW * 0.95, nw = neck / 6 + 2, sh = B.chestW * 0.34, L = (yCrotch + B.legLen * 0.42) - yNeck, hemHalf = chestHalf * 1.55;
-    const front = plush('vestido-delantero', 'Vestido delantero (al doblez)', [[0, 12, 'escote', 'c'], [nw, 0, 'hombro', 'cl'], [sh, 4, 'sisa', 'c'], [chestHalf, 26, 'costado', 'cl'], [hemHalf, L, 'bajo', 'cl'], [0, L + 2, 'centro', 'cl']], t, { fold: 'centro', hems: { bajo: 10 }, fabric: 'contraste', labels: { escote: 'Escote (ribete al bies)', sisa: 'Sisa (ribete al bies)' } });
-    const back = plush('vestido-espalda', 'Vestido espalda (par en espejo)', [[-8, 4, 'escote', 'c'], [nw, 0, 'hombro', 'cl'], [sh, 4, 'sisa', 'c'], [chestHalf, 26, 'costado', 'cl'], [hemHalf, L, 'bajo', 'cl'], [-8, L, 'centro', 'cl']], t, { qty: 2, mirrorPairs: true, hems: { bajo: 10, centro: 8 }, fabric: 'contraste', labels: { escote: 'Escote (ribete al bies)', sisa: 'Sisa (ribete al bies)', centro: 'Centro de espalda: doblar y poner broches' } });
-    for (let i = 0; i < 3; i++) back.marks.push({ id: `broche-${i}`, kind: 'cruz', at: P(-4 * t.k, (10 + i * 22) * t.k), label: 'Broche' });
+  const vestido = ropa === 'vestido' || ropa === 'vestido-chaqueta', blusa = ropa === 'blusa-pantalon';
+  if (vestido || blusa) {
+    // The blouse is the same bodice cut at the hip, with a gathered ruffle.
+    const pre = blusa ? 'blusa' : 'vestido', what = blusa ? 'Blusa' : 'Vestido';
+    const chestHalf = circ(B.chestW, 14) / 4, neck = 2 * B.neckW * 0.95, nw = neck / 6 + 2, sh = B.chestW * 0.34, L = blusa ? B.yWaist + 12 - yNeck : (yCrotch + B.legLen * 0.42) - yNeck, hemHalf = chestHalf * (blusa ? 1.12 : 1.55);
+    const front = plush(`${pre}-delantero`, `${what} delantero (al doblez)`, [[0, 12, 'escote', 'c'], [nw, 0, 'hombro', 'cl'], [sh, 4, 'sisa', 'c'], [chestHalf, 26, 'costado', 'cl'], [hemHalf, L, 'bajo', 'cl'], [0, L + 2, 'centro', 'cl']], t, { fold: 'centro', hems: { bajo: 10 }, fabric: 'contraste', labels: { escote: 'Escote (ribete al bies)', sisa: 'Sisa (ribete al bies)' } });
+    const back = plush(`${pre}-espalda`, `${what} espalda (par en espejo)`, [[-8, 4, 'escote', 'c'], [nw, 0, 'hombro', 'cl'], [sh, 4, 'sisa', 'c'], [chestHalf, 26, 'costado', 'cl'], [hemHalf, L, 'bajo', 'cl'], [-8, L, 'centro', 'cl']], t, { qty: 2, mirrorPairs: true, hems: { bajo: 10, centro: 8 }, fabric: 'contraste', labels: { escote: 'Escote (ribete al bies)', sisa: 'Sisa (ribete al bies)', centro: 'Centro de espalda: doblar y poner broches' } });
+    for (let i = 0; i < (blusa ? 2 : 3); i++) back.marks.push({ id: `broche-${i}`, kind: 'cruz', at: P(-4 * t.k, (10 + i * 22) * t.k), label: 'Broche' });
     pieces.push(front, back);
-    seams.push(match('vestido-hombro', 'Hombros', side(front, 'hombro'), side(back, 'hombro')), match('vestido-costado', 'Costados', side(front, 'costado'), side(back, 'costado')));
+    seams.push(match(`${pre}-hombro`, 'Hombros', side(front, 'hombro'), side(back, 'hombro')), match(`${pre}-costado`, 'Costados', side(front, 'costado'), side(back, 'costado')));
+    if (blusa) {
+      const hem = 2 * runLength(front, 'bajo') + 2 * runLength(back, 'bajo');
+      const ruffle = rectangle('volante', 'Volante de la blusa (2 tiras: fruncir al bajo)', 1.7 * hem / 2, 24 * t.k, [edge('union', 'Unión: fruncir y coser al bajo de la blusa', 'costura', sa), edge('lado', 'Lado (une las dos tiras)', 'costura', sa), edge('bajo', 'Bajo', 'dobladillo', 8), edge('lado-b', 'Lado', 'costura', sa)], { qty: 2, fabric: 'contraste' }, true);
+      const pp = pantsPiece(B, t);
+      pieces.push(ruffle, pp.piece);
+      seams.push(ratio('blusa-volante', 'Volante fruncido al bajo de la blusa', 'fruncido', [side(ruffle, 'union', 2)], [side(front, 'bajo', 2), side(back, 'bajo', 2)], 1.7), ...pp.seams);
+      return { pieces, seams, notices, step: 'Blusa: une hombros, ribetea escote y sisas al bies y cierra costados. Une las dos tiras del volante, dobladilla el bajo, frúncelo y cóselo al bajo de la blusa; broches en la espalda. Pantalón: une los tiros, cierra las entrepiernas, haz la jareta y pasa el elástico.' };
+    }
     if (ropa === 'vestido') return { pieces, seams, notices, step: 'Une hombros, ribetea escote y sisas al bies, cierra los costados, dobladilla el bajo y pon broches en la espalda.' };
   }
   // Jacket (and pants for the jeans outfit), drop shoulder.
@@ -222,16 +235,28 @@ function garments(B: Body, ropa: string, t: ToyScale, sa: number, who: Character
   seams.push(match('chaqueta-hombro', 'Hombros', side(jf, 'hombro'), side(jb, 'hombro')), match('chaqueta-costado', 'Costados', side(jf, 'costado'), side(jb, 'costado')),
     equal2('manga-sisa', 'Copa de la manga con las sisas', side(sleeve, 'copa'), [side(jf, 'sisa'), side(jb, 'sisa')]),
     match('manga-costura', 'Costura de la manga', side(sleeve, 'costura-manga'), side(sleeve, 'costura-manga-b')));
-  if (ropa === 'pantalon-chaqueta') {
-    const W = circ(B.hipW, 18) / 2, ext = 8, rise = yCrotch - B.yWaist + 2, L = yCrotch + B.legLen * 0.9 - B.yWaist, lw = legHalf + 4;
-    const pants = plush('pantalon', 'Pantalón (par en espejo: una pieza por pierna)', [[0, 0, 'cintura', 'cl'], [W, 0, 'tiro-tr', 'c'], [W + 0.5, rise * 0.55], [W + ext, rise, 'entrepierna-tr', 'c'], [W / 2 + lw, L, 'bajo', 'cl'], [W / 2 - lw, L, 'entrepierna-del', 'c'], [-ext, rise, 'tiro-del', 'c'], [-0.5, rise * 0.55]], t, { qty: 2, mirrorPairs: true, hems: { cintura: 14, bajo: 12 }, fabric: 'contraste', labels: { cintura: 'Cintura (jareta para elástico)' } });
-    pieces.push(pants);
-    seams.push(match('pantalon-entrepierna', 'Entrepierna delantera con trasera', side(pants, 'entrepierna-del'), side(pants, 'entrepierna-tr')), match('pantalon-tiro', 'Tiro delantero con tiro delantero de la otra pierna', side(pants, 'tiro-del'), side(pants, 'tiro-del')));
-  }
+  if (ropa === 'pantalon-chaqueta') { const pp = pantsPiece(B, t); pieces.push(pp.piece); seams.push(...pp.seams); }
   return { pieces, seams, notices, step: `${vestido ? 'Cose el vestido (hombros, ribetes, costados, bajo y broches). ' : ''}${ropa === 'pantalon-chaqueta' ? 'Pantalón: une los tiros, cierra las entrepiernas, haz la jareta y pasa el elástico. ' : ''}Chaqueta: une hombros, cose las mangas planas a la sisa, cierra costados y mangas de un tirón y dobladilla cantos, bajo y puños.` };
 }
-function equal2(id: string, label: string, a: ReturnType<typeof side>, b: ReturnType<typeof side>[]): SeamRelation {
-  return { id, label, kind: 'igual', a: [a], b, ratioMin: 0.999, ratioMax: 1.001, tolerance: 0.6 };
+/** Pull-on pants, one piece per leg, from the stuffed hip and leg. */
+function pantsPiece(B: Body, t: ToyScale) {
+  const yCrotch = B.headH + B.bodyH, legHalf = (2 * B.legW * 0.95 + 14) / 2;
+  const W = (2 * B.hipW * 0.92 + 18) / 2, ext = 8, rise = yCrotch - B.yWaist + 2, L = yCrotch + B.legLen * 0.9 - B.yWaist, lw = legHalf + 4;
+  const pants = plush('pantalon', 'Pantalón (par en espejo: una pieza por pierna)', [[0, 0, 'cintura', 'cl'], [W, 0, 'tiro-tr', 'c'], [W + 0.5, rise * 0.55], [W + ext, rise, 'entrepierna-tr', 'c'], [W / 2 + lw, L, 'bajo', 'cl'], [W / 2 - lw, L, 'entrepierna-del', 'c'], [-ext, rise, 'tiro-del', 'c'], [-0.5, rise * 0.55]], t, { qty: 2, mirrorPairs: true, hems: { cintura: 14, bajo: 12 }, fabric: 'contraste', labels: { cintura: 'Cintura (jareta para elástico)' } });
+  return { piece: pants, seams: [match('pantalon-entrepierna', 'Entrepierna delantera con trasera', side(pants, 'entrepierna-del'), side(pants, 'entrepierna-tr')), match('pantalon-tiro', 'Tiro delantero con tiro delantero de la otra pierna', side(pants, 'tiro-del'), side(pants, 'tiro-del'))] };
+}
+/** Small hat that sits on top of the head: a double brim with the crown line marked, and a two-piece crown that fits it. */
+function hat(B: Body, t: ToyScale) {
+  const xs = B.head.map(a => a[0]), headW = Math.max(...xs) - Math.min(...xs), rx = headW * 0.3, ry = headW * 0.22, k = t.k;
+  const brim = ellipsePiece('sombrero-ala', 'Ala del sombrero (2: arriba y debajo)', rx + 24, ry + 20, 'borde', t, { qty: 2, fabric: 'contraste', labels: { borde: 'Borde exterior' } });
+  const inner = placeOval(brim, 'copa', 0, 0, rx * k, ry * k, 'Línea de la copa: coser aquí y recortar el centro a 5 mm', 48);
+  const W = inner / 2 / k, H = headW * 0.3;
+  const crown = plush('sombrero-copa', 'Copa del sombrero (2: delante y detrás)', [[W, H, 'base', 'cl'], [0, H, 'contorno', 'c'], [W * 0.06, H * 0.3], [W / 2, 0], [W * 0.94, H * 0.3]], t, { qty: 2, fabric: 'contraste', labels: { base: 'Base: se cose a la línea del ala' } });
+  return {
+    pieces: [brim, crown],
+    seams: [match('sombrero-copa', 'Las dos mitades de la copa', side(crown, 'contorno'), side(crown, 'contorno'))] as SeamRelation[],
+    notice: { level: 'ok', code: 'sombrero', message: `La base de la copa (2 × ${cm(W * k)}) mide justo la línea marcada en el ala. El sombrero se cose a la cabeza con unas puntadas: no lleva cintas al cuello.` } as Issue
+  };
 }
 
 function shoes(B: Body, t: ToyScale) {
@@ -258,9 +283,9 @@ function patchwork(B: Body, t: ToyScale, sa: number) {
 }
 
 const RAG_CHOICES = (key: string) => ({
-  personaje: [['muneca', 'Muñeca'], ['conejita', 'Conejita'], ['gatito', 'Gatito'], ['perrito', 'Perrito'], ['patito', 'Patito'], ['abeja', 'Abeja de rayas'], ['flor', 'Muñeca flor']],
-  ropa: [['ninguna', 'Sin ropa'], ['peto', 'Peto corto'], ['peto-largo', 'Peto largo'], ['vestido', 'Vestido'], ['vestido-chaqueta', 'Vestido y chaqueta'], ['pantalon-chaqueta', 'Pantalón y chaqueta']],
-  accesorio: [['ninguno', 'Ninguno'], ['moño', 'Moño'], ['bolso', 'Bolso cruzado'], ['bufanda', 'Bufanda'], ['hueso', 'Hueso de juguete'], ['zapatos', 'Zapatos']],
+  personaje: [['muneca', 'Muñeca'], ['conejita', 'Conejita'], ['conejo', 'Conejo de orejas largas'], ['gatito', 'Gatito'], ['perrito', 'Perrito'], ['patito', 'Patito'], ['abeja', 'Abeja de rayas'], ['flor', 'Muñeca flor']],
+  ropa: [['ninguna', 'Sin ropa'], ['peto', 'Peto corto'], ['peto-largo', 'Peto largo'], ['vestido', 'Vestido'], ['vestido-chaqueta', 'Vestido y chaqueta'], ['pantalon-chaqueta', 'Pantalón y chaqueta'], ['blusa-pantalon', 'Blusa con volante y pantalón']],
+  accesorio: [['ninguno', 'Ninguno'], ['moño', 'Moño'], ['bolso', 'Bolso cruzado'], ['bufanda', 'Bufanda'], ['hueso', 'Hueso de juguete'], ['zapatos', 'Zapatos'], ['sombrero', 'Sombrero']],
   parche: [['no', 'Sin parche'], ['patchwork', 'Parche de patchwork en la panza']],
   petalo: [['redondo', 'Pétalos redondos'], ['puntiagudo', 'Pétalos en punta']],
   brazos: [['brazo', 'Brazos'], ['hoja', 'Brazos en forma de hoja']],
@@ -269,7 +294,7 @@ const RAG_CHOICES = (key: string) => ({
 
 export const ragGenerator: PatternGenerator = {
   id: 'muneco-trapo', name: 'Muñecos y animalitos de trapo', status: 'experimental',
-  summary: 'Muñeca, conejita, gatito, perrito, patito, abeja o muñeca flor de 22 a 70 cm, con ropa calculada desde su cuerpo.',
+  summary: 'Muñeca, conejita, conejo de orejas largas, gatito, perrito, patito, abeja o muñeca flor de 22 a 70 cm, con ropa calculada desde su cuerpo.',
   requiredMeasures: [], optionalMeasures: [], defaults: ragDefaults, generate: generateRag,
   params: [
     { key: 'personaje', label: 'Personaje', group: 'diseno', type: 'choice', choices: RAG_CHOICES('personaje') }, altoParam(220, 700),
@@ -466,4 +491,4 @@ export const bunny3dGenerator: PatternGenerator = {
   requiredMeasures: [], optionalMeasures: [], defaults: bunny3dDefaults, generate: generateBunny3d, params: [altoParam(220, 700), margin]
 };
 
-export const TOY_GENERATORS: PatternGenerator[] = [ragGenerator, bugGenerator, fairyGenerator, dragonflyGenerator, bunny3dGenerator];
+export const TOY_GENERATORS: PatternGenerator[] = [ragGenerator, bugGenerator, fairyGenerator, dragonflyGenerator, bunny3dGenerator, ...TOY_GENERATORS_2];

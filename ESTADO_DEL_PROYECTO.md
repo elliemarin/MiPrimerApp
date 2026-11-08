@@ -6,22 +6,43 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-08 (Claude: juguetes y peluches con patrones comprobados).
+- Última actualización: 2026-11-08 (Claude: segundo lote de juguetes: ositos, conejos y casitas).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 3775 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
+npm test            # 3777 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Juguetes y peluches, segundo lote (2026-11-08)
+
+**Este es el relevo más reciente.** Detalle en `docs/JUGUETES_Y_PELUCHES.md`
+(sección «Segundo lote»).
+
+- 10 fotos nuevas → 10 tarjetas más (26 en total) y sexta categoría **Casitas**.
+- Generadores nuevos en `src/lib/pattern/generators/toys2.ts`: osito o
+  conejita planos (`peluche-plano`), oso 3D con fuelle y cabeza trasera
+  (`peluche-oso-3d`), conejo sentado de orejas caídas
+  (`peluche-conejo-sentado`), casa hongo por gajos (`peluche-casa-hongo`) y
+  casita de gnomos de fieltro (`fieltro-casa-gnomos`).
+- Muñeco de trapo: conejo de orejas largas con hocico, blusa con volante y
+  pantalón, sombrero.
+- Costuras que se unen calculadas para medir igual (nuca, cuellos, bases,
+  suelas, gajos y ondas del tejado, volante 1,7×, copa del sombrero).
+- Validación: **3,777 pruebas en 85 archivos** y `npm run build`. Barrido de
+  287 combinaciones de juguetes sin errores.
+
+Siguiente paso sugerido: coser muestras del oso 3D, el conejo sentado y la
+casa hongo.
+
 ## Juguetes y peluches (2026-11-08)
 
-**Este es el relevo más reciente.** Detalle en `docs/JUGUETES_Y_PELUCHES.md`.
+Relevo anterior. Detalle en `docs/JUGUETES_Y_PELUCHES.md`.
 
 - Quinto modo de la biblioteca, **Juguetes y peluches** (carga aparte): 16
   juguetes a partir de 16 fotos de la usuaria, como diseños propios.
@@ -36,7 +57,6 @@ Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
   `npm run build`. El barrido de 186 combinaciones de personaje, ropa y alto no
   da errores.
 
-Siguiente paso sugerido: coser muestras de la muñeca con ropa y del conejo 3D.
 
 ## Figuras de tela por capas (2026-11-03)
 

@@ -11,7 +11,7 @@ import { prepareToy } from './prepare';
 import '../figures/figures.css';
 import './toys.css';
 
-const SIZES: Record<string, number[]> = { 'muneco-trapo': [25, 30, 40, 50], 'peluche-bichito': [16, 22, 30], 'fieltro-hada': [15, 20, 28], 'peluche-libelula': [35, 42, 60], 'peluche-conejo-3d': [26, 32, 45] };
+const SIZES: Record<string, number[]> = { 'muneco-trapo': [25, 30, 40, 50], 'peluche-bichito': [16, 22, 30], 'fieltro-hada': [15, 20, 28], 'peluche-libelula': [35, 42, 60], 'peluche-conejo-3d': [26, 32, 45], 'peluche-plano': [27, 36, 45], 'peluche-oso-3d': [30, 40, 50], 'peluche-conejo-sentado': [25, 33, 45], 'peluche-casa-hongo': [20, 26, 35], 'fieltro-casa-gnomos': [15, 20, 30] };
 const sizeKey = (card: ToyCard) => (card.generatorId === 'peluche-libelula' ? 'largo' : 'alto');
 const FABRIC: Record<string, string> = { principal: 'tela principal', contraste: 'contraste', forro: 'forro', entretela: 'entretela', 'punto-elastico': 'punto' };
 
@@ -32,9 +32,9 @@ export function ToysPanel() {
   return <section className="toys-panel" aria-labelledby="toys-title">
     <div className="figures-intro">
       <h1 id="toys-title">Juguetes y peluches</h1>
-      <p>Muñecas de trapo, animalitos con ropa, bichitos y peluches con volumen. Elige el alto y descarga las piezas a tamaño real con margen, piquetes y costuras comprobadas.</p>
+      <p>Muñecas de trapo, animalitos con ropa, ositos, bichitos, peluches con volumen y casitas. Elige el alto y descarga las piezas a tamaño real con margen, piquetes y costuras comprobadas.</p>
     </div>
-    <div className="transform-search"><Icon name="search"/><input type="search" aria-label="Buscar juguetes" placeholder="Conejo, abeja, muñeca, peto…" value={query} onChange={e => setQuery(e.target.value)}/></div>
+    <div className="transform-search"><Icon name="search"/><input type="search" aria-label="Buscar juguetes" placeholder="Oso, conejo, casa, muñeca…" value={query} onChange={e => setQuery(e.target.value)}/></div>
     <div className="figures-chips" role="group" aria-label="Tipo de juguete">
       <button className="filter-chip" aria-pressed={category === 'todas'} onClick={() => setCategory('todas')}>Todos</button>
       {TOY_CATEGORIES.map(c => <button key={c.id} className="filter-chip" aria-pressed={category === c.id} onClick={() => setCategory(c.id)}>{c.label}</button>)}

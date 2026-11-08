@@ -3,7 +3,7 @@ import type { Pt } from '../../lib/geom/vec';
 import type { GeneratorResult, Params } from '../../lib/pattern/generator';
 import type { Piece } from '../../lib/pattern/types';
 import { nodeById, pieceSeamPath, pointOnEdge, edgeLength, seamPolygon } from '../../lib/pattern/outline';
-import { circle, ellipse, inter, leaf, rect, rrect, uni, type Shape } from '../../lib/applique/shapes';
+import { circle, ellipse, inter, leaf, poly, rect, rrect, uni, type Shape, type ShapeLike } from '../../lib/applique/shapes';
 import { polysPath } from '../../lib/applique/figure';
 import type { ToyCard } from '../../data/toys';
 
@@ -28,7 +28,21 @@ function pointAlong(piece: Piece, run: string, s: number): Pt {
   return P(nodeById(piece, last.to).x, nodeById(piece, last.to).y);
 }
 const mid = (a: Pt, b: Pt) => P((a.x + b.x) / 2, (a.y + b.y) / 2);
-const embroidery = (pc: Piece, color: string, transform: string): Item[] => pc.lines.filter(l => l.kind === 'pespunte').map(l => line([l.a, l.b], color, Math.max(0.9, 1.6), transform));
+const embroidery = (pc: Piece, color: string, transform: string): Item[] => pc.lines.filter(l => l.kind === 'pespunte' && !/^pinza/.test(l.id)).map(l => line([l.a, l.b], color, Math.max(0.9, 1.6), transform));
+const moved = (pts: Pt[], dx: number, dy: number) => pts.map(q => P(q.x + dx, q.y + dy));
+/** Fabric print (gingham, plaid or stripes) clipped to a shape; `step` is the repeat in drawing units. */
+function printOver(s: ShapeLike, c: ToyCard['colors'], step: number): Item[] {
+  if (!c.print || !c.ropa2) return [];
+  const big = 1e4, n = Math.ceil(2 * big / step);
+  const v = uni(...Array.from({ length: Math.min(n, 400) }, (_, i) => rect(-200 * step + i * step, -big, step * (c.print === 'rayas' ? 0.32 : 0.5), 2 * big)));
+  const out: Item[] = [shape(inter(s, v), `${c.ropa2}${c.print === 'rayas' ? 'aa' : '66'}`, { stroke: 'none' })];
+  if (c.print !== 'rayas') {
+    const h = uni(...Array.from({ length: Math.min(n, 400) }, (_, i) => rect(-big, -200 * step + i * step, 2 * big, step * 0.5)));
+    out.push(shape(inter(s, h), `${c.ropa2}66`, { stroke: 'none' }));
+    if (c.print === 'cuadros') out.push(shape(inter(s, uni(...Array.from({ length: Math.min(n, 400) }, (_, i) => rect(-200 * step + i * step + step * 0.7, -big, step * 0.06, 2 * big)))), '#f6e7c8aa', { stroke: 'none' }));
+  }
+  return out;
+}
 
 /** Rag dolls and animals, drawn from their real pieces in a front view. */
 function ragScene(card: ToyCard, r: GeneratorResult, p: Params): Item[] {
@@ -71,7 +85,7 @@ function ragScene(card: ToyCard, r: GeneratorResult, p: Params): Item[] {
     }
   }
   const ear = get('oreja');
-  if (ear && who === 'conejita') {
+  if (ear && (who === 'conejita' || who === 'conejo')) {
     const [e0, e1] = runPoints(ear, 'union'), eu = mid(e0, e1), at = pointAlong(head, 'contorno', 22 * k);
     for (const m of ['', `translate(${2 * cx} 0) scale(-1 1) `]) items.push({ d: pieceSeamPath(ear), fill: c.piel, transform: `${m}translate(${at.x - eu.x} ${at.y - eu.y + 4 * k}) rotate(8 ${eu.x} ${eu.y})` }, { d: pieceSeamPath(ear), fill: c.contraste, transform: `${m}translate(${at.x - eu.x} ${at.y - eu.y + 4 * k}) rotate(8 ${eu.x} ${eu.y}) translate(${eu.x * 0.25} ${eu.y * 0.2}) scale(.75 .8)` });
   }
@@ -83,7 +97,16 @@ function ragScene(card: ToyCard, r: GeneratorResult, p: Params): Item[] {
     for (const m of ['', `translate(${2 * cx} 0) scale(-1 1) `]) items.push({ d: pieceSeamPath(ear), fill: c.contraste, transform: `${m}translate(${at.x - eu.x} ${at.y - eu.y}) rotate(-28 ${eu.x} ${eu.y})` });
   }
   front.push(...embroidery(head, '#3b2a1a', ''));
-  if (who !== 'patito' && who !== 'abeja') front.push(shape(circle(cx - 24 * k, (flower ? 8 : 64) * k, 6 * k), '#f2a7a7'), shape(circle(cx + 24 * k, (flower ? 8 : 64) * k, 6 * k), '#f2a7a7'));
+  const cheek = who === 'conejo' ? 32 : 24;
+  if (who !== 'patito' && who !== 'abeja') front.push(shape(circle(cx - cheek * k, (flower ? 8 : 64) * k, 6 * k), '#f2a7a7'), shape(circle(cx + cheek * k, (flower ? 8 : 64) * k, 6 * k), '#f2a7a7'));
+  const muzzle = get('hocico'), mAt = head.marks.find(m => m.id === 'hocico')?.at;
+  if (muzzle && mAt) front.push({ d: pieceSeamPath(muzzle), fill: c.contraste, transform: `translate(${mAt.x} ${mAt.y})` }, ...embroidery(muzzle, '#3b2a1a', `translate(${mAt.x} ${mAt.y})`));
+  const brim = get('sombrero-ala'), crown = get('sombrero-copa');
+  if (brim && crown) {
+    const xs = crown.nodes.map(n => n.x), ys = crown.nodes.map(n => n.y), W = Math.max(...xs) - Math.min(...xs), H = Math.max(...ys) - Math.min(...ys);
+    const hat = `translate(${cx + 10 * k} ${2 * k}) rotate(-10)`;
+    front.push({ d: pieceSeamPath(crown), fill: c.ropa2 ?? c.contraste, transform: `${hat} translate(${-W / 2 - Math.min(...xs)} ${-H - Math.min(...ys)}) scale(1 0.9)` }, { d: pieceSeamPath(brim), fill: c.ropa2 ?? c.contraste, transform: `${hat} scale(1 0.32)` }, shape(rect(-W / 2, -7 * k, W, 6 * k), c.ropa, { transform: hat }));
+  }
   const beak = get('pico');
   if (beak) front.push({ d: pieceSeamPath(beak), fill: c.contraste, transform: `translate(${cx + 13 * k} ${hc.y * 0.55}) rotate(90)` });
   if (who === 'abeja' && get('antena')) for (const s of [-1, 1]) front.push(line([P(cx + s * 22 * k, 10 * k), P(cx + s * 36 * k, -40 * k)], c.ropa, 5 * k), shape(circle(cx + s * 36 * k, -44 * k, 9 * k), c.ropa));
@@ -97,6 +120,12 @@ function ragScene(card: ToyCard, r: GeneratorResult, p: Params): Item[] {
   }
   if (get('vestido-delantero')) cloth('vestido-delantero', c.ropa, P(cx, garmentY + 2 * k));
   if (get('pantalon')) for (const lp of legPos) items.push(shape(rrect(lp.x - 20 * k, garmentY + 66 * k, 40 * k, (lp.y - garmentY - 66 * k) + 88 * k, 4 * k), c.ropa));
+  const blouse = get('blusa-delantero');
+  if (blouse) {
+    cloth('blusa-delantero', c.ropa2 ?? c.contraste, P(cx, garmentY + 2 * k));
+    const hemY = garmentY + 2 * k + Math.max(...blouse.nodes.map(n => n.y)), hw = Math.max(...blouse.nodes.map(n => n.x)) * 1.12, r = 6 * k, nScal = Math.max(4, Math.round(hw / r));
+    items.push(shape(uni(rect(cx - hw, hemY - 2 * k, 2 * hw, 16 * k), ...Array.from({ length: nScal + 1 }, (_, i) => circle(cx - hw + (2 * hw * i) / nScal, hemY + 14 * k, r))), c.ropa2 ?? c.contraste, { stroke: '#00000022' }));
+  }
   if (get('chaqueta-delantero')) {
     const sl = get('manga')!;
     // The cap runs down the body side (drop shoulder); the sleeve hangs along the arm.
@@ -157,12 +186,98 @@ function bunny3dScene(c: ToyCard['colors']): Item[] {
   ];
 }
 
+/** Flat bear or bunny, drawn from its real pieces: body, head on the neck, arms from the side seams. */
+function flatScene(card: ToyCard, r: GeneratorResult, p: Params): Item[] {
+  const get = (id: string) => r.pieces.find(x => x.id === id);
+  const head = get('cabeza')!, body = get('cuerpo')!, arm = get('brazo')!, c = card.colors, bear = p.personaje !== 'conejita';
+  const ys = body.nodes.map(n => n.y), k = (Math.max(...ys) - Math.min(...ys)) / 216;
+  const [hn0, hn1] = runPoints(head, 'cuello'), hc = mid(hn0, hn1), [bn0, bn1] = runPoints(body, 'cuello'), bc = mid(bn0, bn1);
+  const dx = hc.x - bc.x, dy = hc.y - bc.y, cx = hc.x, items: Item[] = [];
+  const sh = pointAlong(body, 'costado', 30 * k), [a0, a1] = runPoints(arm, 'union'), au = mid(a0, a1);
+  const armT = `translate(${sh.x + dx - au.x - 8 * k} ${sh.y + dy - au.y}) rotate(-24 ${au.x} ${au.y})`;
+  for (const m of ['', `translate(${2 * cx} 0) scale(-1 1) `]) items.push({ d: pieceSeamPath(arm), fill: c.piel, transform: `${m}${armT}` });
+  const ear = get('oreja');
+  if (ear) {
+    const [e0, e1] = runPoints(ear, 'union'), eu = mid(e0, e1), at = pointAlong(head, 'contorno', 42 * k);
+    for (const m of ['', `translate(${2 * cx} 0) scale(-1 1) `]) items.push({ d: pieceSeamPath(ear), fill: c.piel, transform: `${m}translate(${at.x - eu.x} ${at.y - eu.y + 8 * k}) rotate(14 ${eu.x} ${eu.y})` }, { d: pieceSeamPath(ear), fill: c.contraste, transform: `${m}translate(${at.x - eu.x} ${at.y - eu.y + 8 * k}) rotate(14 ${eu.x} ${eu.y}) translate(${eu.x * 0.22} ${eu.y * 0.18}) scale(.78 .82)` });
+  }
+  const bodyPoly = moved(seamPolygon(body), dx, dy), headPoly = seamPolygon(head);
+  items.push({ d: polysPath([bodyPoly]), fill: c.piel }, ...printOver(bodyPoly, c, 22 * k), { d: polysPath([headPoly]), fill: c.piel }, ...printOver(headPoly, c, 22 * k));
+  if (bear) for (const s of [-1, 1]) items.push(shape(circle(cx + s * 56 * k, 24 * k, 12 * k), c.contraste));
+  items.push(...embroidery(head, c.detalle, ''));
+  const muzzle = get('hocico'), mAt = head.marks.find(m => m.id === 'hocico')?.at;
+  if (muzzle && mAt) items.push({ d: pieceSeamPath(muzzle), fill: c.contraste, transform: `translate(${mAt.x} ${mAt.y})` }, ...embroidery(muzzle, c.detalle, `translate(${mAt.x} ${mAt.y})`));
+  items.push(shape(uni(circle(cx - 46 * k, 104 * k, 9 * k), circle(cx + 46 * k, 104 * k, 9 * k)), '#f2a7a788', { stroke: 'none' }));
+  if (get('lazo')) { const y = hc.y + 4 * k, bx = bear ? cx : cx + 44 * k, by = bear ? y : 22 * k; items.push(shape(uni(ellipse(bx - 20 * k, by, 20 * k, 11 * k, -16), ellipse(bx + 20 * k, by, 20 * k, 11 * k, 16)), c.ropa), shape(circle(bx, by, 6 * k), c.ropa, { stroke: '#00000033' })); }
+  return items;
+}
+function bear3dScene(c: ToyCard['colors'], p: Params): Item[] {
+  const head = ellipse(100, 96, 54, 46), body = ellipse(100, 182, 48, 58), arms = uni(ellipse(54, 168, 15, 38, 24), ellipse(146, 168, 15, 38, -24)), legs = uni(ellipse(70, 232, 23, 30), ellipse(130, 232, 23, 30));
+  const items: Item[] = [
+    shape(uni(circle(56, 56, 20), circle(144, 56, 20)), c.piel), shape(uni(circle(56, 56, 11), circle(144, 56, 11)), c.contraste),
+    shape(legs, c.piel), ...printOver(legs, c, 12), shape(uni(ellipse(70, 256, 19, 9), ellipse(130, 256, 19, 9)), c.contraste),
+    shape(body, c.piel), ...printOver(body, c, 12), shape(arms, c.piel), ...printOver(arms, c, 12),
+    shape(head, c.piel), ...printOver(head, c, 12), shape(ellipse(100, 114, 24, 17), '#ffffff40', { stroke: 'none' }),
+    shape(uni(circle(80, 92, 4), circle(120, 92, 4)), c.detalle), { d: 'M93 106 L107 106 L100 114 Z', fill: c.detalle }, line([P(100, 114), P(100, 120), P(94, 124)], c.detalle, 1.6), line([P(100, 120), P(106, 124)], c.detalle, 1.6)
+  ];
+  if (p.lazo !== 'no') items.push(shape(uni(ellipse(84, 140, 18, 10, -14), ellipse(116, 140, 18, 10, 14)), c.ropa), shape(circle(100, 140, 6), c.ropa, { stroke: '#00000033' }));
+  return items;
+}
+function sitBunnyScene(c: ToyCard['colors'], p: Params): Item[] {
+  const long = p.orejas !== 'medianas', head = ellipse(100, 104, 46, 40), body = uni(ellipse(100, 190, 54, 60), ellipse(100, 150, 38, 30));
+  const earL = long ? 74 : 44, ears = uni(ellipse(56, 92 + earL * 0.7, 15, earL, 10), ellipse(144, 92 + earL * 0.7, 15, earL, -10)), inner = uni(ellipse(56, 92 + earL * 0.7, 8, earL - 12, 10), ellipse(144, 92 + earL * 0.7, 8, earL - 12, -10));
+  const feet = uni(ellipse(66, 246, 30, 13), ellipse(134, 246, 30, 13)), paws = uni(ellipse(82, 200, 12, 30), ellipse(118, 200, 12, 30));
+  return [
+    shape(body, c.piel), ...printOver(body, c, 12), shape(feet, c.piel), ...printOver(feet, c, 12), shape(uni(ellipse(66, 250, 18, 6), ellipse(134, 250, 18, 6)), c.contraste),
+    shape(paws, c.piel), ...printOver(paws, c, 12), shape(head, c.piel), ...printOver(head, c, 12),
+    shape(ears, c.piel), ...printOver(ears, c, 12), shape(inner, c.contraste),
+    line([P(76, 100), P(80, 104), P(86, 104), P(90, 100)], c.detalle, 1.8), line([P(110, 100), P(114, 104), P(120, 104), P(124, 100)], c.detalle, 1.8),
+    { d: 'M95 114 L105 114 L100 119 Z', fill: '#d98c8c' }, line([P(100, 119), P(100, 124)], c.detalle, 1.4), shape(uni(circle(74, 116, 6), circle(126, 116, 6)), '#f2a7a788', { stroke: 'none' })
+  ];
+}
+function mushroomHouseScene(c: ToyCard['colors'], p: Params): Item[] {
+  const n = Math.round(Number(p.gajos ?? 6)), wall: [number, number][] = [];
+  for (let i = 0; i <= 20; i++) { const t = i / 20, w = 50 + (66 - 50) * t + Math.sin(Math.PI * t) * 6; wall.push([100 + w, 116 + t * 140]); }
+  for (let i = 20; i >= 0; i--) { const t = i / 20, w = 50 + (66 - 50) * t + Math.sin(Math.PI * t) * 6; wall.push([100 - w, 116 + t * 140]); }
+  const lobes = Array.from({ length: n + 1 }, (_, i) => circle(100 - 116 + (232 * i) / n, 122, 232 / n / 2 + 1));
+  const cap = uni(inter(ellipse(100, 122, 118, 106), rect(-100, 0, 400, 122)), ...lobes);
+  const spots = [[60, 72, 12], [104, 46, 14], [146, 80, 11], [86, 104, 8], [128, 112, 9], [40, 112, 7], [164, 116, 7]].map(([x, y, r]) => circle(x, y, r));
+  return [
+    shape(uni(ellipse(60, 258, 22, 8), ellipse(146, 260, 18, 7)), '#9bb57a', { stroke: 'none' }),
+    { d: polysPath([poly(wall)]), fill: c.piel }, ...Array.from({ length: 2 }, (_, i) => line([P(100 + (i ? 1 : -1) * 28, 120), P(100 + (i ? 1 : -1) * 36, 254)], '#00000022', 1)),
+    shape(rrect(84, 196, 32, 60, 15), c.detalle), line([P(100, 200), P(100, 256)], '#00000040', 1.2), shape(circle(110, 228, 2.2), c.ropa2 ?? '#f2c94c'),
+    ...[[56, 170], [144, 170]].flatMap(([x, y]) => [shape(circle(x, y, 13), c.ropa2 ?? '#f2c94c'), line([P(x, y - 13), P(x, y + 13)], c.detalle, 1.6), line([P(x - 13, y), P(x + 13, y)], c.detalle, 1.6)]),
+    shape(cap, c.ropa), shape(uni(...spots), c.contraste, { stroke: 'none' })
+  ];
+}
+/** Felt gnome house, drawn from its real pieces in their sewn positions. */
+function gnomeHouseScene(card: ToyCard, r: GeneratorResult, p: Params): Item[] {
+  const get = (id: string) => r.pieces.find(x => x.id === id)!, c = card.colors, k = Number(p.alto ?? 200) / 200;
+  const at = (id: string, x: number, y: number, extra = '') => ({ d: pieceSeamPath(get(id)), transform: `translate(${x * k} ${y * k}) ${extra}` });
+  const items: Item[] = [
+    { ...at('hoja', -96, 104, 'rotate(-150)'), fill: c.ropa2 }, { ...at('hoja', 88, 112, 'rotate(-30)'), fill: c.ropa2 }, { ...at('hoja', -44, 116, 'rotate(-170) scale(.8)'), fill: c.ropa2 },
+    { ...at('casa', 0, 0), fill: c.piel }, { ...at('puerta', 0, 0), fill: c.contraste }, ...embroidery(get('puerta'), '#00000055', ''),
+    { ...at('ventana', 32, 44), fill: c.detalle }, ...embroidery(get('ventana'), c.contraste, `translate(${32 * k} ${44 * k})`),
+    { ...at('tejado', 0, 0), fill: c.ropa }, { ...at('ventana-tejado', 0, -42), fill: c.detalle }, ...embroidery(get('ventana-tejado'), c.contraste, `translate(0 ${-42 * k})`),
+    { ...at('pie-grande', -70, 84), fill: '#f6efe2' }, { ...at('seta-grande', -70, 86), fill: c.ropa },
+    { ...at('pie-pequeno', 74, 96), fill: '#f6efe2' }, { ...at('seta-pequena', 74, 98), fill: c.ropa },
+    ...[[-80, 74], [-62, 70], [-70, 80], [70, 90], [80, 92]].map(([x, y]) => ({ ...at('lunar', x, y), fill: '#fbf6ec' }))
+  ];
+  if (p.colgante !== 'no') items.unshift(line([P(-30 * k, -150 * k), P(0, -86 * k), P(30 * k, -150 * k)], c.contraste, 1.4));
+  return items;
+}
+
 export function toyScene(card: ToyCard, result: GeneratorResult | null, params: Params): Item[] {
   if (card.generatorId === 'muneco-trapo' && result?.pieces.length) return ragScene(card, result, params);
   if (card.generatorId === 'peluche-bichito') return bugScene(card.colors, params);
   if (card.generatorId === 'fieltro-hada') return fairyScene(card.colors);
   if (card.generatorId === 'peluche-libelula') return dragonflyScene(card.colors);
   if (card.generatorId === 'peluche-conejo-3d') return bunny3dScene(card.colors);
+  if (card.generatorId === 'peluche-plano' && result?.pieces.length) return flatScene(card, result, params);
+  if (card.generatorId === 'peluche-oso-3d') return bear3dScene(card.colors, params);
+  if (card.generatorId === 'peluche-conejo-sentado') return sitBunnyScene(card.colors, params);
+  if (card.generatorId === 'peluche-casa-hongo') return mushroomHouseScene(card.colors, params);
+  if (card.generatorId === 'fieltro-casa-gnomos' && result?.pieces.length) return gnomeHouseScene(card, result, params);
   return [];
 }
 

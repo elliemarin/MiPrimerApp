@@ -1,6 +1,6 @@
 import type { Pt } from '../../geom/vec';
-import type { EdgeFinish, Piece, SeamRelation } from '../types';
-import { P, edge, equal, outline, type CutDef, type EdgeDef } from './kidsShared';
+import type { EdgeFinish, Issue, Piece, SeamRelation } from '../types';
+import { P, cm, edge, equal, outline, type CutDef, type EdgeDef } from './kidsShared';
 import { edgeLength } from '../outline';
 
 /* Kit para juguetes y peluches cosidos. Cada pieza se dibuja sobre su línea de
@@ -116,3 +116,38 @@ export const smile = (cx: number, cy: number, w: number): [number, number][] => 
 
 /** Narrowest finished width a stuffed part can have and still be turned right side out. */
 export const MIN_TURN_WIDTH = 16;
+
+// ------------------------------------------------------------------ Shared notices and params
+const TOY_CTX_NOTE = 'Para menores de 3 años: ojos y detalles bordados, sin botones, cuentas, alambre ni piezas que se suelten.';
+export const margin = { key: 'margen', label: 'Margen de costura', group: 'margenes' as const, type: 'length' as const, min: 4, max: 10 };
+export const altoParam = (min: number, max: number) => ({ key: 'alto', label: 'Alto del juguete terminado', group: 'diseno' as const, type: 'length' as const, min, max });
+export const exp = (what: string): Issue => ({ level: 'aviso', code: 'juguete-experimental', message: `${what} experimental: imprime al 100 %, comprueba la escala y cose una prueba antes de cortar la tela definitiva.` });
+export const safety: Issue = { level: 'aviso', code: 'juguete-seguridad', message: TOY_CTX_NOTE };
+export const fiber = (grams: number) => ({ id: 'relleno', label: 'Relleno de fibra hueca (poliéster siliconado)', qty: `unos ${Math.max(10, Math.round(grams / 5) * 5)} g` });
+
+/** A turnable width check for every stuffed part. */
+export function turnCheck(parts: [string, number][], issues: Issue[]) {
+  const narrow = parts.filter(([, w]) => w < MIN_TURN_WIDTH);
+  if (narrow.length) issues.push({ level: 'error', code: 'juguete-estrecho', message: `A este alto no se pueden voltear: ${narrow.map(([n, w]) => `${n} (${cm(w)})`).join(', ')}. Sube el alto o elige fieltro.` });
+}
+/** One edge set equal to the sum of several (sleeve cap with two armholes, neck with several pieces). */
+export function equal2(id: string, label: string, a: ReturnType<typeof side>, b: ReturnType<typeof side>[]): SeamRelation {
+  return { id, label, kind: 'igual', a: [a], b, ratioMin: 0.999, ratioMax: 1.001, tolerance: 0.6 };
+}
+/** Closed outline of a fish-eye dart (internal stitching lines), centred at (cx, cy) in design units. */
+export function fishDart(piece: Piece, id: string, cx: number, y0: number, y1: number, w: number, k: number) {
+  const m = (y0 + y1) / 2, pts: [number, number][] = [[cx, y0], [cx + w / 2, m], [cx, y1], [cx - w / 2, m], [cx, y0]];
+  for (let i = 0; i < 4; i++) piece.lines.push({ id: `${id}-${i}`, kind: 'pespunte', a: P(pts[i][0] * k, pts[i][1] * k), b: P(pts[i + 1][0] * k, pts[i + 1][1] * k), label: i === 0 ? 'Pinza en ojal: coser antes de unir las piezas' : undefined });
+}
+/** Closed placement line (polyline) for a circle or oval, in millimetres. */
+export function placeOval(piece: Piece, id: string, cx: number, cy: number, rx: number, ry: number, label: string, n = 36) {
+  for (let i = 0; i < n; i++) {
+    const a0 = (2 * Math.PI * i) / n, a1 = (2 * Math.PI * (i + 1)) / n;
+    piece.lines.push({ id: `${id}-${i}`, kind: 'colocacion', a: P(cx + rx * Math.cos(a0), cy + ry * Math.sin(a0)), b: P(cx + rx * Math.cos(a1), cy + ry * Math.sin(a1)), label: i === 0 ? label : undefined });
+  }
+  let L = 0;
+  for (let i = 0; i < n; i++) { const a0 = (2 * Math.PI * i) / n, a1 = (2 * Math.PI * (i + 1)) / n; L += Math.hypot(rx * (Math.cos(a1) - Math.cos(a0)), ry * (Math.sin(a1) - Math.sin(a0))); }
+  return L;
+}
+/** Mirror a run's anchors (x → -x) and reverse them, so the neighbouring piece shares exactly the same seam curve. */
+export const mirrorRun = (anchors: A[]): [number, number][] => anchors.map(([x, y]) => [-x, y] as [number, number]).reverse();
