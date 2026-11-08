@@ -69,6 +69,7 @@ profesional de patronaje 2D (estilo Seamly2D), pero con una interfaz muy simple.
 | `src/lib/pdf` | Mosaico carta, PDF vectorial, calibración |
 | `src/lib/draw` | Trayectos, dibujables, SVG |
 | `src/lib/applique` | Figuras de tela por capas: formas (`shapes.ts`) y motor de solapas y profundidad (`figure.ts`) |
+| `src/lib/pattern/generators/toys.ts` | Juguetes y peluches (kit en `toyKit.ts`); tarjetas en `src/data/toys.ts`, pantalla en `src/features/toys/` |
 | `src/lib/sizes` | Medidas y tablas de tallas |
 | `src/lib/db.ts` | IndexedDB |
 | `src/lib/zip.ts` | Proyecto completo en ZIP |

@@ -6,22 +6,41 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-03 (Claude: figuras de tela por capas con PDF ajustable; antes, Codex: fotos del lote nuevo).
+- Última actualización: 2026-11-08 (Claude: juguetes y peluches con patrones comprobados).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 3766 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
+npm test            # 3775 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Juguetes y peluches (2026-11-08)
+
+**Este es el relevo más reciente.** Detalle en `docs/JUGUETES_Y_PELUCHES.md`.
+
+- Quinto modo de la biblioteca, **Juguetes y peluches** (carga aparte): 16
+  juguetes a partir de 16 fotos de la usuaria, como diseños propios.
+- Usan el motor de patrones: 5 generadores en
+  `src/lib/pattern/generators/toys.ts` con el kit `toyKit.ts` (curvas con bordes
+  con nombre, piquetes de inserción y costuras que deben medir igual). Ropa de
+  muñeca calculada desde el cuerpo relleno; conejo 3D con fuelle, panza y suelas
+  resueltos para coincidir.
+- Ilustraciones dibujadas con las piezas reales; PDF con costuras comprobadas y
+  piezas 1:1. En el móvil los cinco modos se reparten en 3 + 2.
+- Validación: **3,775 pruebas en 85 archivos** (`tests/toys.test.ts` nueva) y
+  `npm run build`. El barrido de 186 combinaciones de personaje, ropa y alto no
+  da errores.
+
+Siguiente paso sugerido: coser muestras de la muñeca con ropa y del conejo 3D.
+
 ## Figuras de tela por capas (2026-11-03)
 
-**Este es el relevo más reciente.** Detalle en `docs/FIGURAS_DE_TELA.md`.
+Relevo anterior. Detalle en `docs/FIGURAS_DE_TELA.md`.
 
 - Cuarto modo de la biblioteca, **Figuras de tela**: 156 diseños originales en
   13 categorías (flores, plantas y hongos, cielo y mar, animales, casas, frutas y
