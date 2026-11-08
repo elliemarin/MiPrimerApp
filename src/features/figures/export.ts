@@ -99,7 +99,7 @@ function partDrawable(p: FigurePiece, part: { cut: Pt[][]; final: Pt[][]; visibl
 }
 
 /** Pieces that fit a Letter sheet are packed several per page; larger ones are tiled with overlap. */
-async function exportDrawables(ds: Drawable[], info: ExportInfo): Promise<{ files: Uint8Array[]; pages: number }> {
+export async function exportDrawables(ds: Drawable[], info: ExportInfo): Promise<{ files: Uint8Array[]; pages: number }> {
   const box = contentBox(DEFAULT_TILE), fits = (d: Drawable) => d.bbox.maxX - d.bbox.minX <= box.w && d.bbox.maxY - d.bbox.minY <= box.h;
   const small = ds.filter(fits), big = ds.filter(d => !fits(d)), files: Uint8Array[] = [];
   let pages = 0;

@@ -1,0 +1,10 @@
+/* Juguetes: cada muñeco se presenta sobre una manta de punto suave. */
+.toys-panel { padding-bottom: 28px; }
+.toy-swatch { display: grid; place-items: center; aspect-ratio: 1; border-radius: 10px; color: var(--ink, #25352c);
+  background-color: #f1ebe2;
+  background-image: radial-gradient(circle at 25% 25%, rgba(255, 255, 255, .5) 0 1.2px, transparent 1.6px), radial-gradient(circle at 75% 75%, rgba(150, 120, 90, .1) 0 1.2px, transparent 1.6px);
+  background-size: 8px 8px; box-shadow: inset 0 0 0 1px rgba(90, 70, 40, .08); }
+.toy-swatch > svg { width: 86%; height: 86%; overflow: visible; filter: drop-shadow(0 2px 1.5px rgba(60, 40, 20, .2)); }
+.toy-swatch-lg { width: 100%; max-width: 520px; margin: 0 auto; border-radius: 16px; }
+.toy-piece-list { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.5; }
+.toy-piece-list li { margin-bottom: 6px; }
