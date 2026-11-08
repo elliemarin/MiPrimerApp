@@ -5,7 +5,7 @@ import type { Params } from '../lib/pattern/generator';
  * Reconstruidos como diseños propios a partir de las fotos de referencia de la
  * usuaria (2026-11-08): no se copian imágenes, marcas ni medidas. */
 
-export const TOY_CATEGORY_LABEL = { munecos: 'Muñecas', animalitos: 'Animalitos', insectos: 'Bichitos e insectos', fieltro: 'Fieltro', volumen: 'Peluches con volumen', casitas: 'Casitas' } as const;
+export const TOY_CATEGORY_LABEL = { munecos: 'Muñecas', animalitos: 'Animalitos', insectos: 'Bichitos e insectos', fieltro: 'Fieltro', volumen: 'Peluches con volumen', casitas: 'Casitas', portatiles: 'Casitas de muñecas' } as const;
 export type ToyCategory = keyof typeof TOY_CATEGORY_LABEL;
 
 export interface ToyColors {
@@ -93,7 +93,32 @@ export const TOY_CARDS: ToyCard[] = [
     colors: { piel: '#efe4cf', ropa: '#c2412f', contraste: '#fbf6ec', detalle: '#7a5233', ropa2: '#f2c94c' }, reference: 'Casa hongo de tela con paredes y tejado de gajos' }),
   card({ id: 'casita-gnomos', name: 'Casita de gnomos', category: 'casitas', generatorId: 'fieltro-casa-gnomos', params: {},
     description: 'Casita plana de fieltro con tejado ondulado, puerta, ventanas, setas con lunares y hojas. Para colgar o decorar.', tags: ['casa', 'gnomos', 'fieltro', 'setas', 'adorno'],
-    colors: { piel: '#f3e6cc', ropa: '#c23b2e', contraste: '#8a5a3b', detalle: '#f2c94c', ropa2: '#7aa35a' }, reference: 'Casita de gnomos de fieltro con setas y hojas' })
+    colors: { piel: '#f3e6cc', ropa: '#c23b2e', contraste: '#8a5a3b', detalle: '#f2c94c', ropa2: '#7aa35a' }, reference: 'Casita de gnomos de fieltro con setas y hojas' }),
+  // ---------- Casitas de muñecas portátiles (2026-11-08)
+  card({ id: 'casita-libro', name: 'Casita libro', category: 'portatiles', generatorId: 'casita-libro', params: { forma: 'casa' },
+    description: 'Dos casas acolchadas que se abren como un libro: ropero-bolsillo para la ropa, cama con manta-bolsillo y almohada, banderines y lengüeta de velcro. Fuera, puerta que se abre.', tags: ['casita', 'muñecas', 'libro', 'portátil', 'cama'],
+    colors: { piel: '#f3e9dc', ropa: '#e9c2c0', contraste: '#9fb8cf', detalle: '#b88a5a', ropa2: '#f1d8a6', print: 'lunares' }, reference: 'Casitas libro acolchadas con bolsillo-armario y cama' }),
+  card({ id: 'casita-calabaza', name: 'Casita calabaza', category: 'portatiles', generatorId: 'casita-libro', params: { forma: 'calabaza' },
+    description: 'La casita libro en forma de calabaza: puerta y banderines por fuera, hoja con botón de fieltro y tallo; dentro, ropero y cama.', tags: ['casita', 'calabaza', 'otoño', 'muñecas', 'libro'],
+    colors: { piel: '#c98a5e', ropa: '#f2e3cc', contraste: '#d0694b', detalle: '#7a5233', ropa2: '#a9c5a0' }, reference: 'Casita calabaza con puerta de lunares y banderines' }),
+  card({ id: 'casita-bolsa', name: 'Casita bolsa redonda', category: 'portatiles', generatorId: 'casita-bolsa', params: { forma: 'redonda', habitaciones: 'bano-dormitorio' },
+    description: 'Se dobla por la mitad y se lleva por las asas. Baño con bañera-bolsillo, espejo, lavabo y alfombra; dormitorio con dos camas y banderines.', tags: ['casita', 'bolsa', 'asas', 'baño', 'portátil'],
+    colors: { piel: '#ece9e4', ropa: '#e9e2d4', contraste: '#7fa8a9', detalle: '#c9b58f', ropa2: '#e6c35c' }, reference: 'Casita bolsa redondeada con baño y dormitorio' }),
+  card({ id: 'casita-viaje', name: 'Casita de viaje con tejado', category: 'portatiles', generatorId: 'casita-bolsa', params: { forma: 'tejado', habitaciones: 'cocina-dormitorio', cierre: 'cremallera' },
+    description: 'Casita bolsa con tejado en los dos extremos y cremallera alrededor: cocina con fregadero, campana y nevera que se abren; dormitorio con cama y armario.', tags: ['casita', 'viaje', 'cocina', 'armario', 'cremallera'],
+    colors: { piel: '#f1ebe0', ropa: '#e7c9c4', contraste: '#e3a6a4', detalle: '#c9a87c', ropa2: '#f7e8e6' }, reference: 'Travel dollhouse: cocina, armario, cama y baño' }),
+  card({ id: 'casita-plegable', name: 'Casita plegable con asas', category: 'portatiles', generatorId: 'casita-plegable', params: {},
+    description: 'Cuatro habitaciones en cruz: cocina, comedor, dormitorio y baño. Los laterales se doblan como puertas y se lleva por las asas.', tags: ['casita', 'plegable', 'asas', 'cruz', 'comedor'],
+    colors: { piel: '#f2dccb', ropa: '#efe4d6', contraste: '#e58f73', detalle: '#9c7b5b', ropa2: '#f6efe4', print: 'lunares' }, reference: 'Casita bolso que se despliega en cruz con cuatro habitaciones' }),
+  card({ id: 'casita-cubo', name: 'Casita cubo con tejado', category: 'portatiles', generatorId: 'casita-cubo', params: {},
+    description: 'Casita con volumen: paredes con refuerzo, tejado a dos aguas con asa y frente que se abre como jardín. Cama, almohada y manta sueltas.', tags: ['casita', 'cubo', 'asa', 'jardín', '3D'],
+    colors: { piel: '#e9f0f5', ropa: '#c9433d', contraste: '#e9a6b5', detalle: '#2b2b2b', ropa2: '#f7e2a2' }, reference: 'Casita de tela de 6 × 4 × 4 pulgadas con asa y frente abatible' }),
+  card({ id: 'casita-tapete', name: 'Tapete casita de cuatro habitaciones', category: 'portatiles', generatorId: 'casita-tapete', params: {},
+    description: 'Libro-tapete acolchado: cocina con nevera y armarios que se abren, comedor con cortinas y mantel, baño con toalla, bañera-bolsillo e inodoro con tapa, dormitorio con cama, sillón y libro.', tags: ['casita', 'quiet book', 'muebles', 'interactivo', 'acolchado'],
+    colors: { piel: '#dfe7f1', ropa: '#efe4d6', contraste: '#e8a8b0', detalle: '#b88a5a', ropa2: '#f2d27c' }, reference: 'Casitas tapete de cuatro habitaciones con muebles que se abren' }),
+  card({ id: 'casita-paginas', name: 'Libro de casita de fieltro', category: 'portatiles', generatorId: 'casita-paginas', params: {},
+    description: 'Ocho páginas de fieltro: fachada con puerta, baño, armario, cocina con horno y platero, salón, dormitorio, lavadero con tendedero y comedor. Con muñequita y gato.', tags: ['casita', 'fieltro', 'quiet book', 'páginas', 'muñeca'],
+    colors: { piel: '#f6dfe3', ropa: '#efe4d6', contraste: '#8fd1c4', detalle: '#c79e7a', ropa2: '#f6e3a8' }, reference: 'Libro de páginas de fieltro con habitaciones' })
 ];
 
 export const TOY_CATEGORIES = (Object.keys(TOY_CATEGORY_LABEL) as ToyCategory[]).map(id => ({ id, label: TOY_CATEGORY_LABEL[id], count: TOY_CARDS.filter(c => c.category === id).length }));

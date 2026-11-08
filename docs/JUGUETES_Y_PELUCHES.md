@@ -99,6 +99,11 @@ total) y una sexta categoría, **Casitas**. Generadores nuevos en
   diseñadora concreta sirvieron de inspiración de construcción, sin copiar
   piezas, medidas ni nombres.
 
+## Casitas de muñecas (2026-11-08)
+
+Grupo «Casitas de muñecas» con 8 casitas portátiles y muebles interactivos:
+ver `docs/CASITAS_DE_MUNECAS.md`.
+
 ## Proyectar (2026-11-08)
 
 La ficha de juguetes es ahora la ficha común `src/features/toys/PlushCatalog.tsx`

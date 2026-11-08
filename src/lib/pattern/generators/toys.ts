@@ -5,6 +5,7 @@ import { bowPieces } from './kidsBlocks';
 import { MIN_TURN_WIDTH, altoParam, ellipsePiece, embroider, equal2, exp, fiber, insertion, margin, match, notchAt, placeOval, plush, polyPiece, runLength, safety, side, sleepyEye, smile, turnCheck, type A, type ToyScale } from './toyKit';
 import { ellipse, leaf, uni } from '../../applique/shapes';
 import { TOY_GENERATORS_2 } from './toys2';
+import { DOLLHOUSE_GENERATORS } from './dollhouses';
 
 /* Juguetes y peluches (2026-11-08), reconstruidos a partir de las fotos de la
  * usuaria como diseños propios: muñecos de trapo (muñeca, conejita, gatito,
@@ -491,4 +492,4 @@ export const bunny3dGenerator: PatternGenerator = {
   requiredMeasures: [], optionalMeasures: [], defaults: bunny3dDefaults, generate: generateBunny3d, params: [altoParam(220, 700), margin]
 };
 
-export const TOY_GENERATORS: PatternGenerator[] = [ragGenerator, bugGenerator, fairyGenerator, dragonflyGenerator, bunny3dGenerator, ...TOY_GENERATORS_2];
+export const TOY_GENERATORS: PatternGenerator[] = [ragGenerator, bugGenerator, fairyGenerator, dragonflyGenerator, bunny3dGenerator, ...TOY_GENERATORS_2, ...DOLLHOUSE_GENERATORS];

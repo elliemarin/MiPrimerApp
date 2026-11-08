@@ -6,22 +6,43 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-08 (Claude: sección de cojines y proyector para juguetes y cojines).
+- Última actualización: 2026-11-08 (Claude: casitas de muñecas portátiles con muebles interactivos).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 3786 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
+npm test            # 3792 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Casitas de muñecas portátiles (2026-11-08)
+
+**Este es el relevo más reciente.** Detalle en `docs/CASITAS_DE_MUNECAS.md`.
+
+- Grupo nuevo «Casitas de muñecas» en Juguetes y peluches: 8 tarjetas de 6
+  generadores (`src/lib/pattern/generators/dollhouses.ts`):
+  - casita libro (casa o calabaza);
+  - casita bolsa (redonda, con tejado o rectangular);
+  - plegable en cruz con asas;
+  - cubo con tejado y asa;
+  - tapete de cuatro habitaciones;
+  - libro de páginas de fieltro.
+- Kit de 23 muebles interactivos (`dollFurniture.ts`): puertas, bolsillos,
+  solapas, cortinas con alzapaños, toalla que se quita y espejo de seguridad.
+  La silueta de cada mueble se marca en la pared y también sale al proyectar.
+- Validación: pruebas nuevas en `tests/dollhouses.test.ts`; el barrido de 60
+  combinaciones no da errores.
+
+Siguiente paso sugerido: coser una casita libro y un tapete de muestra, y dejar
+elegir los muebles de cada habitación desde la ficha.
+
 ## Cojines (2026-11-08)
 
-**Este es el relevo más reciente.** Detalle en `docs/COJINES.md`.
+Relevo anterior. Detalle en `docs/COJINES.md`.
 
 - Sexto modo de la biblioteca, **Cojines**: 16 fotos de patrones revisados como
   patronista → 18 tarjetas, 17 generadores en

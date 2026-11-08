@@ -24,9 +24,9 @@ const problems = (r: ReturnType<typeof gen>) => [
 ];
 
 describe('catálogo de juguetes', () => {
-  it('tiene 26 juguetes con generador existente, en seis grupos', () => {
-    expect(TOY_CARDS).toHaveLength(26);
-    expect(TOY_CATEGORIES).toHaveLength(6);
+  it('tiene 34 juguetes con generador existente, en siete grupos', () => {
+    expect(TOY_CARDS).toHaveLength(34);
+    expect(TOY_CATEGORIES).toHaveLength(7);
     expect(new Set(TOY_CARDS.map(c => c.id)).size).toBe(TOY_CARDS.length);
     for (const c of TOY_CARDS) expect(getGenerator(c.generatorId), c.id).toBeDefined();
     expect(TOY_CATEGORIES.every(c => c.count > 0)).toBe(true);

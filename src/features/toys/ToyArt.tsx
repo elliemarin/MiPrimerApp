@@ -5,6 +5,7 @@ import { pieceSeamPath, seamPolygon } from '../../lib/pattern/outline';
 import { circle, ellipse, inter, leaf, poly, rect, rrect, uni } from '../../lib/applique/shapes';
 import { polysPath } from '../../lib/applique/figure';
 import type { PlushCard } from '../../data/toys';
+import { dollhouseScene } from './DollhouseArt';
 import { P, embroidery, line, mid, moved, pointAlong, printOver, runPoints, shape, type Item, type Scene } from './art';
 type ToyCard = PlushCard;
 
@@ -237,6 +238,7 @@ export function toyScene(card: ToyCard, result: GeneratorResult | null, params: 
   if (card.generatorId === 'fieltro-hada') return fairyScene(card.colors);
   if (card.generatorId === 'peluche-libelula') return dragonflyScene(card.colors);
   if (card.generatorId === 'peluche-conejo-3d') return bunny3dScene(card.colors);
+  if (card.generatorId.startsWith('casita-')) return dollhouseScene(card, params);
   if (card.generatorId === 'peluche-plano' && result?.pieces.length) return flatScene(card, result, params);
   if (card.generatorId === 'peluche-oso-3d') return bear3dScene(card.colors, params);
   if (card.generatorId === 'peluche-conejo-sentado') return sitBunnyScene(card.colors, params);
@@ -257,6 +259,6 @@ export function ToyArt({ card, result, params, label, scene = toyScene }: { card
     if (side > 0) setVb(`${b.x + b.width / 2 - side / 2} ${b.y + b.height / 2 - side / 2} ${side} ${side}`);
   }, [items]);
   return <svg viewBox={vb} role="img" aria-label={label ?? card.name} preserveAspectRatio="xMidYMid meet">
-    <g ref={ref}>{items.map((it, i) => <path key={i} d={it.d} fill={it.fill ?? 'none'} stroke={it.stroke ?? (it.fill && it.fill !== 'none' ? 'rgba(0,0,0,.2)' : 'none')} strokeWidth={it.sw ?? 0.8} strokeLinecap="round" strokeLinejoin="round" vectorEffect={it.sw ? undefined : 'non-scaling-stroke'} transform={it.transform || undefined}/>)}</g>
+    <g ref={ref}>{items.map((it, i) => <path key={i} d={it.d} fill={it.fill ?? 'none'} stroke={it.stroke ?? (it.fill && it.fill !== 'none' ? 'rgba(0,0,0,.2)' : 'none')} strokeWidth={it.sw ?? 0.8} strokeDasharray={it.dash} strokeLinecap="round" strokeLinejoin="round" vectorEffect={it.sw ? undefined : 'non-scaling-stroke'} transform={it.transform || undefined}/>)}</g>
   </svg>;
 }
