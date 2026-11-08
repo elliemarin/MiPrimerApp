@@ -43,6 +43,11 @@ function readDraft(prefix: string, card: PlushCard): Params {
   } catch { /* Saved choices are a convenience. */ }
   return {};
 }
+/** Usual margins, plus the pattern's own default when it is another one (12 mm on the clover). */
+function marginOptions(params: ParamDef[], current: Params[string]) {
+  const base = (params.find(p => p.key === 'margen')?.min ?? 4) >= 6 ? [6, 10, 15] : [5, 6, 8], v = Number(current);
+  return [...new Set([...base, ...(Number.isFinite(v) ? [v] : [])])].sort((a, b) => a - b).map(n => ({ value: String(n), label: `${n} mm` }));
+}
 /** The size is the first length parameter that is not a margin or a gusset. */
 export const sizeDef = (params: ParamDef[]) => params.find(p => p.type === 'length' && !SKIP.has(p.key))!;
 
@@ -149,7 +154,7 @@ function PlushSheet<C extends string>({ card, config, onClose }: { card: PlushCa
           <input id={`plush-${card.id}-${o.key}`} className="input num" type="number" min={o.min} max={o.max} value={Number(params[o.key])} onChange={e => set(o.key, Number(e.target.value))}/>}
       </Field>)}</div></section>}
       <details className="transform-settings"><summary>Margen de costura y lista de piezas</summary><div className="stack">
-        <Field label="Margen de costura" htmlFor={`plush-margin-${card.id}`}><Select id={`plush-margin-${card.id}`} value={String(params.margen ?? 6)} options={(generator.params.find(p => p.key === 'margen')?.min ?? 4) >= 6 ? ['6', '10', '15'].map(v => ({ value: v, label: `${v} mm` })) : ['5', '6', '8'].map(v => ({ value: v, label: `${v} mm` }))} onChange={v => set('margen', Number(v))}/></Field>
+        <Field label="Margen de costura" htmlFor={`plush-margin-${card.id}`}><Select id={`plush-margin-${card.id}`} value={String(params.margen ?? 6)} options={marginOptions(generator.params, params.margen)} onChange={v => set('margen', Number(v))}/></Field>
         <ul className="toy-piece-list">{built.pieces.map(p => <li key={p.id}><strong>{p.name}</strong> · cortar {p.cut.qty} en {FABRIC[p.cut.fabric] ?? p.cut.fabric}</li>)}</ul>
       </div></details>
       {errors.map(e => <Notice key={e.code + e.message} tone="err">{e.message}</Notice>)}

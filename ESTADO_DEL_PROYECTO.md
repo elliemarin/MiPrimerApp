@@ -6,22 +6,44 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-08 (Claude: casitas de muñecas portátiles con muebles interactivos).
+- Última actualización: 2026-11-08 (Claude: bolsilleros, organizadores colgantes de tela).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 3792 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
+npm test            # 3800 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Bolsilleros (2026-11-08)
+
+**Este es el relevo más reciente.** Detalle en `docs/BOLSILLEROS.md`.
+
+- Séptimo modo de la biblioteca, «Bolsilleros»: organizadores colgantes de tela.
+  También se llaman «porte-objets» o «vide-poches mural» en francés, «Utensilo»
+  en alemán y «wall pocket organizer» en inglés.
+- 9 tarjetas de 9 generadores (`src/lib/pattern/generators/organizers.ts`):
+  - animales: gato, koala, zorro con panel y ballena con pliegues;
+  - flores y plantas: flor de 8 pétalos y trébol de 3 a 5 hojas;
+  - cuna y juego: gota para la cuna y zanahoria con conejito;
+  - escritorio: zorro portalápices con barra.
+- Bolsillos y apliques se marcan en el delantero con líneas de colocación, que
+  también se proyectan. Acabado volteado o con ribete al bies.
+- El selector de margen de la ficha común ahora muestra también el margen
+  propio del patrón (12 mm en el trébol).
+- Validación: pruebas nuevas en `tests/organizers.test.ts`; el barrido de 132
+  combinaciones no da errores.
+
+Siguiente paso sugerido: coser una ballena y un gato de muestra, y dejar elegir
+el número de bolsillos desde la ficha.
+
 ## Casitas de muñecas portátiles (2026-11-08)
 
-**Este es el relevo más reciente.** Detalle en `docs/CASITAS_DE_MUNECAS.md`.
+Relevo anterior. Detalle en `docs/CASITAS_DE_MUNECAS.md`.
 
 - Grupo nuevo «Casitas de muñecas» en Juguetes y peluches: 8 tarjetas de 6
   generadores (`src/lib/pattern/generators/dollhouses.ts`):
@@ -42,7 +64,7 @@ elegir los muebles de cada habitación desde la ficha.
 
 ## Cojines (2026-11-08)
 
-Relevo anterior. Detalle en `docs/COJINES.md`.
+Relevo previo a las casitas. Detalle en `docs/COJINES.md`.
 
 - Sexto modo de la biblioteca, **Cojines**: 16 fotos de patrones revisados como
   patronista → 18 tarjetas, 17 generadores en
