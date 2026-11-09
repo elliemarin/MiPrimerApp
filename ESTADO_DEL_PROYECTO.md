@@ -6,22 +6,44 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-09 (Claude: bolsos y mochilas en la sección de bolsos).
+- Última actualización: 2026-11-09 (Claude: casitas de juego de rincón y de mesa).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 3826 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
+npm test            # 3834 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Casitas de juego (2026-11-09)
+
+**Este es el relevo más reciente.** Detalle en `docs/CASITAS_DE_JUEGO.md`.
+
+- Noveno modo de la biblioteca, «Casitas de juego» (en el móvil, 3 filas de 3):
+  12 tarjetas de 2 generadores (`src/lib/pattern/generators/playhouses.ts`).
+  - Casita de rincón: tejado triangular que cuelga del vértice, faldón y pared
+    de cortina en una barra.
+  - Casita de mesa: funda con techo, cuatro paredes, puerta y ventanas.
+- 12 temas propios que se mezclan desde la ficha (tema, faldón, medidas,
+  esquinas): honguito, princesa, payasos, hada del bosque, chocolate con
+  glaseado, noche estrellada, castillo, jardín, lunares, rayas, menta y
+  sencilla.
+- Ventanas y puerta se marcan para cortar y ribetear con bies; faldones con un
+  número entero de ondas o picos. Los apliques que no caben en medidas pequeñas
+  se omiten enteros (`fitDecos`).
+- Validación: pruebas nuevas en `tests/playhouses.test.ts`; el barrido de 432
+  combinaciones no da errores.
+
+Siguiente paso sugerido: coser una casita de rincón de muestra y dejar elegir
+los apliques uno a uno.
+
 ## Bolsos y mochilas (2026-11-09)
 
-**Este es el relevo más reciente.** Detalle en `docs/BOLSOS_Y_MOCHILAS.md`.
+Relevo anterior. Detalle en `docs/BOLSOS_Y_MOCHILAS.md`.
 
 - 8 diseños nuevos (10 recetas) en **Patrones editables → Bolsos y bolsas**, con
   el flujo completo: medidas del objeto, PDF y «Proyectar en la mesa». Son:
@@ -47,7 +69,7 @@ una funda y una mochila osito de muestra.
 
 ## Tapetes de juego (2026-11-09)
 
-Relevo anterior. Detalle en `docs/TAPETES.md`.
+Relevo previo a los bolsos. Detalle en `docs/TAPETES.md`.
 
 - Octavo modo de la biblioteca, «Tapetes»: 17 tarjetas de 11 generadores
   (`src/lib/pattern/generators/playmats.ts`):

@@ -16,11 +16,11 @@ import { bendFor, biggest, clipLines, near, smooth } from './shapeKit';
  * medidas de las referencias se usan solo como comprobación y todo sale de
  * los parámetros. Experimental hasta coser una muestra. */
 
-type Seg = { pts: Pt[]; run: string };
+export type Seg = { pts: Pt[]; run: string };
 const TAU = Math.PI * 2;
 const key = (q: Pt) => `${q.x.toFixed(3)},${q.y.toFixed(3)}`;
 /** Closed outline from consecutive segments (each ends where the next starts); every edge keeps its segment's run. */
-function tagged(segs: Seg[]) {
+export function tagged(segs: Seg[]) {
   const pts: Pt[] = [], runs: string[] = [];
   for (const s of segs) for (const q of s.pts.slice(0, -1)) { pts.push(q); runs.push(s.run); }
   let area = 0; pts.forEach((a, i) => { const b = pts[(i + 1) % pts.length]; area += a.x * b.y - b.x * a.y; });
@@ -29,13 +29,13 @@ function tagged(segs: Seg[]) {
   // Points where the run changes must survive simplification.
   return { pts: area >= 0 ? pts : [...pts].reverse(), runOf: (a: Pt) => map.get(key(a)) ?? 'contorno', keep: (q: Pt) => corners.has(key(q)) };
 }
-const arcPts = (cx: number, cy: number, r: number, a0: number, a1: number, n = 12) => Array.from({ length: n + 1 }, (_, i) => { const a = a0 + ((a1 - a0) * i) / n; return P(cx + r * Math.cos(a), cy + r * Math.sin(a)); });
+export const arcPts = (cx: number, cy: number, r: number, a0: number, a1: number, n = 12) => Array.from({ length: n + 1 }, (_, i) => { const a = a0 + ((a1 - a0) * i) / n; return P(cx + r * Math.cos(a), cy + r * Math.sin(a)); });
 const line = (a: Pt, b: Pt) => [a, b];
 export const runIds = (pc: Piece, run: string) => pc.edges.filter(e => e.id === run || new RegExp(`^${run}-\\d+$`).test(e.id)).map(e => e.id);
 const len = (pc: Piece, run: string) => runLength(pc, run);
 const mirrorSegs = (segs: Seg[]): Seg[] => [...segs].reverse().map(s => ({ run: s.run, pts: [...s.pts].reverse().map(q => P(-q.x, q.y)) }));
 /** Catmull-Rom through points (smooth curves for straps and mouths). */
-function curve(pts: Pt[], n = 10): Pt[] {
+export function curve(pts: Pt[], n = 10): Pt[] {
   const out: Pt[] = [];
   for (let i = 0; i < pts.length - 1; i++) {
     const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
