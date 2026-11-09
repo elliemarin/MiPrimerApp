@@ -5,8 +5,9 @@ import { seamPolygon } from '../outline';
 import { P, cm, edge, equal, invalid, rectangle } from './kidsShared';
 import { embroider, exp, plush, runLength, sleepyEye, smile, type A } from './toyKit';
 import { polyRuns, strips } from './cushionKit';
-import { circle, ellipse, rect, rrect, uni, type Shape } from '../../applique/shapes';
-import { intersectPolygons, offsetPolygons, strokePolyline } from '../../geom/polyoffset';
+import { circle, ellipse, rect, rrect, uni } from '../../applique/shapes';
+import { intersectPolygons, strokePolyline } from '../../geom/polyoffset';
+import { S, bendFor, biggest, box, hull, inset, near, smooth, spline } from './shapeKit';
 
 /* Bolsilleros (2026-11-08): organizadores colgantes de tela —en francés
  * «porte-objets» o «vide-poches mural», en alemán «Utensilo», en inglés «wall
@@ -46,13 +47,6 @@ export interface OrgLayout {
   drawLines?: Pt[][];
 }
 
-const S = (k: number) => (pts: Pt[]) => pts.map(q => P(q.x * k, q.y * k));
-const biggest = (s: Shape) => [...s].sort((a, b) => b.length - a.length)[0];
-const smooth = (s: Shape, r: number) => biggest(offsetPolygons(offsetPolygons(s, r), -r));
-/** Radius for concave bends with a given seam allowance: a tighter bend makes the cutting line loop over itself. */
-const bendFor = (sa: number) => 1.5 * sa + 4;
-const spline = (a: A[]) => seamPolygon(plush('t', 't', a, { k: 1, sa: 0, felt: true }), 0.4);
-const near = (v: number, w: number) => Math.abs(v - w) < 0.05;
 const topEdge = (y: number) => (a: Pt, b: Pt) => near(a.y, y) && near(b.y, y);
 /** The part of a silhouette below a cut line (left to right), and a test for edges on the cut. */
 function below(body: Pt[], cut: Pt[]): { poly: Pt[]; boca: (a: Pt, b: Pt) => boolean } {
@@ -61,7 +55,6 @@ function below(body: Pt[], cut: Pt[]): { poly: Pt[]; boca: (a: Pt, b: Pt) => boo
   const dist = (p: Pt) => Math.min(...line.slice(1).map((b, i) => { const a = line[i], dx = b.x - a.x, dy = b.y - a.y, t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1))); return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy); }));
   return { poly: biggest(intersectPolygons([body], [region])), boca: (a, b) => dist(a) < 0.05 && dist(b) < 0.05 };
 }
-const box = (x0: number, y0: number, x1: number, y1: number) => [P(x0, y0), P(x1, y0), P(x1, y1), P(x0, y1)];
 /** Rounds every concave bend of a body to at least radius r (mm) so the cutting line never crosses itself.
  * On a fold the whole (mirrored) shape is rounded and cut back at the fold. */
 function closeBody(body: Pt[], r: number, fold: boolean): Pt[] {
@@ -69,14 +62,6 @@ function closeBody(body: Pt[], r: number, fold: boolean): Pt[] {
   const xs = body.map(q => q.x), ys = body.map(q => q.y), yMax = Math.max(...ys);
   const whole = smooth([body, body.map(q => P(q.x, 2 * yMax - q.y)).reverse()], r);
   return biggest(intersectPolygons([whole], [box(Math.min(...xs) - 10, Math.min(...ys) - 10, Math.max(...xs) + 10, yMax)]));
-}
-/** An appliqué kept at least d (mm) inside the body's seam line. */
-const inset = (poly: Pt[], body: Pt[], d: number) => biggest(intersectPolygons([poly], offsetPolygons([body], -d)));
-/** Convex hull (monotone chain). */
-function hull(pts: Pt[]): Pt[] {
-  const q = [...pts].sort((a, b) => a.x - b.x || a.y - b.y), cross = (o: Pt, a: Pt, b: Pt) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-  const half = (list: Pt[]) => { const h: Pt[] = []; for (const p of list) { while (h.length >= 2 && cross(h[h.length - 2], h[h.length - 1], p) <= 0) h.pop(); h.push(p); } h.pop(); return h; };
-  return [...half(q), ...half([...q].reverse())];
 }
 const pocketBox = (id: string, name: string, x0: number, y0: number, x1: number, y1: number, color: string, extra: Partial<OrgPocket> = {}): OrgPocket => ({ id, name, place: box(x0, y0, x1, y1), boca: topEdge(y0), lined: true, color, ...extra });
 /** Rectangle pocket with rounded bottom corners. */

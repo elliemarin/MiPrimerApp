@@ -6,22 +6,45 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-08 (Claude: bolsilleros, organizadores colgantes de tela).
+- Última actualización: 2026-11-09 (Claude: tapetes de juego, con forma y sensoriales).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 3800 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
+npm test            # 3810 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Tapetes de juego (2026-11-09)
+
+**Este es el relevo más reciente.** Detalle en `docs/TAPETES.md`.
+
+- Octavo modo de la biblioteca, «Tapetes»: 17 tarjetas de 11 generadores
+  (`src/lib/pattern/generators/playmats.ts`):
+  - con forma: sol con juguetes, arcoíris de bandas, oso, conejo y fresa;
+  - hojas y flores: flor y cinco hojas (acorazonada, ovalada, ginkgo,
+    festoneada y monstera);
+  - borde de pétalos (redondo o colchoneta con cabecero) y puzle de cojines;
+  - sensoriales de 3 × 3, 4 × 4 y hexagonal.
+- Las líneas de acolchado, los apliques y los elementos sensoriales van
+  marcados en las piezas, así que todo se imprime y **se proyecta**.
+- Cada pieza grande se corta entera (para proyectar) o al doblez (la mitad de
+  papel).
+- Kit nuevo de 13 elementos sensoriales (`sensoryKit.ts`) y utilidades de
+  siluetas compartidas (`shapeKit.ts`).
+- Validación: pruebas nuevas en `tests/playmats.test.ts`; el barrido de 792
+  combinaciones no da errores.
+
+Siguiente paso sugerido: coser un tapete hoja y un sensorial de muestra, y
+dejar elegir el elemento de cada cuadro desde la ficha.
+
 ## Bolsilleros (2026-11-08)
 
-**Este es el relevo más reciente.** Detalle en `docs/BOLSILLEROS.md`.
+Relevo anterior. Detalle en `docs/BOLSILLEROS.md`.
 
 - Séptimo modo de la biblioteca, «Bolsilleros»: organizadores colgantes de tela.
   También se llaman «porte-objets» o «vide-poches mural» en francés, «Utensilo»
@@ -43,7 +66,7 @@ el número de bolsillos desde la ficha.
 
 ## Casitas de muñecas portátiles (2026-11-08)
 
-Relevo anterior. Detalle en `docs/CASITAS_DE_MUNECAS.md`.
+Relevo previo a los bolsilleros. Detalle en `docs/CASITAS_DE_MUNECAS.md`.
 
 - Grupo nuevo «Casitas de muñecas» en Juguetes y peluches: 8 tarjetas de 6
   generadores (`src/lib/pattern/generators/dollhouses.ts`):

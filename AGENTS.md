@@ -73,6 +73,7 @@ profesional de patronaje 2D (estilo Seamly2D), pero con una interfaz muy simple.
 | `src/lib/pattern/generators/cushions.ts` | Cojines (kit `cushionKit.ts`: vivo, fuelle, cierre, tiras, franjas); tarjetas en `src/data/cushions.ts`, dibujos en `src/features/cushions/`. La ficha común con PDF y «Proyectar sobre la tela» está en `src/features/toys/PlushCatalog.tsx` |
 | `src/lib/pattern/generators/dollhouses.ts` | Casitas de muñecas portátiles (trazado con paneles y huecos; muebles interactivos en `dollFurniture.ts`); dibujo en `src/features/toys/DollhouseArt.ts` |
 | `src/lib/pattern/generators/organizers.ts` | Bolsilleros: organizadores colgantes (trazado `OrgLayout` con cuerpo, bolsillos, apliques y colgador; `build` hace el patrón). Tarjetas en `src/data/organizers.ts`, dibujo y panel en `src/features/organizers/` |
+| `src/lib/pattern/generators/playmats.ts` | Tapetes de juego (trazado `MatLayout`: silueta, acolchado, apliques; corte entero o al doblez). Elementos sensoriales en `sensoryKit.ts`, utilidades de siluetas en `shapeKit.ts`. Tarjetas en `src/data/playmats.ts`, dibujo y panel en `src/features/playmats/` |
 | `src/lib/sizes` | Medidas y tablas de tallas |
 | `src/lib/db.ts` | IndexedDB |
 | `src/lib/zip.ts` | Proyecto completo en ZIP |
