@@ -60,3 +60,11 @@ las láminas vectoriales históricas para cualquier receta activa.
 Prompts, originales, hashes y revisión de las prendas:
 [`IMAGENES_ADULTOS_NUEVOS_A.md`](IMAGENES_ADULTOS_NUEVOS_A.md) y
 [`IMAGENES_ADULTOS_NUEVOS_B.md`](IMAGENES_ADULTOS_NUEVOS_B.md).
+
+## Bolsos y mochilas con foto pendiente (2026-11-09)
+
+Los 8 diseños nuevos de bolsos y mochilas aún no tienen fotografía IA: esta
+sesión no podía generar imágenes. Están en `PENDING_AI_PHOTOS` y su tarjeta
+muestra el dibujo técnico real, nunca la foto de otra construcción. Las pruebas
+exigen foto a todos los demás y dibujo técnico a estos ocho. Guía y prompts:
+[`BOLSOS_Y_MOCHILAS.md`](BOLSOS_Y_MOCHILAS.md).

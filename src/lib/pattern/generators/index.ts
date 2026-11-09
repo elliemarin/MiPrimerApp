@@ -30,6 +30,7 @@ import { TOY_GENERATORS } from './toys';
 import { CUSHION_GENERATORS } from './cushions';
 import { ORGANIZER_GENERATORS } from './organizers';
 import { PLAYMAT_GENERATORS } from './playmats';
+import { BAG_GENERATORS } from './bags';
 
 export const GENERATORS: PatternGenerator[] = [
   pantsGenerator, skirtGenerator, toteGenerator, bibGenerator, beanieGenerator,
@@ -42,7 +43,7 @@ export const GENERATORS: PatternGenerator[] = [
   ...KIDS_HATS_GENERATORS, ...KIDS_BATCH2_GENERATORS, ...STREET_STYLE_GENERATORS,
   ...DRESS_STYLE_GENERATORS, ...BABY_STYLE_GENERATORS, ...TRANSFORMATION_GENERATORS,
   ...ADULT_BATCH_GENERATORS, ...MEN_BATCH_GENERATORS, ...TOY_GENERATORS, ...CUSHION_GENERATORS,
-  ...ORGANIZER_GENERATORS, ...PLAYMAT_GENERATORS
+  ...ORGANIZER_GENERATORS, ...PLAYMAT_GENERATORS, ...BAG_GENERATORS
 ];
 
 export function getGenerator(id: string): PatternGenerator | undefined {

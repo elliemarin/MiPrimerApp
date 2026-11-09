@@ -6,22 +6,48 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-09 (Claude: tapetes de juego, con forma y sensoriales).
+- Última actualización: 2026-11-09 (Claude: bolsos y mochilas en la sección de bolsos).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 3810 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
+npm test            # 3826 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Bolsos y mochilas (2026-11-09)
+
+**Este es el relevo más reciente.** Detalle en `docs/BOLSOS_Y_MOCHILAS.md`.
+
+- 8 diseños nuevos (10 recetas) en **Patrones editables → Bolsos y bolsas**, con
+  el flujo completo: medidas del objeto, PDF y «Proyectar en la mesa». Son:
+  - funda acolchada para portátil (13, 14 y 15–16 pulgadas o a medida);
+  - bolsa en U con bolsillo bordado;
+  - bolsa de compra con asas laterales;
+  - bolsa estrella con asa calada;
+  - tote de caja con bolsillos alrededor;
+  - mochila de solapa con hebillas;
+  - mochila osito infantil;
+  - riñonera organizadora.
+- Generadores en `src/lib/pattern/generators/bags.ts`. Dibujos técnicos desde
+  las piezas reales en `src/data/bagFlats.ts`, con zonas ligadas a piezas
+  (`BAG_SURFACE_PIECES`).
+- Familias nuevas: Mochilas, y Riñoneras y delantales de cadera.
+- **Fotos IA pendientes**: los 8 diseños están en `PENDING_AI_PHOTOS` y
+  muestran su dibujo técnico. La guía para generarlas está en el doc.
+- Pruebas: `tests/bags.test.ts`, y los conteos de catálogo pasan a 2084
+  recetas, 326 diseños y 265 con patrón.
+
+Siguiente paso sugerido: generar la lámina `bolsos-01` con las 8 fotos y coser
+una funda y una mochila osito de muestra.
+
 ## Tapetes de juego (2026-11-09)
 
-**Este es el relevo más reciente.** Detalle en `docs/TAPETES.md`.
+Relevo anterior. Detalle en `docs/TAPETES.md`.
 
 - Octavo modo de la biblioteca, «Tapetes»: 17 tarjetas de 11 generadores
   (`src/lib/pattern/generators/playmats.ts`):
@@ -44,7 +70,7 @@ dejar elegir el elemento de cada cuadro desde la ficha.
 
 ## Bolsilleros (2026-11-08)
 
-Relevo anterior. Detalle en `docs/BOLSILLEROS.md`.
+Relevo previo a los tapetes. Detalle en `docs/BOLSILLEROS.md`.
 
 - Séptimo modo de la biblioteca, «Bolsilleros»: organizadores colgantes de tela.
   También se llaman «porte-objets» o «vide-poches mural» en francés, «Utensilo»

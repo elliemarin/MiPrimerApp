@@ -7,6 +7,7 @@ import { KIDS_CATALOG, withKidsPatterns } from './kidsCatalog';
 import { TREND_CATALOG, withTrendPatterns } from './trendCatalog';
 import { DIGITIZED_KIDS_CATALOG } from './digitizedKidsCatalog';
 import { DIGITIZED_ADULT_CATALOG, withAdultPatterns } from './digitizedAdultCatalog';
+import { BAG_CATALOG } from './bagCatalog';
 import { STREET_STYLE_CATALOG } from './streetStyleCatalog';
 import { BABY_STYLE_CATALOG } from './babyStyleCatalog';
 import { DRESS_STYLE_CATALOG } from './dressStyleCatalog';
@@ -762,7 +763,8 @@ const BASE_CATALOG: CatalogModel[] = [
   ...DIGITIZED_ADULT_CATALOG,
   ...STREET_STYLE_CATALOG,
   ...BABY_STYLE_CATALOG,
-  ...DRESS_STYLE_CATALOG
+  ...DRESS_STYLE_CATALOG,
+  ...BAG_CATALOG
 ];
 const ACCESSORY_IDS=new Set(['cojin','funda-cheve','funda-vaso','dona-cabello','bandana-reversible','individual-reversible','posavasos-textil','servilleta-reversible','marcapaginas-textil','tapete-maquina','delantal-estudio','antifaz-estudio','banderin-estudio']);
 const UPGRADED_ACCESSORY:Record<string,string>={'delantal-estudio':'delantal-peto','antifaz-estudio':'antifaz-forrado','banderin-estudio':'banderin-jareta'};

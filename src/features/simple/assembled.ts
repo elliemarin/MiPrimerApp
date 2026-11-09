@@ -17,6 +17,7 @@ import { KIDS_SURFACE_PIECES } from '../../data/kidsFlats';
 import { STREET_SURFACE_PIECES } from '../../data/streetStyleFlats';
 import { DRESS_STYLE_SURFACE_PIECES } from '../../data/dressStyleFlats';
 import { BABY_STYLE_SURFACE_PIECES } from '../../data/babyStyleFlats';
+import { BAG_SURFACE_PIECES } from '../../data/bagFlats';
 import { basePanelPattern } from '../studio/panelWorkflow';
 
 /** A reversible illustration projection. The original millimetre geometry is
@@ -128,7 +129,7 @@ function makeScene(project: Project, flat: FlatView, physical: DesignView[], apr
   const generatorId=project.pattern?.generatorId??'';
   const explicitBindings:{zoneId:string;pieceId:string;mirror:boolean;fold?:boolean}[]|undefined=
     STREET_SURFACE_PIECES[generatorId]?.[flat.key] ?? DRESS_STYLE_SURFACE_PIECES[generatorId]?.[flat.key] ?? BABY_STYLE_SURFACE_PIECES[generatorId]?.[flat.key] ??
-    (costumeKey?COSTUME_SURFACE_PIECES[costumeKey]?.[flat.key]:undefined) ?? KIDS_SURFACE_PIECES[generatorId]?.[flat.key];
+    (costumeKey?COSTUME_SURFACE_PIECES[costumeKey]?.[flat.key]:undefined) ?? KIDS_SURFACE_PIECES[generatorId]?.[flat.key] ?? BAG_SURFACE_PIECES[generatorId]?.[flat.key];
   const ranked=(zone:Zone)=>physical.map(view=>({view,score:score(view,zone,back)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score)[0]?.view;
   for(const zone of zones) {
     const physicalId=forced?.[zone.id];

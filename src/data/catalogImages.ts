@@ -164,6 +164,12 @@ const VARIANT_IMAGES: Record<string, CatalogImageSource> = {
   'chaqueta-campo': { sheet: 'lote-adultos-01', cell: 7 }
 };
 
+/** Designs whose AI photo is still pending (bags and backpacks of 2026-11-09):
+ * their cards show the real technical drawing (FlatArt) until a generated
+ * image is added to a sheet and registered in CATALOG_IMAGES. Never fill this
+ * gap with a photo of another construction. Prompts: docs/BOLSOS_Y_MOCHILAS.md. */
+export const PENDING_AI_PHOTOS = new Set(['funda-portatil-cremallera', 'bolsa-u-bordada', 'bolsa-asas-laterales', 'bolsa-estrella', 'tote-bolsillos', 'mochila-solapa', 'mochila-osito', 'rinonera-organizador']);
+
 export function catalogImageFor(model: CatalogModel, recipient?: Recipient): CatalogImageSource | undefined {
   const id = model.designGroup?.id ?? model.id;
   // Children use their own cord-free reference, matching the generator. Exact

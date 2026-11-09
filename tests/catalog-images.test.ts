@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { CATALOG, findModel } from '../src/data/catalog';
-import { CATALOG_IMAGES, CATALOG_IMAGE_SHEETS, catalogImageBounds, catalogImageCaption, catalogImageFor } from '../src/data/catalogImages';
+import { CATALOG_IMAGES, CATALOG_IMAGE_SHEETS, PENDING_AI_PHOTOS, catalogImageBounds, catalogImageCaption, catalogImageFor } from '../src/data/catalogImages';
+import { buildFlat } from '../src/data/flats';
 import { groupCatalog } from '../src/features/library/groups';
 
 describe('imágenes propias para todos los diseños y referencias del catálogo', () => {
   it('cubre todos los grupos con una celda propia, incluidas todas sus recetas', () => {
-    const models = CATALOG, groups = groupCatalog(models);
+    const all = groupCatalog(CATALOG), groups = all.filter(group => !PENDING_AI_PHOTOS.has(group.id)), models = CATALOG.filter(model => !PENDING_AI_PHOTOS.has(model.designGroup?.id ?? model.id));
     expect(Object.keys(CATALOG_IMAGES).sort()).toEqual(groups.map(group => group.id).sort());
     for (const [id, image] of Object.entries(CATALOG_IMAGES)) {
       expect(catalogImageCaption(image), id).toBe('Ilustración generada con IA.');
@@ -25,6 +26,17 @@ describe('imágenes propias para todos los diseños y referencias del catálogo'
     for (const model of models) expect(catalogImageFor(model), model.id).toBeDefined();
     const entries = Object.values(CATALOG_IMAGE_SHEETS).flat();
     expect(new Set(entries).size).toBe(entries.length);
+  });
+
+  it('los diseños con foto pendiente muestran su dibujo técnico real, nunca la foto de otra construcción', () => {
+    const pending = groupCatalog(CATALOG).filter(group => PENDING_AI_PHOTOS.has(group.id));
+    expect(pending.map(group => group.id).sort()).toEqual([...PENDING_AI_PHOTOS].sort());
+    for (const group of pending) for (const model of group.models) {
+      expect(catalogImageFor(model), model.id).toBeUndefined();
+      const flat = buildFlat(model.id, model.flat);
+      expect(flat.views.map(view => view.key), model.id).toEqual(['frente', 'espalda']);
+      expect(flat.views.every(view => view.zones.length > 0), model.id).toBe(true);
+    }
   });
 
   it('publica todas las láminas WebP locales con un presupuesto pequeño para móvil y modo sin conexión', () => {

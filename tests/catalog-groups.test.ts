@@ -14,7 +14,7 @@ describe('Una base por diseño, con medidas elegidas después', () => {
     const grouped = groupCatalog(patterns);
     const ids = grouped.flatMap(entry => entry.models.map(item => item.id));
     // Construction changes have their own cards; dimensional presets stay together.
-    expect(grouped).toHaveLength(257);
+    expect(grouped).toHaveLength(265);
     expect(patterns.length).toBeGreaterThanOrEqual(1789);
     expect(ids).toHaveLength(patterns.length);
     expect(new Set(ids).size).toBe(ids.length);
@@ -57,8 +57,9 @@ describe('Una base por diseño, con medidas elegidas después', () => {
   it('agrupa después de buscar y filtrar, con un representante que cumple todos los filtros', () => {
     for (const q of ['hoodie', 'hoddie', 'scrunchie', 'cheve', 'tote', 'laptop 13']) {
       const found = CATALOG.filter(item => matches(item, { ...patternFilters, q }));
-      // The original adult, infant and twelve new hoodie constructions stay separate.
-      expect(groupCatalog(found), q).toHaveLength(q.startsWith('ho') ? 15 : 1);
+      // The original adult, infant and twelve new hoodie constructions stay separate,
+      // and so do the four new totes (U, side handles, star and pockets) next to the classic one.
+      expect(groupCatalog(found), q).toHaveLength(q.startsWith('ho') ? 15 : q === 'tote' ? 5 : 1);
     }
     const filtered = { ...patternFilters, q: 'hoodie 66', recipient: 'mujer' as const, fit: 'oversize' as const, fabric: 'punto' as const };
     const found = CATALOG.filter(item => matches(item, filtered));

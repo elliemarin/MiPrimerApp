@@ -5,6 +5,7 @@ import { presetLines } from './panelPresets';
 import { babyBodysuitFlat } from './babyBodysuitFlat';
 import { buildCostumeFlat } from './costumeFlats';
 import { buildKidsFlat } from './kidsFlats';
+import { buildBagFlat } from './bagFlats';
 import { buildStreetStyleFlat } from './streetStyleFlats';
 import { buildDressStyleFlat } from './dressStyleFlats';
 import { buildBabyStyleFlat } from './babyStyleFlats';
@@ -800,6 +801,8 @@ export interface FlatSpec {
   street?: string;
   dressStyle?: string;
   babyStyle?: string;
+  /** Bags and backpacks drawn from their real pieces (bagFlats.ts). */
+  bagStyle?: string;
 }
 
 export function buildFlat(id: string, spec: FlatSpec): FlatDef {
@@ -808,6 +811,7 @@ export function buildFlat(id: string, spec: FlatSpec): FlatDef {
   if (spec.babyStyle) return buildBabyStyleFlat(spec.babyStyle);
   if (spec.costume) return buildCostumeFlat(id, spec.costume);
   if (spec.kids) return buildKidsFlat(id, spec.kids);
+  if (spec.bagStyle) return buildBagFlat(id, spec.bagStyle);
   const views: FlatView[] = [];
   const keys: FlatViewKey[] = ['frente', 'espalda'];
   if (spec.pinafore) return {id,views:keys.map(k=>pinaforeView(k,spec.pinafore!))};

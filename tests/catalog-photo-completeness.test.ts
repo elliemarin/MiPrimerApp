@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CATALOG, findModel, type CatalogModel, type Recipient } from '../src/data/catalog';
-import { catalogImageBounds, catalogImageCaption, catalogImageFor, type CatalogImageSource } from '../src/data/catalogImages';
+import { PENDING_AI_PHOTOS, catalogImageBounds, catalogImageCaption, catalogImageFor, type CatalogImageSource } from '../src/data/catalogImages';
 import { DIGITIZED_ADULT_CATALOG } from '../src/data/digitizedAdultCatalog';
 import { modelHasPattern } from '../src/features/library/filters';
 import { groupCatalog } from '../src/features/library/groups';
@@ -32,18 +32,18 @@ function imageForId(id: string): CatalogImageSource {
 
 describe('fotografías completas del catálogo y sus variantes', () => {
   it('mantiene todas las recetas y distingue patrones disponibles de inspiraciones', () => {
-    expect(CATALOG).toHaveLength(2074);
-    expect(groupCatalog(CATALOG)).toHaveLength(318);
+    expect(CATALOG).toHaveLength(2084);
+    expect(groupCatalog(CATALOG)).toHaveLength(326);
     const available = CATALOG.filter(modelHasPattern);
     const inspiration = CATALOG.filter(model => !modelHasPattern(model));
-    expect(available).toHaveLength(2013);
-    expect(groupCatalog(available)).toHaveLength(257);
+    expect(available).toHaveLength(2023);
+    expect(groupCatalog(available)).toHaveLength(265);
     expect(inspiration).toHaveLength(61);
     expect(groupCatalog(inspiration)).toHaveLength(61);
   });
 
   it('resuelve cada receta y destinatario a una imagen IA, también al cambiar de variante', () => {
-    for (const model of CATALOG) {
+    for (const model of CATALOG.filter(item => !PENDING_AI_PHOTOS.has(item.designGroup?.id ?? item.id))) {
       const recipients: (Recipient | undefined)[] = [undefined, ...model.recipients];
       for (const recipient of recipients) {
         const source = sourceFor(model, recipient);
@@ -56,7 +56,7 @@ describe('fotografías completas del catálogo y sus variantes', () => {
 
   it('publica el WebP y un recorte válido de cada imagen resuelta, incluidas celdas solo de variantes', () => {
     const sources = new Map<string, CatalogImageSource>();
-    for (const model of CATALOG) {
+    for (const model of CATALOG.filter(item => !PENDING_AI_PHOTOS.has(item.designGroup?.id ?? item.id))) {
       for (const recipient of [undefined, ...model.recipients]) {
         const source = sourceFor(model, recipient);
         sources.set(`${source.sheet}/${source.cell}`, source);
@@ -83,12 +83,14 @@ describe('fotografías completas del catálogo y sus variantes', () => {
     }
   });
 
-  it('presenta los 318 diseños con imagen sin caer al dibujo técnico en la tarjeta', () => {
+  it('presenta 318 diseños con imagen y los 8 bolsos con foto pendiente con su dibujo técnico', () => {
     for (const group of groupCatalog(CATALOG)) {
       const markup = renderToStaticMarkup(createElement(CatalogImage, { model: group.representative }));
+      if (PENDING_AI_PHOTOS.has(group.id)) { expect(markup, group.id).toContain('<svg'); continue; }
       expect(markup, group.id).toContain('class="catalog-photo-atlas"');
       expect(markup, group.id).not.toContain('<svg');
     }
+    expect(PENDING_AI_PHOTOS.size).toBe(8);
   });
 
   it.each([

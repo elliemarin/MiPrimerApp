@@ -11,9 +11,9 @@ const patternSearch = (q: string) => CATALOG.filter(model => matches(model, { ..
 
 describe('Auditoría completa de identidad y destinatario del catálogo', () => {
   it('clasifica cada receta e inspiración mediante una asignación explícita de su diseño', () => {
-    expect(CATALOG).toHaveLength(2074);
+    expect(CATALOG).toHaveLength(2084);
     expect(new Set(CATALOG.map(model => model.id)).size).toBe(CATALOG.length);
-    expect(CATALOG.filter(modelHasPattern)).toHaveLength(2013);
+    expect(CATALOG.filter(modelHasPattern)).toHaveLength(2023);
     const designIds = new Set(CATALOG.map(model => model.designGroup?.id ?? model.id));
     expect(Object.keys(FAMILY_BY_DESIGN).sort()).toEqual([...designIds].sort());
     for (const model of CATALOG) {

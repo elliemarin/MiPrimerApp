@@ -18,6 +18,7 @@ export const FAMILY_LABEL = {
   body: 'Pañaleros / bodies', mameluco: 'Mamelucos', babero: 'Baberos', gorro: 'Gorros y bonetes',
   cubrepanal: 'Cubrepañales y bombachos', patucos: 'Patucos de bebé', 'saco-dormir': 'Sacos de dormir', toalla: 'Toallas con capucha', conjunto: 'Conjuntos de bebé',
   tote: 'Bolsas tote', 'bolsa-jareta': 'Bolsas con jareta', estuche: 'Estuches y neceseres', bandolera: 'Bandoleras',
+  mochila: 'Mochilas', rinonera: 'Riñoneras y delantales de cadera',
   'funda-tecnologia': 'Fundas para tecnología', 'funda-lectura': 'Fundas para libros y documentos',
   'funda-costura': 'Fundas para costura', 'funda-lentes': 'Fundas para lentes',
   cojin: 'Fundas de cojín', 'funda-bebida': 'Fundas para bebidas', 'funda-silla': 'Fundas para sillas',
@@ -54,8 +55,9 @@ const DESIGNS: Partial<Record<CatalogFamily, readonly string[]>> = {
   mono: ['mono-camisero', 'mono-mecanico', 'mono-palazzo', 'mono-cruzado', 'playsuit-camisero', 'mono-baggy', 'pelele-volantes', 'tipo-mono-tirantes'],
   body: ['body-bebe'], mameluco: ['mameluco'], babero: ['babero', 'tipo-babero-bandana'], gorro: ['gorro', 'tipo-bonete', 'tipo-gorro-orejas', 'tipo-gorro-duende', 'tipo-gorro-orejeras', 'tipo-bonete-volante'],
   cubrepanal: ['tipo-cubrepanal'], patucos: ['tipo-patucos'], 'saco-dormir': ['tipo-saco-dormir'], toalla: ['tipo-toalla-capucha'], conjunto: ['tipo-conjunto-bebe'],
-  tote: ['tipo-bolsa-tote'], 'bolsa-jareta': ['tipo-bolsa-jareta'], estuche: ['neceser', 'tipo-estuche-cierre'], bandolera: ['bandolera'],
-  'funda-tecnologia': ['tipo-funda-portatil', 'tipo-funda-tableta', 'tipo-funda-telefono', 'tipo-funda-lector', 'tipo-funda-consola', 'tipo-funda-cables'],
+  tote: ['tipo-bolsa-tote', 'bolsa-u-bordada', 'bolsa-asas-laterales', 'bolsa-estrella', 'tote-bolsillos'], 'bolsa-jareta': ['tipo-bolsa-jareta'], estuche: ['neceser', 'tipo-estuche-cierre'], bandolera: ['bandolera'],
+  mochila: ['mochila-solapa', 'mochila-osito'], rinonera: ['rinonera-organizador'],
+  'funda-tecnologia': ['tipo-funda-portatil', 'funda-portatil-cremallera', 'tipo-funda-tableta', 'tipo-funda-telefono', 'tipo-funda-lector', 'tipo-funda-consola', 'tipo-funda-cables'],
   'funda-lectura': ['tipo-funda-libro', 'tipo-funda-cuaderno', 'tipo-funda-tarjetas', 'tipo-funda-pasaporte'],
   'funda-costura': ['tipo-funda-patrones', 'tipo-funda-bastidor', 'tipo-funda-muestrario'],
   'funda-lentes': ['tipo-funda-lentes'], cojin: ['tipo-cojin'], 'funda-bebida': ['tipo-funda-bebida'], 'funda-silla': ['funda-silla'],
@@ -91,7 +93,7 @@ export function modelSupportsRecipient(model: CatalogModel, recipient: Recipient
 }
 
 const FAMILY_TYPE: Partial<Record<CatalogFamily, GarmentType>> = {
-  tote: 'bolsos', 'bolsa-jareta': 'bolsos', estuche: 'bolsos', bandolera: 'bolsos',
+  tote: 'bolsos', 'bolsa-jareta': 'bolsos', estuche: 'bolsos', bandolera: 'bolsos', mochila: 'bolsos', rinonera: 'bolsos',
   peto: 'monos', mono: 'monos', jogger: 'inferiores', lenceria: 'inferiores', babero: 'accesorios', gorro: 'accesorios',
   cubrepanal: 'bebe', patucos: 'bebe', 'saco-dormir': 'bebe', toalla: 'bebe', conjunto: 'bebe'
 };

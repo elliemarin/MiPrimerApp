@@ -4,6 +4,7 @@ import type { DesignView, Fill, Zone } from '../studio/model';
 import { STREET_SURFACE_PIECES } from '../../data/streetStyleFlats';
 import { DRESS_STYLE_SURFACE_PIECES } from '../../data/dressStyleFlats';
 import { BABY_STYLE_SURFACE_PIECES } from '../../data/babyStyleFlats';
+import { BAG_SURFACE_PIECES } from '../../data/bagFlats';
 
 const normalized = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
@@ -49,7 +50,7 @@ export function modelMaterials(project: Project, flat: FlatView): { fills: Recor
   let omittedPanels = false;
   const costume = COSTUME_SURFACES[project.pattern?.generatorId ?? ''];
   const generatorId = project.pattern?.generatorId ?? '';
-  const bindings = STREET_SURFACE_PIECES[generatorId]?.[flat.key] ?? DRESS_STYLE_SURFACE_PIECES[generatorId]?.[flat.key] ?? BABY_STYLE_SURFACE_PIECES[generatorId]?.[flat.key];
+  const bindings = STREET_SURFACE_PIECES[generatorId]?.[flat.key] ?? DRESS_STYLE_SURFACE_PIECES[generatorId]?.[flat.key] ?? BABY_STYLE_SURFACE_PIECES[generatorId]?.[flat.key] ?? BAG_SURFACE_PIECES[generatorId]?.[flat.key];
   for (const zone of flat.zones) {
     const ranked = (part: Zone) => doc.views.map(view => ({ view, score: pieceScore(view, part, back) })).filter(item => item.score > 0).sort((a,b) => b.score - a.score)[0]?.view;
     const binding = bindings?.find(value => value.zoneId === zone.id);
