@@ -55,6 +55,8 @@ function setEnd(poly: Pt[], X: Pt): Pt[] {
   return [res[0], X];
 }
 
+const polyLength = (poly: Pt[]) => poly.slice(1).reduce((s, q, i) => s + dist(poly[i], q), 0);
+
 function setStart(poly: Pt[], X: Pt): Pt[] {
   return setEnd(poly.slice().reverse(), X).reverse();
 }
@@ -161,6 +163,15 @@ export function cutOutline(piece: Piece): CutOutline {
 
     const hit = lineIntersect(endI, ti, startJ, tj);
     const maxA = Math.max(ei.allowance, ej.allowance);
+    // Concave corner next to a short edge whose far corner has not been
+    // joined yet (a stepped outline walked one way or the other): the
+    // parallels overlap but miss each other inside their extents, so they
+    // meet on their prolongation.
+    if (hit && hit.t < -1e-6 && hit.u > 1e-6 && Math.min(polyLength(offs[i]), polyLength(offs[j])) < dist(hit.pt, node) && dist(hit.pt, node) <= Math.max(4 * maxA, 6)) {
+      offs[i] = setEnd(offs[i], hit.pt);
+      offs[j] = setStart(offs[j], hit.pt);
+      continue;
+    }
     if (hit && hit.t >= -1e-6 && hit.u <= 1e-6) {
       const miter = dist(hit.pt, node);
       if (miter <= Math.max(4 * maxA, 6)) {

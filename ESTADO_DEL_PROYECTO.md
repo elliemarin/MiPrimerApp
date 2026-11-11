@@ -6,22 +6,44 @@ Actualízalo al terminar cada tarea.
 
 - App publicada: https://elliemarin.github.io/MiPrimerApp/ (cambia al nombre del
   repositorio si se renombra; el flujo de despliegue se adapta solo).
-- Última actualización: 2026-11-09 (Claude: casitas de juego de rincón y de mesa).
+- Última actualización: 2026-11-11 (Claude: adornos navideños).
 
 ## Cómo continuar en 5 minutos
 
 ```bash
 npm install
-npm test            # 3834 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
+npm test            # 3843 pruebas: catálogo, fotos, actualizaciones, patrones, persistencia, PDF, logos y transformaciones
 npm run dev         # http://localhost:5173/
 npm run build
 ```
 Cada push a `main` ejecuta pruebas, compila y publica en GitHub Pages
 (`.github/workflows/deploy.yml`).
 
+## Adornos navideños (2026-11-11)
+
+**Este es el relevo más reciente.** Detalle en `docs/ADORNOS_NAVIDENOS.md`.
+
+- Décimo modo de la biblioteca, «Adornos navideños». En el móvil: 3 filas de 3
+  y «Gratis de internet» a lo ancho; en tableta, 5 columnas.
+  - 24 tarjetas de 7 generadores (`src/lib/pattern/generators/ornaments.ts`).
+- Construcciones:
+  - Fieltro cortado por el contorno con la puntada marcada: casita nevada,
+    reno (pajarita, gorro o lazo), galleta de jengibre (botones, falda o
+    bufanda), árbol por capas y 9 figuritas de adviento con el número del día
+    bordado (`fitNumber`).
+  - Árbol escalonado de retales en sándwich, con margen en zigzag.
+  - Bota forrada con puño recto o de ondas, talón y puntera de contraste y
+    aplique de reno o árbol que solo va en la zona libre.
+- Cambio en `src/lib/pattern/offset.ts`: esquina entrante junto a un borde corto
+  (ver el documento).
+- Validación: `tests/ornaments.test.ts`, barrido de 300 combinaciones sin
+  errores; 3843 pruebas en total.
+
+Siguiente paso sugerido: coser un reno, una figurita y la bota de muestra.
+
 ## Casitas de juego (2026-11-09)
 
-**Este es el relevo más reciente.** Detalle en `docs/CASITAS_DE_JUEGO.md`.
+Relevo anterior. Detalle en `docs/CASITAS_DE_JUEGO.md`.
 
 - Noveno modo de la biblioteca, «Casitas de juego» (en el móvil, 3 filas de 3):
   12 tarjetas de 2 generadores (`src/lib/pattern/generators/playhouses.ts`).
@@ -43,7 +65,7 @@ los apliques uno a uno.
 
 ## Bolsos y mochilas (2026-11-09)
 
-Relevo anterior. Detalle en `docs/BOLSOS_Y_MOCHILAS.md`.
+Detalle en `docs/BOLSOS_Y_MOCHILAS.md`.
 
 - 8 diseños nuevos (10 recetas) en **Patrones editables → Bolsos y bolsas**, con
   el flujo completo: medidas del objeto, PDF y «Proyectar en la mesa». Son:
